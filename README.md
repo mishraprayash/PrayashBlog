@@ -1,46 +1,59 @@
-# Astro Starter Kit: Basics
+# Prayash Mishra — Blog
 
-```sh
-npm create astro@latest -- --template basics
+Personal blog built with [Astro](https://astro.build) + Tailwind CSS v4. In-depth analyses of backend systems, cloud-native microservices, containerization, and distributed reliability — featuring edge cases, real-world pitfalls, and production best practices.
+
+## Stack
+
+- **Astro v7** — static site generation, content collections, fast builds
+- **Tailwind CSS v4** — modern styling via `@tailwindcss/vite`
+- **Markdown & Frontmatter** — Git-native content management via `src/content/blog/`
+- **RSS + Sitemap** — auto-generated at `/rss.xml` and `/sitemap-index.xml`
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Open `http://localhost:4321` in your browser.
 
-## 🚀 Project Structure
+## Available Commands
 
-Inside of your Astro project, you'll see the following folders and files:
+| Command           | Action                                        |
+| :---------------- | :-------------------------------------------- |
+| `npm run dev`     | Start local development server with hot reload |
+| `npm run build`   | Build production static site to `./dist/`      |
+| `npm run preview` | Preview production build locally               |
+| `npm run check`   | Run Astro + TypeScript type checks            |
 
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
+## Writing & Managing Posts
+
+All blog posts live in `src/content/blog/` as Markdown files adhering to the schema in `src/content.config.ts`:
+
+```yaml
+---
+title: "Post Title"
+slug: "post-slug"
+description: "One or two sentence summary shown in cards, search, and meta tags."
+publishDate: "2026-08-24T10:00:00Z"
+updatedDate: "2026-08-25T10:00:00Z"   # optional
+author: "Prayash Mishra"
+tags: ["nestjs", "dapr", "architecture"]
+category: "engineering"               # engineering | design | tutorial | opinion | career
+featuredImage: "/images/uploads/placeholder.svg"
+featuredImageAlt: "Describe the image"
+draft: false
+---
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+Posts marked `draft: true` are hidden in production builds and only visible in local development.
 
-## 🧞 Commands
+### Quick Typo Edits
+Because the blog is 100% Git-native, you can fix any typo by navigating to the file on GitHub and pressing `.` to open the web editor. Committing changes automatically triggers an instant rebuild.
 
-All commands are run from the root of the project, from a terminal:
+## Deployment (Vercel)
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+1. Push this repository to GitHub.
+2. In Vercel, import the repository (framework preset: Astro).
+3. The build command (`npm run build`) and output directory (`dist`) are pre-configured in `vercel.json`.

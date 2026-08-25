@@ -1,0 +1,104 @@
+---
+export interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+  mode?: "mobile" | "desktop";
+}
+
+const { headings, mode = "desktop" } = Astro.props;
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  toc.length > 0 && mode === "mobile" && (
+    <div class="lg:hidden mb-8 rounded-xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/60 p-4 shadow-sm shadow-[#ece5d8]/40 dark:shadow-none">
+      <details class="group">
+        <summary class="flex items-center justify-between cursor-pointer font-medium text-sm text-[#1c1915] dark:text-zinc-100 select-none">
+          <span class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-brand-600 dark:text-brand-400">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            Table of Contents
+          </span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200 group-open:rotate-180 text-[#7d7260] dark:text-zinc-400">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </summary>
+        <nav class="mt-3 pt-3 border-t border-[#f4eee3] dark:border-zinc-800 space-y-1.5 text-xs text-[#5c5344] dark:text-zinc-400">
+          {toc.map((heading) => (
+            <a
+              href={`#${heading.slug}`}
+              class={`block py-1 hover:text-brand-700 dark:hover:text-brand-300 transition-colors ${
+                heading.depth === 3 ? "pl-4 text-[#7d7260] dark:text-zinc-500" : "font-medium"
+              }`}
+            >
+              {heading.text}
+            </a>
+          ))}
+        </nav>
+      </details>
+    </div>
+  )
+}
+
+{
+  toc.length > 0 && mode === "desktop" && (
+    <aside class="hidden lg:block w-64 shrink-0 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
+      <div class="space-y-3 pb-8">
+        <p class="text-xs font-bold uppercase tracking-wider text-[#7d7260] dark:text-zinc-500 flex items-center gap-2">
+          <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400"></span>
+          On this page
+        </p>
+        <nav class="space-y-1 text-xs" id="desktop-toc">
+          {toc.map((heading) => (
+            <a
+              href={`#${heading.slug}`}
+              data-heading-link={heading.slug}
+              class={`block py-1.5 text-[#7d7260] dark:text-zinc-400 hover:text-[#1c1915] dark:hover:text-zinc-100 transition-all border-l-2 border-transparent hover:border-[#d5ccba] dark:hover:border-zinc-700 ${
+                heading.depth === 3 ? "pl-5 text-[11px]" : "pl-3 font-medium text-xs"
+              }`}
+            >
+              {heading.text}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </aside>
+  )
+}
+
+<script is:inline>
+  document.addEventListener("DOMContentLoaded", () => {
+    const links = document.querySelectorAll("#desktop-toc a");
+    if (!links.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute("id");
+            links.forEach((link) => {
+              const linkTarget = link.getAttribute("href")?.substring(1);
+              if (linkTarget === id) {
+                link.classList.add("text-brand-700", "dark:text-brand-300", "border-brand-600", "font-semibold");
+                link.classList.remove("border-transparent", "text-[#7d7260]", "dark:text-zinc-400");
+              } else {
+                link.classList.remove("text-brand-700", "dark:text-brand-300", "border-brand-600", "font-semibold");
+                link.classList.add("border-transparent", "text-[#7d7260]", "dark:text-zinc-400");
+              }
+            });
+          }
+        });
+      },
+      { rootMargin: "-80px 0px -70% 0px", threshold: 0 }
+    );
+
+    document.querySelectorAll(".prose h2, .prose h3").forEach((h) => {
+      observer.observe(h);
+    });
+  });
+</script>

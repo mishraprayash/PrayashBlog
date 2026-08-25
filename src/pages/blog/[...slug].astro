@@ -1,0 +1,252 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TableOfContents from "../../components/TableOfContents.astro";
+import SeriesBanner from "../../components/SeriesBanner.astro";
+import ShareWidget from "../../components/ShareWidget.astro";
+import PostNavigation from "../../components/PostNavigation.astro";
+import AuthorBio from "../../components/AuthorBio.astro";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog", ({ data }) => {
+    if (import.meta.env.PROD) return !data.draft;
+    return true;
+  });
+
+  // Sort chronological
+  posts.sort((a, b) => a.data.publishDate.getTime() - b.data.publishDate.getTime());
+
+  return posts.map((post, index) => ({
+    params: { slug: post.id },
+    props: {
+      post,
+      prevPost: index > 0 ? posts[index - 1] : undefined,
+      nextPost: index < posts.length - 1 ? posts[index + 1] : undefined,
+    },
+  }));
+}
+
+const { post, prevPost, nextPost } = Astro.props;
+const { Content, headings } = await render(post);
+
+function estimateReadingTime(body: string | null | undefined): number {
+  if (!body) return 0;
+  const wordsPerMinute = 200;
+  const wordCount = body.split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+}
+
+const readingTime = estimateReadingTime(post.body);
+const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmishra.com").href;
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={post.data.description}
+  ogImage={post.data.featuredImage}
+  canonicalURL={currentUrl}
+  ogType="article"
+>
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.data.title,
+    description: post.data.description,
+    image: new URL(post.data.featuredImage, Astro.site ?? "https://prayashmishra.com").href,
+    datePublished: post.data.publishDate.toISOString(),
+    ...(post.data.updatedDate
+      ? { dateModified: post.data.updatedDate.toISOString() }
+      : {}),
+    author: {
+      "@type": "Person",
+      name: post.data.author,
+    },
+    mainEntityOfPage: currentUrl,
+    ...(post.data.tags.length > 0 ? { keywords: post.data.tags.join(", ") } : {}),
+  })} />
+
+  <!-- Scroll Reading Progress Bar -->
+  <div id="reading-progress" class="fixed top-0 left-0 w-0 h-1 bg-brand-600 dark:bg-brand-500 z-50 transition-all duration-100"></div>
+
+  <div class="mx-auto max-w-6xl px-6 py-10 sm:py-16 relative z-10">
+    <!-- Breadcrumb Routing Path -->
+    <nav class="flex flex-wrap items-center gap-2 text-xs font-mono text-[#7d7260] dark:text-zinc-500 mb-8" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+        Home
+      </a>
+      <span class="text-[#d5ccba] dark:text-zinc-700">/</span>
+      <a href="/blog" class="hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+        Publications
+      </a>
+      {
+        post.data.category && (
+          <>
+            <span class="text-[#d5ccba] dark:text-zinc-700">/</span>
+            <a
+              href={`/blog?tag=${encodeURIComponent(post.data.category)}`}
+              class="hover:text-brand-700 dark:hover:text-brand-300 uppercase font-semibold text-[10px] tracking-wider text-brand-700 dark:text-brand-300"
+            >
+              {post.data.category}
+            </a>
+          </>
+        )
+      }
+      <span class="text-[#d5ccba] dark:text-zinc-700">/</span>
+      <span class="text-[#1c1915] dark:text-zinc-300 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+        {post.data.title}
+      </span>
+    </nav>
+
+    <!-- Header Section -->
+    <header class="max-w-3xl mb-12">
+      {
+        post.data.category && (
+          <span class="inline-block text-xs font-bold tracking-widest uppercase text-brand-700 dark:text-brand-300 mb-4 bg-[#f4eee3] dark:bg-brand-500/20 px-3 py-1 rounded-md border border-[#e8e2d5] dark:border-transparent font-mono">
+            {post.data.category}
+          </span>
+        )
+      }
+
+      <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#1c1915] dark:text-zinc-50 mb-6 leading-tight">
+        {post.data.title}
+      </h1>
+
+      <p class="text-base sm:text-lg text-[#5c5344] dark:text-zinc-400 leading-relaxed mb-6 font-normal">
+        {post.data.description}
+      </p>
+
+      <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-[#7d7260] dark:text-zinc-400 border-y border-[#e8e2d5] dark:border-zinc-800 py-3.5">
+        <span class="font-semibold text-[#1c1915] dark:text-zinc-200">
+          {post.data.author}
+        </span>
+        <span aria-hidden="true" class="text-[#d5ccba] dark:text-zinc-700">&middot;</span>
+        <time datetime={post.data.publishDate.toISOString()}>
+          {post.data.publishDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </time>
+        <span aria-hidden="true" class="text-[#d5ccba] dark:text-zinc-700">&middot;</span>
+        <span class="bg-[#f4eee3] dark:bg-zinc-800 px-2 py-0.5 rounded text-xs font-mono text-[#5c5344] dark:text-zinc-300">{readingTime} min read</span>
+      </div>
+
+      {
+        post.data.tags.length > 0 && (
+          <div class="flex flex-wrap gap-2 mt-5">
+            {post.data.tags.map((tag) => (
+              <a
+                href={`/blog?tag=${encodeURIComponent(tag)}`}
+                class="inline-block text-xs font-mono px-2.5 py-1 rounded-md bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600 dark:hover:border-brand-400 transition-colors shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+              >
+                #{tag}
+              </a>
+            ))}
+          </div>
+        )
+      }
+    </header>
+
+    <!-- Two-Column Layout: Article Body + Sticky Sidebar ToC -->
+    <div class="flex flex-col lg:flex-row gap-12 items-start">
+      <article class="flex-1 min-w-0 max-w-3xl">
+        <!-- Series Banner (Top) -->
+        <SeriesBanner currentSlug={post.id} />
+
+        <!-- Mobile ToC (Only on < lg screens) -->
+        <TableOfContents headings={headings} mode="mobile" />
+
+        <!-- Prose Content -->
+        <div
+          class="prose prose-zinc dark:prose-invert max-w-none
+            prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-[#1c1915] dark:prose-headings:text-zinc-50
+            prose-h2:text-2xl prose-h2:sm:text-3xl prose-h2:mt-12 prose-h2:mb-4
+            prose-h3:text-xl prose-h3:sm:text-2xl prose-h3:mt-8 prose-h3:mb-3
+            prose-p:leading-relaxed prose-p:text-[#3c3630] dark:prose-p:text-zinc-300 prose-p:mb-5 prose-p:text-sm sm:prose-p:text-base
+            prose-a:text-brand-700 dark:prose-a:text-brand-400 prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
+            prose-li:marker:text-brand-600
+          "
+        >
+          <Content />
+        </div>
+
+        <!-- Series Banner (Bottom) -->
+        <SeriesBanner currentSlug={post.id} />
+
+        <!-- Share Widget -->
+        <ShareWidget title={post.data.title} url={currentUrl} />
+
+        <!-- Post Navigation (Prev/Next) -->
+        <PostNavigation prevPost={prevPost} nextPost={nextPost} />
+
+        <!-- Author Bio Card -->
+        <AuthorBio author={post.data.author} />
+      </article>
+
+      <!-- Desktop Sidebar ToC (Only on >= lg screens) -->
+      <TableOfContents headings={headings} mode="desktop" />
+    </div>
+  </div>
+
+  <script is:inline>
+    // Reading progress bar
+    window.addEventListener("scroll", () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      const progressBar = document.getElementById("reading-progress");
+      if (progressBar) {
+        progressBar.style.width = scrolled + "%";
+      }
+    });
+
+    // Code block copy button injection with non-scrolling wrapper
+    const initCodeCopy = () => {
+      const preBlocks = document.querySelectorAll(".prose pre");
+      preBlocks.forEach((pre) => {
+        // If already wrapped, skip
+        if (pre.parentElement && pre.parentElement.classList.contains("code-block-wrapper")) return;
+
+        // 1. Create a relative, non-scrolling wrapper
+        const wrapper = document.createElement("div");
+        wrapper.className = "code-block-wrapper";
+
+        // 2. Insert wrapper before pre and move pre inside it
+        pre.parentNode?.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+
+        // 3. Create static-anchored copy button
+        const button = document.createElement("button");
+        button.className = "copy-code-btn";
+        button.setAttribute("aria-label", "Copy code");
+        button.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        `;
+
+        // 4. Attach button to wrapper (NOT to the scrolling pre)
+        wrapper.appendChild(button);
+
+        button.addEventListener("click", async () => {
+          const code = pre.querySelector("code")?.innerText || "";
+          await navigator.clipboard.writeText(code);
+
+          button.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          `;
+
+          setTimeout(() => {
+            button.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            `;
+          }, 2000);
+        });
+      });
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initCodeCopy);
+    } else {
+      initCodeCopy();
+    }
+  </script>
+</BaseLayout>

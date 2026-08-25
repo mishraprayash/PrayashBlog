@@ -1,0 +1,44 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Page Not Found"
+  description="The page you're looking for doesn't exist or has been relocated."
+>
+  <div class="mx-auto max-w-5xl px-6 py-24 sm:py-36 flex flex-col items-center text-center relative z-10">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#f4eee3] dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-[#e8e2d5] dark:border-brand-500/20 mb-6">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand-600 animate-pulse"></span>
+      404: route_not_found
+    </div>
+    
+    <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-[#1c1915] dark:text-zinc-50 mb-3">
+      Page Not Found
+    </h1>
+    
+    <p class="text-sm sm:text-base text-[#5c5344] dark:text-zinc-400 max-w-md mb-8 leading-relaxed">
+      The publication or route you are looking for has been moved or does not exist.
+    </p>
+
+    <a
+      href="/"
+      class="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-all shadow-sm"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Return to Home
+    </a>
+  </div>
+</BaseLayout>

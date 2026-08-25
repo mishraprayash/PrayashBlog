@@ -1,0 +1,190 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const allPosts = await getCollection("blog", ({ data }) => {
+  if (import.meta.env.PROD) return !data.draft;
+  return true;
+});
+
+allPosts.sort(
+  (a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime()
+);
+
+const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
+const selectedTag = Astro.url.searchParams.get("tag") ?? "";
+
+const filteredPosts = selectedTag
+  ? allPosts.filter((p) => p.data.tags.includes(selectedTag))
+  : allPosts;
+---
+
+<BaseLayout
+  title="Publications & Deep Dives"
+  description="Technical analysis, systems engineering deep dives, and production debugging notes."
+>
+  <div class="mx-auto max-w-5xl px-6 py-12 sm:py-20 relative z-10">
+    <header class="mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#f4eee3] dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-[#e8e2d5] dark:border-brand-500/20 mb-4">
+        <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400"></span>
+        Technical Publications
+      </div>
+      <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#1c1915] dark:text-zinc-50 mb-3">
+        Articles & Deep Dives
+      </h1>
+      <p class="text-base sm:text-lg text-[#5c5344] dark:text-zinc-400 max-w-2xl leading-relaxed">
+        Deep analysis on backend architectures, network protocols, container storage, and real-time AI security.
+      </p>
+    </header>
+
+    <!-- Search & Filter Controls -->
+    <div class="mb-10 space-y-4">
+      <div class="relative max-w-md">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#a89d89]">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Filter by title, tag, or topic..."
+          class="block w-full pl-10 pr-4 py-2 bg-[#ffffff] dark:bg-zinc-900 border border-[#e8e2d5] dark:border-zinc-800 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 rounded-xl text-sm placeholder-[#a89d89] text-[#1c1915] dark:text-zinc-100 outline-none transition-all shadow-sm shadow-[#ece5d8]/30 dark:shadow-none"
+        />
+      </div>
+
+      {
+        allTags.length > 0 && (
+          <nav class="flex flex-wrap gap-1.5" aria-label="Filter by tag">
+            <a
+              href="/blog"
+              class={`inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all ${
+                selectedTag === ""
+                  ? "bg-[#1c1915] text-white dark:bg-zinc-100 dark:text-zinc-900 border-transparent font-semibold shadow-sm"
+                  : "bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
+              }`}
+            >
+              all ({allPosts.length})
+            </a>
+            {
+              allTags.map((tag) => {
+                const count = allPosts.filter((p) => p.data.tags.includes(tag)).length;
+                return (
+                  <a
+                    href={`/blog?tag=${encodeURIComponent(tag)}`}
+                    class={`inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all ${
+                      selectedTag === tag
+                        ? "bg-brand-700 text-white border-brand-700 font-semibold shadow-sm"
+                        : "bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
+                    }`}
+                  >
+                    #{tag} <span class="opacity-60 text-[10px]">({count})</span>
+                  </a>
+                );
+              })
+            }
+          </nav>
+        )
+      }
+    </div>
+
+    <!-- Posts Grid -->
+    {
+      filteredPosts.length === 0 ? (
+        <div class="rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff]/60 dark:bg-zinc-900/40 p-12 text-center">
+          <p class="text-[#7d7260] dark:text-zinc-400 text-sm">
+            {selectedTag
+              ? `No publications tagged with "${selectedTag}".`
+              : "No publications found."}
+          </p>
+        </div>
+      ) : (
+        <div>
+          <div id="posts-grid" class="grid gap-6 sm:grid-cols-2">
+            {
+              filteredPosts.map((post) => (
+                <a
+                  href={`/blog/${post.id}`}
+                  data-search-target
+                  data-title={post.data.title.toLowerCase()}
+                  data-description={post.data.description.toLowerCase()}
+                  data-tags={post.data.tags.join(" ").toLowerCase()}
+                  class="group flex flex-col p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-3">
+                    <time datetime={post.data.publishDate.toISOString()}>
+                      {post.data.publishDate.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </time>
+                    {post.data.category && (
+                      <>
+                        <span>&middot;</span>
+                        <span class="uppercase tracking-wider text-[10px] font-mono font-semibold text-brand-700 dark:text-brand-300">
+                          {post.data.category}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <h2 class="text-lg sm:text-xl font-bold text-[#1c1915] dark:text-zinc-100 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-2.5 leading-snug">
+                    {post.data.title}
+                  </h2>
+
+                  <p class="text-xs sm:text-sm text-[#5c5344] dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4 flex-grow">
+                    {post.data.description}
+                  </p>
+
+                  <div class="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-[#f4eee3] dark:border-zinc-800/60">
+                    {post.data.tags.map((tag) => (
+                      <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f4eee3] dark:bg-zinc-800 text-[#5c5344] dark:text-zinc-400 border border-[#e8e2d5]/60 dark:border-transparent">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </a>
+              ))
+            }
+          </div>
+          <div id="no-results-message" class="hidden rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/40 p-12 text-center mt-6">
+            <p class="text-[#7d7260] dark:text-zinc-400 text-sm">No publications matched your search query.</p>
+          </div>
+        </div>
+      )
+    }
+  </div>
+
+  <script is:inline>
+    const searchInput = document.getElementById("search-input");
+    const posts = document.querySelectorAll("[data-search-target]");
+    const noResultsMessage = document.getElementById("no-results-message");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        posts.forEach((post) => {
+          const title = post.getAttribute("data-title") || "";
+          const description = post.getAttribute("data-description") || "";
+          const tags = post.getAttribute("data-tags") || "";
+
+          if (title.includes(query) || description.includes(query) || tags.includes(query)) {
+            post.classList.remove("hidden");
+            visibleCount++;
+          } else {
+            post.classList.add("hidden");
+          }
+        });
+
+        if (visibleCount === 0 && query !== "") {
+          noResultsMessage?.classList.remove("hidden");
+        } else {
+          noResultsMessage?.classList.add("hidden");
+        }
+      });
+    }
+  </script>
+</BaseLayout>

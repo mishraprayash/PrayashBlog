@@ -1,0 +1,120 @@
+---
+export interface Props {
+  currentSlug: string;
+}
+
+const { currentSlug } = Astro.props;
+
+interface Series {
+  title: string;
+  description: string;
+  posts: { title: string; slug: string; part: number }[];
+}
+
+const seriesCatalog: Series[] = [
+  {
+    title: "Building Cloud-Native Microservices with NestJS and Dapr",
+    description: "A 4-part architectural blueprint for Dapr sidecars, service invocation, state/secrets/pubsub, and Kubernetes production.",
+    posts: [
+      {
+        part: 1,
+        title: "Part 1: Core Fundamentals & Architecture",
+        slug: "nestjs-dapr-core-fundamentals-architecture",
+      },
+      {
+        part: 2,
+        title: "Part 2: NestJS Module & Service Invocation",
+        slug: "nestjs-dapr-nestjs-integration-service-invocation",
+      },
+      {
+        part: 3,
+        title: "Part 3: State, Secrets, Config & Pub/Sub",
+        slug: "nestjs-dapr-state-secrets-config-pubsub",
+      },
+      {
+        part: 4,
+        title: "Part 4: Local Dev & Production Kubernetes",
+        slug: "nestjs-dapr-local-dev-production-kubernetes",
+      },
+    ],
+  },
+  {
+    title: "Building an AI-Powered WAF on Nginx",
+    description: "A 2-part deep dive on request-path ML inference, OpenResty cosockets, and production hardening.",
+    posts: [
+      {
+        part: 1,
+        title: "Part 1: The Architecture & Implementation",
+        slug: "nginx-lua-ai-waf-gatekeeper",
+      },
+      {
+        part: 2,
+        title: "Part 2: Traps, Bypasses, and Hardening",
+        slug: "nginx-lua-ai-waf-traps-bypasses",
+      },
+    ],
+  },
+  {
+    title: "Docker Mastery: From Fundamentals to Multi-Stage Pipelines",
+    description: "A 2-part guide to container mechanics, single-stage best practices, multi-stage layer optimization, and kernel traps.",
+    posts: [
+      {
+        part: 1,
+        title: "Part 1: Docker Fundamentals – Container Mechanics & Single-Stage Best Practices",
+        slug: "architecting-lightweight-docker-builds",
+      },
+      {
+        part: 2,
+        title: "Part 2: Docker Multi-Stage Builds – Layer Optimization & Image Size Reduction",
+        slug: "docker-production-traps-edge-cases",
+      },
+    ],
+  },
+];
+
+const currentSeries = seriesCatalog.find((s) =>
+  s.posts.some((p) => p.slug === currentSlug)
+);
+
+const currentPostIndex = currentSeries
+  ? currentSeries.posts.findIndex((p) => p.slug === currentSlug)
+  : -1;
+---
+
+{
+  currentSeries && (
+    <div class="my-8 rounded-xl border border-[#e8e2d5] dark:border-brand-500/20 bg-[#ffffff] dark:bg-brand-950/20 p-5 shadow-sm shadow-[#ece5d8]/40 dark:shadow-none">
+      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300 mb-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+          <path d="M6 6h10"></path>
+          <path d="M6 10h10"></path>
+        </svg>
+        Series: {currentSeries.title} ({currentPostIndex + 1} of {currentSeries.posts.length})
+      </div>
+      <p class="text-xs text-[#5c5344] dark:text-zinc-400 mb-3">
+        {currentSeries.description}
+      </p>
+      <div class="space-y-1.5 pt-2 border-t border-[#f4eee3] dark:border-brand-500/10">
+        {currentSeries.posts.map((p) => (
+          <div class="flex items-center gap-2 text-xs">
+            {p.slug === currentSlug ? (
+              <span class="font-semibold text-brand-800 dark:text-brand-300 flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400"></span>
+                {p.title} <span class="text-[10px] px-1.5 py-0.2 rounded bg-[#f4eee3] dark:bg-brand-500/20 text-brand-700 dark:text-brand-300 font-mono border border-[#e8e2d5]/60 dark:border-transparent">Current</span>
+              </span>
+            ) : (
+              <a
+                href={`/blog/${p.slug}`}
+                class="text-[#5c5344] dark:text-zinc-400 hover:text-brand-700 dark:hover:text-brand-300 hover:underline flex items-center gap-1.5 transition-colors"
+              >
+                <span class="h-1.5 w-1.5 rounded-full bg-[#d5ccba] dark:bg-zinc-700"></span>
+                {p.title} &rarr;
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

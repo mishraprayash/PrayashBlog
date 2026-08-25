@@ -1,0 +1,44 @@
+---
+export interface Props {
+  prevPost?: { id: string; data: { title: string } };
+  nextPost?: { id: string; data: { title: string } };
+}
+
+const { prevPost, nextPost } = Astro.props;
+---
+
+{
+  (prevPost || nextPost) && (
+    <nav class="my-10 grid gap-4 sm:grid-cols-2" aria-label="Post navigation">
+      {prevPost ? (
+        <a
+          href={`/blog/${prevPost.id}`}
+          class="group flex flex-col p-4 rounded-xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/50 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all text-left shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+        >
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-[#a89d89] dark:text-zinc-500 mb-1 flex items-center gap-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
+            &larr; Previous publication
+          </span>
+          <span class="text-sm font-bold text-[#1c1915] dark:text-zinc-200 group-hover:text-brand-700 dark:group-hover:text-brand-300 line-clamp-2 transition-colors">
+            {prevPost.data.title}
+          </span>
+        </a>
+      ) : (
+        <div class="hidden sm:block" />
+      )}
+
+      {nextPost && (
+        <a
+          href={`/blog/${nextPost.id}`}
+          class="group flex flex-col p-4 rounded-xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/50 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all text-right sm:text-right shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+        >
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-[#a89d89] dark:text-zinc-500 mb-1 flex items-center justify-end gap-1 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
+            Next publication &rarr;
+          </span>
+          <span class="text-sm font-bold text-[#1c1915] dark:text-zinc-200 group-hover:text-brand-700 dark:group-hover:text-brand-300 line-clamp-2 transition-colors">
+            {nextPost.data.title}
+          </span>
+        </a>
+      )}
+    </nav>
+  )
+}
