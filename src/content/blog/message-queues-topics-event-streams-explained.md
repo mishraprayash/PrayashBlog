@@ -178,7 +178,7 @@ Partition 0 Log (Disk)
 * **Strict Ordering via Partition Keys**: While a queue does not guarantee total ordering across parallel workers, an Event Stream guarantees **strict sequential ordering per partition key** (e.g., all events with `partitionKey: orderId` go to the same partition and are processed in exact chronological order).
 
 ### Real-World Scenario: Financial Ledgers & Event-Driven Microservices
-In banking, every state transition (Account Created $\rightarrow$ Deposit Submitted $\rightarrow$ Compliance Verified $\rightarrow$ Funds Credited) is recorded in an immutable ledger stream. Even if a downstream accounting service crashes for 4 hours, it wakes up, reads from its last committed offset, and catches up with zero data loss.
+In banking, every state transition (Account Created → Deposit Submitted → Compliance Verified → Funds Credited) is recorded in an immutable ledger stream. Even if a downstream accounting service crashes for 4 hours, it wakes up, reads from its last committed offset, and catches up with zero data loss.
 
 ### Code Example: Kafka Producer with Partition Keys
 ```typescript
@@ -239,7 +239,7 @@ In production enterprise architecture, you rarely use Pub/Sub topics in isolatio
 
 **The Pitfall of Pure Topics**: If an SNS topic invokes microservices directly via HTTP webhooks, a sudden spike of 50,000 signups will flood and crash your downstream web servers. Furthermore, if an HTTP endpoint is down, the message is lost.
 
-**The Solution: SNS $\rightarrow$ SQS Fan-Out**:
+**The Solution: SNS → SQS Fan-Out**:
 You publish to a central Topic, but each subscriber subscribes **its own dedicated Message Queue** to that topic:
 
 ```
