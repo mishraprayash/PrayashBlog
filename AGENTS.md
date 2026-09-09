@@ -19,7 +19,7 @@ npm run build
 - **Astro & Tailwind:** Built using Astro v7 and Tailwind CSS v4 (configured via `@tailwindcss/vite` plugin in `astro.config.mjs`).
 - **Content Schema:** Blog posts are defined in `src/content.config.ts` using the Astro Content Loader API. They load from markdown files in `src/content/blog/`. Media is uploaded to `public/images/uploads` and served from `/images/uploads`. When adding or editing blog content, ensure you match the schema rules:
   - Required frontmatter: `title`, `slug` (lowercase, numbers, hyphens), `description`, `publishDate` (as `YYYY-MM-DDTHH:mm:ssZ`), `author`, `tags` (array), `featuredImage` (path starting with `/images/uploads/`), `featuredImageAlt`, and `draft` (boolean).
-  - Optional frontmatter: `updatedDate`, `category` (enum: `engineering`, `design`, `tutorial`, `opinion`, `career`).
+  - Optional frontmatter: `updatedDate`, `updateSummary` (concise changelog note explaining what was updated), `category` (enum: `engineering`, `design`, `tutorial`, `opinion`, `career`).
 
 ## Blog Writing Style
 

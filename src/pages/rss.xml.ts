@@ -9,9 +9,11 @@ export async function GET(context: APIContext) {
     return true;
   });
 
-  posts.sort(
-    (a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime()
-  );
+  posts.sort((a, b) => {
+    const dateA = a.data.updatedDate ? Math.max(a.data.publishDate.getTime(), a.data.updatedDate.getTime()) : a.data.publishDate.getTime();
+    const dateB = b.data.updatedDate ? Math.max(b.data.publishDate.getTime(), b.data.updatedDate.getTime()) : b.data.publishDate.getTime();
+    return dateB - dateA;
+  });
 
   const site = context.site ?? "https://prayashmishra.com";
 
@@ -22,7 +24,9 @@ export async function GET(context: APIContext) {
       const html = await container.renderToString(Content);
       return {
         title: post.data.title,
-        description: post.data.description,
+        description: post.data.updateSummary
+          ? `[Updated: ${post.data.updateSummary}] ${post.data.description}`
+          : post.data.description,
         pubDate: post.data.publishDate,
         link: new URL(`/blog/${post.id}`, site).toString(),
         categories: post.data.tags,

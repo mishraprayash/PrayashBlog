@@ -7,9 +7,11 @@ const allPosts = await getCollection("blog", ({ data }) => {
   return true;
 });
 
-const publishedPosts = allPosts.sort(
-  (a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime()
-);
+const publishedPosts = allPosts.sort((a, b) => {
+  const dateA = a.data.updatedDate ? Math.max(a.data.publishDate.getTime(), a.data.updatedDate.getTime()) : a.data.publishDate.getTime();
+  const dateB = b.data.updatedDate ? Math.max(b.data.publishDate.getTime(), b.data.updatedDate.getTime()) : b.data.publishDate.getTime();
+  return dateB - dateA;
+});
 
 const featuredPost = publishedPosts[0];
 const remainingPosts = publishedPosts.slice(1);
@@ -107,7 +109,7 @@ const remainingPosts = publishedPosts.slice(1);
                   {featuredPost.data.category}
                 </span>
               )}
-              <span>&middot;</span>
+              {featuredPost.data.category && <span>&middot;</span>}
               <time datetime={featuredPost.data.publishDate.toISOString()}>
                 {featuredPost.data.publishDate.toLocaleDateString("en-US", {
                   year: "numeric",
@@ -115,6 +117,12 @@ const remainingPosts = publishedPosts.slice(1);
                   day: "numeric",
                 })}
               </time>
+              {featuredPost.data.updatedDate && (
+                <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${featuredPost.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Updated {featuredPost.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+              )}
             </div>
 
             <h3 class="text-2xl sm:text-3xl font-black text-[#1c1915] dark:text-zinc-50 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-3 leading-tight">
@@ -163,7 +171,7 @@ const remainingPosts = publishedPosts.slice(1);
               href={`/blog/${post.id}`}
               class="group flex flex-col p-5 sm:p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/30 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
             >
-              <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-2.5">
+              <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-2.5 flex-wrap">
                 <time datetime={post.data.publishDate.toISOString()}>
                   {post.data.publishDate.toLocaleDateString("en-US", {
                     year: "numeric",
@@ -171,6 +179,12 @@ const remainingPosts = publishedPosts.slice(1);
                     day: "numeric",
                   })}
                 </time>
+                {post.data.updatedDate && (
+                  <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Updated {post.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                )}
                 {post.data.category && (
                   <>
                     <span>&middot;</span>
