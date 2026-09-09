@@ -15,12 +15,12 @@ draft: false
 
 Early in my backend engineering career, terms like **Queue**, **Topic**, **Pub/Sub**, and **Stream** all sounded like minor variations of the same thing: *a box in the middle where you drop a message and someone else picks it up asynchronously*.
 
-That vagueness led to some painful architectural mistakes:
-* Deploying a multi-broker Apache Kafka cluster just to send background password-reset emails.
-* Using Redis Pub/Sub for billing notifications, only to drop critical invoices whenever a subscriber container restarted during a rolling deploy.
-* Funneling variable-duration video transcoding jobs into Kafka partitions, creating catastrophic head-of-line blocking where a 4-hour encode froze thousands of 5-second jobs trapped behind it.
+In practice, that vagueness leads to very real architectural friction:
+* Reaching for Redis `PUBLISH`/`SUBSCRIBE` because Redis is already in the stack as a cache, only to discover that disconnected subscribers silently drop messages during deployments or network blips.
+* Introducing a streaming platform like Kafka for simple background jobs (like sending emails or syncing records), only to spend weeks wrestling with partition counts, consumer group rebalances, and offset commits for a workload that just needed a basic task queue.
+* Assuming a queue guarantees that every task runs exactly once, only to find duplicate charges or duplicate emails in production because a slow worker exceeded its visibility timeout before acknowledging.
 
-The root cause of these mistakes was simple: **I was confusing architectural messaging patterns with the tools that implement them.**
+The root cause of this confusion is simple: **conflating architectural messaging patterns with the tools that implement them.**
 
 A queue is not SQS; a stream is not Kafka; a topic is not SNS. A queue is an abstract pattern for distributing work; a stream is an abstract pattern for an append-only log. Many modern tools can actually implement or emulate multiple patterns depending on how you configure them.
 
@@ -161,7 +161,7 @@ When you need both **high-throughput work distribution** and **per-entity sequen
 
 By partitioning on `accountId`, all transactions for Account #123 land in the same partition and are processed strictly in arrival order by one worker. Meanwhile, transactions for Account #456 run concurrently on another worker.
 
-**The catch to avoid**: Never route variable-duration tasks (like video encoding or PDF rendering) through Kafka partitions. Because a partition is strictly sequential, one slow 30-minute render blocks every subsequent job in that partition (**head-of-line blocking**). Use a dynamic message queue (SQS, BullMQ) for variable-duration work.
+**The catch to watch out for**: Be cautious with tasks that have wildly unpredictable execution times (e.g., a fast cache sync vs. a heavy report export). Because a partition is strictly sequential, a single slow task stalls all subsequent tasks assigned to that partition (**head-of-line blocking**). For tasks with high variance in runtime, a dynamic message queue (SQS, BullMQ) distributes work much more smoothly.
 
 ---
 
@@ -192,9 +192,9 @@ Instead of memorizing complex vendor comparison matrices, I walk through these f
 * If you need to **broadcast an announcement** to decoupled systems: **Choose a Pub/Sub Topic** (AWS SNS, Google Cloud Pub/Sub). *Rule of thumb*: subscribe queues to that topic for heavy consumers.
 * If you need to **record an ordered sequence of state changes** that multiple consumers read at different speeds and replay on demand: **Choose an Event Stream** (Kafka, Redpanda).
 
-### 2. What happens if a job takes 10 minutes instead of 10 milliseconds?
-* If tasks have **variable execution times**, stick with a **Message Queue**. Competing consumers will naturally bypass long-running jobs to keep the queue moving.
-* If you put variable-duration tasks into an **Event Stream**, you will trigger partition head-of-line blocking.
+### 2. What happens when task runtimes vary widely?
+* If tasks have **unpredictable or variable execution times** (e.g., 50ms vs. 30 seconds), stick with a **Message Queue**. Idle workers dynamically pull tasks as capacity frees up without getting stuck behind a slow job.
+* If you route variable-duration tasks into an **Event Stream**, a slow task in a partition stalls all subsequent events assigned to that partition.
 
 ### 3. Will you ever need to rewind and re-read data?
 * If yes, you need an **Event Stream**. Message queues permanently discard data on ACK.
