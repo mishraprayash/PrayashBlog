@@ -1,5 +1,5 @@
 ---
-title: "Mastering k9s: The Senior Engineer’s Guide to Production Kubernetes Debugging"
+title: "Production Kubernetes Debugging with k9s: Shortcuts, Cloud Auth, and Triage Workflows"
 slug: "mastering-k9s-kubernetes-terminal-ui-guide"
 description: "Stop copy-pasting pod hashes: how to connect k9s to AWS EKS, Azure AKS, and GCP GKE, master high-velocity hotkeys, port-forward on the fly, and harden production with read-only modes."
 publishDate: "2026-08-28T10:00:00Z"
@@ -58,7 +58,7 @@ Instead, **k9s is a lightweight local Go binary that consumes your existing `~/.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Because k9s relies directly on your active kubeconfig, **any cluster you can reach with `kubectl` can be managed seamlessly with k9s**.
+Because k9s relies directly on your active kubeconfig, **any cluster you can reach with `kubectl` works out of the box in k9s without special plugins**.
 
 ---
 

@@ -15,7 +15,7 @@ In **[Part 1: Docker Fundamentals & Single-Stage Best Practices](/blog/architect
 
 If your production container ships with the TypeScript compiler, test frameworks, and raw source code, your image will exceed **1.2GB**, increasing cold-start container pull times in Kubernetes and widening your security attack surface.
 
-In this guide, we master **Multi-Stage Builds**, **BuildKit cache mounts**, **drastic image size reduction**, and explore the obscure **kernel-level production traps** that break optimized containers.
+In this guide, we'll build a production 3-stage pipeline, configure BuildKit cache mounts, and look at the kernel-level edge cases that cause subtle bugs when stripping down images.
 
 ---
 

@@ -17,7 +17,7 @@ If your NestJS service needed pub/sub, you imported an AMQP or Kafka client, wro
 
 **Dapr (Distributed Application Runtime)** shifts this paradigm. Instead of pulling cloud SDKs into your Node.js runtime, Dapr provides **language-agnostic distributed building blocks via a companion sidecar process**.
 
-In this 4-part series, we explore how to architect production-grade, cloud-native microservices by marrying NestJS with Dapr. 
+In this 4-part series, we'll walk through marrying NestJS with Dapr sidecars in real Kubernetes clusters. 
 
 ---
 

@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { getSeriesForPost } from "../data/series";
 
 const allPosts = await getCollection("blog", ({ data }) => {
   if (import.meta.env.PROD) return !data.draft;
@@ -14,6 +15,7 @@ const publishedPosts = allPosts.sort((a, b) => {
 });
 
 const featuredPost = publishedPosts[0];
+const featuredSeriesInfo = featuredPost ? getSeriesForPost(featuredPost.id) : undefined;
 const remainingPosts = publishedPosts.slice(1);
 ---
 
@@ -123,6 +125,16 @@ const remainingPosts = publishedPosts.slice(1);
                   Updated {featuredPost.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </span>
               )}
+              {featuredSeriesInfo && (
+                <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-800 dark:text-brand-300 font-semibold border border-brand-200 dark:border-brand-500/20">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                    <path d="M6 6h10"></path>
+                    <path d="M6 10h10"></path>
+                  </svg>
+                  {featuredSeriesInfo.series.shortTitle} &middot; Part {featuredSeriesInfo.part} of {featuredSeriesInfo.total}
+                </span>
+              )}
             </div>
 
             <h3 class="text-2xl sm:text-3xl font-black text-[#1c1915] dark:text-zinc-50 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-3 leading-tight">
@@ -166,34 +178,46 @@ const remainingPosts = publishedPosts.slice(1);
 
       <div class="grid gap-6 sm:grid-cols-2">
         {
-          remainingPosts.map((post) => (
-            <a
-              href={`/blog/${post.id}`}
-              class="group flex flex-col p-5 sm:p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/30 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-2.5 flex-wrap">
-                <time datetime={post.data.publishDate.toISOString()}>
-                  {post.data.publishDate.toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </time>
-                {post.data.updatedDate && (
-                  <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Updated {post.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                )}
-                {post.data.category && (
-                  <>
-                    <span>&middot;</span>
-                    <span class="uppercase tracking-wider text-[10px] font-mono font-semibold text-brand-700 dark:text-brand-300">
-                      {post.data.category}
+          remainingPosts.map((post) => {
+            const seriesInfo = getSeriesForPost(post.id);
+            return (
+              <a
+                href={`/blog/${post.id}`}
+                class="group flex flex-col p-5 sm:p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/30 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
+              >
+                <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-2.5 flex-wrap">
+                  <time datetime={post.data.publishDate.toISOString()}>
+                    {post.data.publishDate.toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </time>
+                  {post.data.updatedDate && (
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Updated {post.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </span>
-                  </>
-                )}
-              </div>
+                  )}
+                  {seriesInfo && (
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-800 dark:text-brand-300 font-semibold border border-brand-200 dark:border-brand-500/20">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                        <path d="M6 6h10"></path>
+                        <path d="M6 10h10"></path>
+                      </svg>
+                      {seriesInfo.series.shortTitle} &middot; Part {seriesInfo.part} of {seriesInfo.total}
+                    </span>
+                  )}
+                  {post.data.category && (
+                    <>
+                      <span>&middot;</span>
+                      <span class="uppercase tracking-wider text-[10px] font-mono font-semibold text-brand-700 dark:text-brand-300">
+                        {post.data.category}
+                      </span>
+                    </>
+                  )}
+                </div>
 
               <h3 class="text-lg font-bold text-[#1c1915] dark:text-zinc-100 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-2 leading-snug line-clamp-2">
                 {post.data.title}
@@ -211,8 +235,9 @@ const remainingPosts = publishedPosts.slice(1);
                 ))}
               </div>
             </a>
-          ))
-        }
+          );
+        })
+      }
       </div>
     </section>
   </div>

@@ -6,7 +6,7 @@ publishDate: "2026-08-25T10:00:00Z"
 updatedDate: "2026-09-09T22:50:00Z"
 updateSummary: "Refactored to be significantly more compact and experience-driven: removed textbook definitions, focused on practical trade-offs (consumer models, retention, ordering, and redeliveries), and streamlined the decision guide."
 author: "Prayash Mishra"
-tags: ["architecture", "backend", "microservices", "kafka", "rabbitmq", "aws"]
+tags: ["architecture", "backend", "distributed-systems", "microservices", "kafka", "rabbitmq", "aws"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Comparison architecture diagram showing Message Queues, Pub/Sub Topics, and Event Streams"
@@ -74,7 +74,7 @@ A common trap I see engineers fall into is demanding "strict chronological FIFO 
 
 In distributed systems, strict global ordering requires serializing all writes through a single coordinator, destroying horizontal scalability. In practice, ordering is always **scoped**:
 * **In Streams (Kafka / Kinesis)**: Ordering is guaranteed strictly **within a single partition**, dictated by the broker's append sequence. 
-* **Crucial Caveat**: Broker partition order is **not necessarily business-time order**. If a client's network connection drops and retries an event from `12:00:01`, a subsequent event from `12:00:02` might reach the broker first and receive a lower offset.
+* **Watch out**: Broker partition order is **not necessarily business-time order**. If a client's network connection drops and retries an event from `12:00:01`, a subsequent event from `12:00:02` might reach the broker first and receive a lower offset.
 * **In Queues (e.g., SQS FIFO)**: Ordering is scoped to a `MessageGroupId`. Messages with the same group ID process strictly in order; messages with different IDs run concurrently across worker pools.
 
 ### 4. Failure & Delivery Semantics: Why "Exactly-Once" is on You

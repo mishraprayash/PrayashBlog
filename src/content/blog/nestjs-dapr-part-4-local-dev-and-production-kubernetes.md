@@ -13,7 +13,7 @@ draft: false
 
 In **[Part 1](/blog/nestjs-dapr-core-fundamentals-architecture)**, **[Part 2](/blog/nestjs-dapr-nestjs-integration-service-invocation)**, and **[Part 3](/blog/nestjs-dapr-state-secrets-config-pubsub)** of this guide, we built a fully featured, event-driven NestJS microservices backend powered by Dapr.
 
-Now comes the critical operational milestone: **How do we run this seamlessly in local development, and how do we deploy and harden it for enterprise Kubernetes production?**
+Now comes the hard part: **How do we run this locally without pulling our hair out, and how do we harden it for enterprise Kubernetes production?**
 
 Here is the complete blueprint.
 

@@ -15,7 +15,7 @@ Most developers start using Docker by copy-pasting a generic `Dockerfile` from S
 
 When builds take 5 minutes, images balloon to 1.5GB, and containers fail mysteriously in production, it's usually because the developer treated Docker as a "lightweight virtual machine" rather than understanding how containers actually construct and cache filesystems.
 
-In this 2-part guide, we demystify Docker from the ground up:
+In this 2-part guide, we break down Docker mechanics from first principles:
 * **Part 1 (Current)**: Core container mechanics, layer caching, `.dockerignore` discipline, and crafting a clean, secure single-stage build.
 * **[Part 2](/blog/docker-production-traps-edge-cases)**: Transitioning to multi-stage builds, BuildKit cache mounts, radical image size reduction, and container runtime traps.
 
@@ -179,6 +179,6 @@ To solve this, we need **Multi-Stage Builds**.
 
 In **[Part 2: Docker Multi-Stage Builds – Layer Optimization & Image Size Reduction](/blog/docker-production-traps-edge-cases)**, we will:
 * Build a high-performance **3-stage pipeline** (`deps` → `builder` → `runner`).
-* Leverage **BuildKit cache mounts** (`--mount=type=cache`) to make CI installs instant.
+* Configure **BuildKit cache mounts** (`--mount=type=cache`) to make CI installs instant.
 * Reduce production container size from **1.2GB down to 130MB**.
 * Unpack real-world container traps: OverlayFS whiteouts, macOS bind-mount shadowing, and PID 1 zombie reaping.

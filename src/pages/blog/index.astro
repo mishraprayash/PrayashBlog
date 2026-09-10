@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { seriesCatalog, getSeriesForPost } from "../../data/series";
 
 const allPosts = await getCollection("blog", ({ data }) => {
   if (import.meta.env.PROD) return !data.draft;
@@ -14,11 +15,6 @@ allPosts.sort((a, b) => {
 });
 
 const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
-const selectedTag = Astro.url.searchParams.get("tag") ?? "";
-
-const filteredPosts = selectedTag
-  ? allPosts.filter((p) => p.data.tags.includes(selectedTag))
-  : allPosts;
 ---
 
 <BaseLayout
@@ -39,6 +35,29 @@ const filteredPosts = selectedTag
       </p>
     </header>
 
+    <!-- Active Series Banner (Controlled via Client-Side Filtering) -->
+    <div id="series-banner" class="hidden mb-8 rounded-2xl border border-brand-500/30 bg-brand-50/40 dark:bg-brand-950/20 p-6 shadow-sm">
+      <div class="flex items-center justify-between gap-4 flex-wrap mb-2">
+        <div class="inline-flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10"></path>
+            <path d="M6 10h10"></path>
+          </svg>
+          <span id="series-banner-badge">Series Collection</span>
+        </div>
+        <a
+          href="/blog"
+          id="series-banner-clear"
+          class="text-xs font-mono text-[#5c5344] dark:text-zinc-400 hover:text-brand-700 dark:hover:text-brand-300 hover:underline"
+        >
+          &times; Clear series filter
+        </a>
+      </div>
+      <h2 id="series-banner-title" class="text-xl sm:text-2xl font-bold text-[#1c1915] dark:text-zinc-50 mb-2"></h2>
+      <p id="series-banner-desc" class="text-sm text-[#5c5344] dark:text-zinc-300 leading-relaxed max-w-3xl"></p>
+    </div>
+
     <!-- Search & Filter Controls -->
     <div class="mb-10 space-y-4">
       <div class="relative max-w-md">
@@ -55,131 +74,229 @@ const filteredPosts = selectedTag
         />
       </div>
 
+      <!-- Curated Series Filter -->
+      <div class="space-y-1.5">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-[#7d7260] dark:text-zinc-500 flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+            <path d="M6 6h10"></path>
+            <path d="M6 10h10"></path>
+          </svg>
+          Series:
+        </div>
+        <nav class="flex flex-wrap gap-1.5" aria-label="Filter by series">
+          <a
+            href="/blog"
+            data-filter-link
+            data-series-button=""
+            class="inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-[#1c1915] text-white dark:bg-zinc-100 dark:text-zinc-900 border-transparent font-semibold shadow-sm"
+          >
+            all ({allPosts.length})
+          </a>
+          {
+            seriesCatalog.map((s) => (
+              <a
+                href={`/blog?series=${encodeURIComponent(s.id)}`}
+                data-filter-link
+                data-series-button={s.id}
+                class="inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
+              >
+                {s.shortTitle} <span class="opacity-70 text-[10px]">({s.posts.length})</span>
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+
+      <!-- Tag Filter -->
       {
         allTags.length > 0 && (
-          <nav class="flex flex-wrap gap-1.5" aria-label="Filter by tag">
-            <a
-              href="/blog"
-              class={`inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all ${
-                selectedTag === ""
-                  ? "bg-[#1c1915] text-white dark:bg-zinc-100 dark:text-zinc-900 border-transparent font-semibold shadow-sm"
-                  : "bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
-              }`}
-            >
-              all ({allPosts.length})
-            </a>
-            {
-              allTags.map((tag) => {
-                const count = allPosts.filter((p) => p.data.tags.includes(tag)).length;
-                return (
-                  <a
-                    href={`/blog?tag=${encodeURIComponent(tag)}`}
-                    class={`inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all ${
-                      selectedTag === tag
-                        ? "bg-brand-700 text-white border-brand-700 font-semibold shadow-sm"
-                        : "bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
-                    }`}
-                  >
-                    #{tag} <span class="opacity-60 text-[10px]">({count})</span>
-                  </a>
-                );
-              })
-            }
-          </nav>
+          <div class="space-y-1.5">
+            <div class="text-[11px] font-mono uppercase tracking-wider text-[#7d7260] dark:text-zinc-500">
+              Tags:
+            </div>
+            <nav class="flex flex-wrap gap-1.5" aria-label="Filter by tag">
+              {
+                allTags.map((tag) => {
+                  const count = allPosts.filter((p) => p.data.tags.includes(tag)).length;
+                  return (
+                    <a
+                      href={`/blog?tag=${encodeURIComponent(tag)}`}
+                      data-filter-link
+                      data-tag-button={tag}
+                      class="inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
+                    >
+                      #{tag} <span class="opacity-60 text-[10px]">({count})</span>
+                    </a>
+                  );
+                })
+              }
+            </nav>
+          </div>
         )
       }
     </div>
 
     <!-- Posts Grid -->
-    {
-      filteredPosts.length === 0 ? (
-        <div class="rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff]/60 dark:bg-zinc-900/40 p-12 text-center">
-          <p class="text-[#7d7260] dark:text-zinc-400 text-sm">
-            {selectedTag
-              ? `No publications tagged with "${selectedTag}".`
-              : "No publications found."}
-          </p>
-        </div>
-      ) : (
-        <div>
-          <div id="posts-grid" class="grid gap-6 sm:grid-cols-2">
-            {
-              filteredPosts.map((post) => (
-                <a
-                  href={`/blog/${post.id}`}
-                  data-search-target
-                  data-title={post.data.title.toLowerCase()}
-                  data-description={post.data.description.toLowerCase()}
-                  data-tags={post.data.tags.join(" ").toLowerCase()}
-                  class="group flex flex-col p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
-                >
-                  <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-3 flex-wrap">
-                    <time datetime={post.data.publishDate.toISOString()}>
-                      {post.data.publishDate.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </time>
-                    {post.data.updatedDate && (
-                      <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Updated {post.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+    <div>
+      <div id="posts-grid" class="grid gap-6 sm:grid-cols-2">
+        {
+          allPosts.map((post) => {
+            const seriesInfo = getSeriesForPost(post.id);
+            return (
+              <a
+                href={`/blog/${post.id}`}
+                data-post-card
+                data-title={post.data.title.toLowerCase()}
+                data-description={post.data.description.toLowerCase()}
+                data-tags={post.data.tags.join(",").toLowerCase()}
+                data-series-id={seriesInfo ? seriesInfo.series.id : ""}
+                data-series-part={seriesInfo ? String(seriesInfo.part) : ""}
+                data-series-name={seriesInfo ? `${seriesInfo.series.title} ${seriesInfo.series.shortTitle}`.toLowerCase() : ""}
+                class="group flex flex-col p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
+              >
+                <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-3 flex-wrap">
+                  <time datetime={post.data.publishDate.toISOString()}>
+                    {post.data.publishDate.toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </time>
+                  {post.data.updatedDate && (
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Updated {post.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                  {seriesInfo && (
+                    <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-800 dark:text-brand-300 font-semibold border border-brand-200 dark:border-brand-500/20">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+                        <path d="M6 6h10"></path>
+                        <path d="M6 10h10"></path>
+                      </svg>
+                      {seriesInfo.series.shortTitle} &middot; Part {seriesInfo.part} of {seriesInfo.total}
+                    </span>
+                  )}
+                  {post.data.category && (
+                    <>
+                      <span>&middot;</span>
+                      <span class="uppercase tracking-wider text-[10px] font-mono font-semibold text-brand-700 dark:text-brand-300">
+                        {post.data.category}
                       </span>
-                    )}
-                    {post.data.category && (
-                      <>
-                        <span>&middot;</span>
-                        <span class="uppercase tracking-wider text-[10px] font-mono font-semibold text-brand-700 dark:text-brand-300">
-                          {post.data.category}
-                        </span>
-                      </>
-                    )}
-                  </div>
+                    </>
+                  )}
+                </div>
 
-                  <h2 class="text-lg sm:text-xl font-bold text-[#1c1915] dark:text-zinc-100 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-2.5 leading-snug">
-                    {post.data.title}
-                  </h2>
+                <h2 class="text-lg sm:text-xl font-bold text-[#1c1915] dark:text-zinc-100 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-2.5 leading-snug">
+                  {post.data.title}
+                </h2>
 
-                  <p class="text-xs sm:text-sm text-[#5c5344] dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4 flex-grow">
-                    {post.data.description}
-                  </p>
+                <p class="text-xs sm:text-sm text-[#5c5344] dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4 flex-grow">
+                  {post.data.description}
+                </p>
 
-                  <div class="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-[#f4eee3] dark:border-zinc-800/60">
-                    {post.data.tags.map((tag) => (
-                      <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f4eee3] dark:bg-zinc-800 text-[#5c5344] dark:text-zinc-400 border border-[#e8e2d5]/60 dark:border-transparent">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </a>
-              ))
-            }
-          </div>
-          <div id="no-results-message" class="hidden rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/40 p-12 text-center mt-6">
-            <p class="text-[#7d7260] dark:text-zinc-400 text-sm">No publications matched your search query.</p>
-          </div>
-        </div>
-      )
-    }
+                <div class="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-[#f4eee3] dark:border-zinc-800/60">
+                  {post.data.tags.map((tag) => (
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f4eee3] dark:bg-zinc-800 text-[#5c5344] dark:text-zinc-400 border border-[#e8e2d5]/60 dark:border-transparent">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </a>
+            );
+          })
+        }
+      </div>
+
+      <div id="no-results-message" class="hidden rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/40 p-12 text-center mt-6">
+        <p class="text-[#7d7260] dark:text-zinc-400 text-sm">No publications matched your current filter.</p>
+      </div>
+    </div>
   </div>
 
+  <!-- Series metadata for client script -->
+  <script id="series-data" type="application/json" set:html={JSON.stringify(seriesCatalog)} />
+
   <script is:inline>
-    const searchInput = document.getElementById("search-input");
-    const posts = document.querySelectorAll("[data-search-target]");
-    const noResultsMessage = document.getElementById("no-results-message");
+    (function () {
+      const searchInput = document.getElementById("search-input");
+      const posts = Array.from(document.querySelectorAll("[data-post-card]"));
+      const postsGrid = document.getElementById("posts-grid");
+      const noResultsMessage = document.getElementById("no-results-message");
 
-    if (searchInput) {
-      searchInput.addEventListener("input", (e) => {
-        const query = e.target.value.toLowerCase().trim();
+      const seriesBanner = document.getElementById("series-banner");
+      const seriesBannerBadge = document.getElementById("series-banner-badge");
+      const seriesBannerTitle = document.getElementById("series-banner-title");
+      const seriesBannerDesc = document.getElementById("series-banner-desc");
+
+      const seriesButtons = document.querySelectorAll("[data-series-button]");
+      const tagButtons = document.querySelectorAll("[data-tag-button]");
+
+      const seriesDataElement = document.getElementById("series-data");
+      const catalog = seriesDataElement ? JSON.parse(seriesDataElement.textContent || "[]") : [];
+
+      const initialOrder = [...posts];
+
+      function applyFilters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeSeriesId = urlParams.get("series") || "";
+        const activeTag = (urlParams.get("tag") || "").toLowerCase().trim();
+        const query = (searchInput?.value || "").toLowerCase().trim();
+
+        // 1. Update Series Buttons active state
+        seriesButtons.forEach((btn) => {
+          const btnSeries = btn.getAttribute("data-series-button");
+          const isActive = (btnSeries === "" && !activeSeriesId && !activeTag) || (btnSeries !== "" && btnSeries === activeSeriesId);
+          if (isActive) {
+            btn.className = "inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-brand-700 text-white border-brand-700 font-semibold shadow-sm";
+          } else {
+            btn.className = "inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50";
+          }
+        });
+
+        // 2. Update Tag Buttons active state
+        tagButtons.forEach((btn) => {
+          const btnTag = (btn.getAttribute("data-tag-button") || "").toLowerCase().trim();
+          const isActive = (btnTag === activeTag);
+          if (isActive) {
+            btn.className = "inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-brand-700 text-white border-brand-700 font-semibold shadow-sm";
+          } else {
+            btn.className = "inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50";
+          }
+        });
+
+        // 3. Update Series Banner
+        const currentSeries = catalog.find((s) => s.id === activeSeriesId);
+        if (currentSeries && seriesBanner) {
+          seriesBanner.classList.remove("hidden");
+          if (seriesBannerBadge) seriesBannerBadge.textContent = `Series Collection · ${currentSeries.posts.length} Parts`;
+          if (seriesBannerTitle) seriesBannerTitle.textContent = currentSeries.title;
+          if (seriesBannerDesc) seriesBannerDesc.textContent = currentSeries.description;
+        } else if (seriesBanner) {
+          seriesBanner.classList.add("hidden");
+        }
+
+        // 4. Filter Posts
         let visibleCount = 0;
-
         posts.forEach((post) => {
           const title = post.getAttribute("data-title") || "";
           const description = post.getAttribute("data-description") || "";
-          const tags = post.getAttribute("data-tags") || "";
+          const rawTags = post.getAttribute("data-tags") || "";
+          const tags = rawTags.split(",").map(t => t.trim());
+          const seriesId = post.getAttribute("data-series-id") || "";
+          const seriesName = post.getAttribute("data-series-name") || "";
 
-          if (title.includes(query) || description.includes(query) || tags.includes(query)) {
+          const matchesSeries = !activeSeriesId || seriesId === activeSeriesId;
+          const matchesTag = !activeTag || tags.includes(activeTag);
+          const matchesQuery = !query || 
+            title.includes(query) || 
+            description.includes(query) || 
+            tags.some((t) => t.includes(query)) || 
+            seriesName.includes(query);
+
+          if (matchesSeries && matchesTag && matchesQuery) {
             post.classList.remove("hidden");
             visibleCount++;
           } else {
@@ -187,12 +304,53 @@ const filteredPosts = selectedTag
           }
         });
 
-        if (visibleCount === 0 && query !== "") {
+        // 5. Order visible posts: sequential by part for series, original chronological when cleared
+        if (postsGrid) {
+          if (currentSeries) {
+            const seriesCards = posts.filter((p) => p.getAttribute("data-series-id") === activeSeriesId);
+            seriesCards.sort((a, b) => {
+              const partA = parseInt(a.getAttribute("data-series-part") || "0", 10);
+              const partB = parseInt(b.getAttribute("data-series-part") || "0", 10);
+              return partA - partB;
+            });
+            seriesCards.forEach((card) => postsGrid.appendChild(card));
+          } else {
+            initialOrder.forEach((card) => postsGrid.appendChild(card));
+          }
+        }
+
+        // 6. Handle No Results State
+        if (visibleCount === 0) {
           noResultsMessage?.classList.remove("hidden");
         } else {
           noResultsMessage?.classList.add("hidden");
         }
+      }
+
+      // Intercept filter links for instant client-side transitions
+      document.querySelectorAll("[data-filter-link]").forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          const href = link.getAttribute("href") || "/blog";
+          history.pushState({}, "", href);
+          applyFilters();
+        });
       });
-    }
+
+      document.getElementById("series-banner-clear")?.addEventListener("click", (e) => {
+        e.preventDefault();
+        history.pushState({}, "", "/blog");
+        applyFilters();
+      });
+
+      // Listen for browser back/forward navigation
+      window.addEventListener("popstate", applyFilters);
+
+      // Listen for search input typing
+      searchInput?.addEventListener("input", applyFilters);
+
+      // Run on page load immediately
+      applyFilters();
+    })();
   </script>
 </BaseLayout>

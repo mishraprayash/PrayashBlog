@@ -1,5 +1,5 @@
 ---
-title: "Demystifying TLS in Node.js: Handshake Mechanics, Event-Loop Stalls, and Cert Chain Traps"
+title: "TLS in Node.js: Handshake Mechanics, Event-Loop Stalls, and Cert Chain Traps"
 slug: "demystifying-ssl-tls-node-https"
 description: "A practical deep dive into Node.js TLS termination: how handshakes impact the event loop, why AIA chasing hides missing intermediate certs, and handling live cert rotation without downtime."
 publishDate: "2026-05-10T10:00:00Z"
@@ -147,7 +147,7 @@ setInterval(async () => {
 
 ---
 
-## 4. Crucial Production Checklist
+## 4. Production Hardening Rules
 
 1. **Terminate TLS at the Reverse Proxy when possible**: Offloading TLS to Nginx, Caddy, or an ALB saves Node's single thread from handling heavy asymmetric crypto handshakes.
 2. **Never set `NODE_TLS_REJECT_UNAUTHORIZED=0`**: This globally disables certificate verification for *all* outbound HTTPS calls in your process, opening your backend to trivial Man-in-the-Middle (MITM) attacks.

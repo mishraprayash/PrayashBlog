@@ -5,72 +5,7 @@ export interface Props {
 
 const { currentSlug } = Astro.props;
 
-interface Series {
-  title: string;
-  description: string;
-  posts: { title: string; slug: string; part: number }[];
-}
-
-const seriesCatalog: Series[] = [
-  {
-    title: "Building Cloud-Native Microservices with NestJS and Dapr",
-    description: "A 4-part architectural blueprint for Dapr sidecars, service invocation, state/secrets/pubsub, and Kubernetes production.",
-    posts: [
-      {
-        part: 1,
-        title: "Part 1: Core Fundamentals & Architecture",
-        slug: "nestjs-dapr-core-fundamentals-architecture",
-      },
-      {
-        part: 2,
-        title: "Part 2: NestJS Module & Service Invocation",
-        slug: "nestjs-dapr-nestjs-integration-service-invocation",
-      },
-      {
-        part: 3,
-        title: "Part 3: State, Secrets, Config & Pub/Sub",
-        slug: "nestjs-dapr-state-secrets-config-pubsub",
-      },
-      {
-        part: 4,
-        title: "Part 4: Local Dev & Production Kubernetes",
-        slug: "nestjs-dapr-local-dev-production-kubernetes",
-      },
-    ],
-  },
-  {
-    title: "Building an AI-Powered WAF on Nginx",
-    description: "A 2-part deep dive on request-path ML inference, OpenResty cosockets, and production hardening.",
-    posts: [
-      {
-        part: 1,
-        title: "Part 1: The Architecture & Implementation",
-        slug: "nginx-lua-ai-waf-gatekeeper",
-      },
-      {
-        part: 2,
-        title: "Part 2: Traps, Bypasses, and Hardening",
-        slug: "nginx-lua-ai-waf-traps-bypasses",
-      },
-    ],
-  },
-  {
-    title: "Docker Mastery: From Fundamentals to Multi-Stage Pipelines",
-    description: "A 2-part guide to container mechanics, single-stage best practices, multi-stage layer optimization, and kernel traps.",
-    posts: [
-      {
-        part: 1,
-        title: "Part 1: Docker Fundamentals – Container Mechanics & Single-Stage Best Practices",
-        slug: "architecting-lightweight-docker-builds",
-      },
-      {
-        part: 2,
-        title: "Part 2: Docker Multi-Stage Builds – Layer Optimization & Image Size Reduction",
-        slug: "docker-production-traps-edge-cases",
-      },
-    ],
-  },
-];
+import { seriesCatalog } from "../data/series";
 
 const currentSeries = seriesCatalog.find((s) =>
   s.posts.some((p) => p.slug === currentSlug)

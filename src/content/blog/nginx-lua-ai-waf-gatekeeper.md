@@ -64,7 +64,7 @@ Three design decisions define this setup:
 Nginx evaluates requests through distinct phases:
 `post-read` → `rewrite` → `access` → `content` → `log`.
 
-When writing Lua in Nginx (via OpenResty), choosing the right phase directive is crucial:
+When writing Lua in Nginx (via OpenResty), picking the wrong phase directive will immediately break your proxy setup:
 
 * ❌ **`content_by_lua`**: Nginx allows **only one content handler** per `location`. If you define both `content_by_lua` and `proxy_pass`, Nginx throws a conflict error on reload.
 * ✅ **`access_by_lua_block`**: Runs in the `access` phase—after HTTP headers and body are received, but *before* the upstream handler executes. This is where security gates belong.

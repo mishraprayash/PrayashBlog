@@ -11,13 +11,13 @@ featuredImageAlt: "Direct media upload architecture using AWS S3 presigned URLs 
 draft: false
 ---
 
-Handling user media uploads—profile pictures, high-resolution videos, PDFs, and data exports—is a universal requirement for web and mobile backends.
+Streaming 50MB file uploads through your Node.js API servers will eventually bring down your cluster.
 
-Yet, many backends still handle file uploads by streaming multipart form data directly through their API server. In a high-traffic production environment, this approach quickly leads to **V8 memory exhaustion, saturated network I/O, and server scaling bottlenecks**.
+A few simultaneous 4K video uploads arrive. Memory buffers spike. The V8 garbage collector starts thrashing. Event-loop latency creeps past 2,000ms. Unrelated HTTP health checks fail, and Kubernetes starts terminating pods.
 
-The industry standard solution is **Direct-to-Storage Uploading via Presigned URLs**.
+The fix isn't allocating more RAM to your API pods. It's getting file bytes off your app servers entirely.
 
-Here is the complete architectural comparison, the cryptographic mechanics of AWS Signature Version 4 (SigV4), security boundaries, and a production NestJS implementation.
+With presigned URLs, your backend only ever handles tiny JSON authorization payloads—signing an S3 upload URL in under 5 milliseconds—while the client streams raw bytes directly to object storage.
 
 ---
 

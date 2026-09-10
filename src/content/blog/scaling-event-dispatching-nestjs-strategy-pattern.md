@@ -470,7 +470,7 @@ await this.smsQueue.add('send-sms', payload, {
 
 ---
 
-## Summary Architecture Checklist
+## Production Rules: What to Enforce
 
 * **Polymorphic DTOs**: Use `@Type` with discriminators to validate dynamic payloads at runtime.
 * **Tier 1 Strategy Registry**: Isolate top-level channels (Email, SMS, Webhooks) into testable strategy classes.
