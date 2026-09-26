@@ -4,7 +4,7 @@ slug: "docker-production-traps-edge-cases"
 description: "How to shrink container images from 1.2GB to 140MB using multi-stage builds, BuildKit cache mounts, production pruning, and handling Linux kernel whiteout traps."
 publishDate: "2026-06-04T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["docker", "devops", "backend", "containers", "node", "production"]
+tags: ["docker", "devops", "backend", "node"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Multi-stage Docker build pipeline diagram showing deps, builder, and minimal runner stages"
@@ -50,7 +50,7 @@ The resulting production image contains **only what is strictly necessary to run
 
 ## 2. Crafting a Production 3-Stage Dockerfile
 
-Here is the complete, production-grade 3-stage Dockerfile for a TypeScript / NestJS application:
+A 3-stage Dockerfile for a TypeScript / NestJS application:
 
 ```dockerfile
 # syntax=docker/dockerfile:1
@@ -82,7 +82,7 @@ COPY . .
 RUN npm run build
 
 # Prune devDependencies to keep only production packages
-RUN npm prune --production
+RUN npm prune --omit=dev
 
 # ==========================================
 # Stage 3: Production Runtime (runner)
@@ -110,7 +110,7 @@ CMD ["node", "dist/main.js"]
 
 ### 🔍 Deep Dive: Why this is Optimal
 1. **`COPY --from=deps /app/node_modules`**: The `builder` stage avoids re-running `npm ci`. It inherits the dependency layer from Stage 1.
-2. **`npm prune --production`**: Strips out hundreds of megabytes of build tools (`typescript`, `@types/*`, `jest`, `eslint`) before copying to Stage 3.
+2. **`npm prune --omit=dev`**: Strips out hundreds of megabytes of build tools (`typescript`, `@types/*`, `jest`, `eslint`) before copying to Stage 3. (`--production` is the deprecated spelling of this flag and warns on npm 7+.)
 3. **`COPY --chown=node:node`**: Sets file ownership directly during copy, avoiding an expensive subsequent `RUN chown -R node:node /app` that would duplicate the entire filesystem layer in OverlayFS!
 
 ---
@@ -195,8 +195,12 @@ CMD ["node", "dist/main.js"]
 
 ## Summary Architecture Checklist
 
-* [x] **3-Stage Build**: Separate `deps`, `builder`, and `runner` to ship only compiled artifacts.
-* [x] **Prune Dependencies**: Run `npm prune --production` to eliminate build-time tools.
-* [x] **BuildKit Cache Mounts**: Cache `/root/.npm` across builds for instant CI execution.
-* [x] **Glibc Reliability**: Standardize on `node:20-slim` to avoid `musl` stack traps.
-* [x] **Signal Forwarding**: Use `tini` or explicit `process.on('SIGTERM')` handlers for graceful zero-downtime shutdown.
+Claims to verify against your own build, not boxes to tick:
+
+* [ ] **3-Stage Build**: `deps`, `builder`, and `runner` are separate, and the final image contains compiled artifacts only — no `typescript`, no `node_modules/.bin`, no source.
+* [ ] **Prune Dependencies**: `npm prune --omit=dev` runs before the copy into `runner`, and `node_modules/typescript` is genuinely absent from the final image.
+* [ ] **BuildKit cache mounts**: `--mount=type=cache,target=/root/.npm` is in the `deps` stage, and a second build with an unchanged lockfile is measurably faster.
+* [ ] **Base image is glibc, not musl**: `node:20-slim`, not `node:20-alpine`. Confirm with `ldd --version` inside the image, and confirm your native modules (`better-sqlite3`, `sharp`, `node-gyp` builds) actually load.
+* [ ] **Deleting files in a later layer does not shrink the image**: check with `docker history` that you are not shipping a layer whose contents you deleted above it.
+* [ ] **Signals reach PID 1**: `tini` (or an explicit `SIGTERM` handler) is in place, and a `docker stop` actually drains in-flight requests.
+* [ ] **The image runs as non-root** and as a numeric UID, so Kubernetes `runAsNonRoot` does not trip over a missing passwd entry.

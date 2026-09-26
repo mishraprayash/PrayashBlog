@@ -4,7 +4,7 @@ slug: "architecting-lightweight-docker-builds"
 description: "Mastering Docker from first principles: container mechanics, immutable layer caching, .dockerignore setup, and crafting a secure, production-grade single-stage build."
 publishDate: "2026-05-28T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["docker", "devops", "backend", "containers", "node"]
+tags: ["docker", "devops", "backend", "node"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Docker container architecture, layer caching, and single-stage Dockerfile diagram"
@@ -134,7 +134,9 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 
 # 5. Clean install production-only dependencies
-RUN npm ci --only=production --ignore-scripts \
+#    --omit=dev is the current flag. `--only=production` is the deprecated
+#    alias: still honoured, but npm >=7 warns and it will be removed.
+RUN npm ci --omit=dev --ignore-scripts \
     && npm cache clean --force
 
 # 6. Copy application source code
@@ -154,9 +156,10 @@ CMD ["node", "server.js"]
 1. **Base Image Selection (`node:20-slim`)**:
    * Avoid full `node:20` (~1.1GB), which contains C++ build tools, Python, and graphics libraries you don't need in production.
    * `node:20-slim` (~190MB) provides the Debian glibc runtime while stripping out bloated compilation tools.
-2. **`npm ci --only=production`**:
-   * Uses `package-lock.json` for strictly reproducible, deterministic dependency installs.
-   * `--only=production` skips heavy testing and linting tools (`jest`, `eslint`, `prettier`).
+   * These sizes are approximate and move with every upstream tag. Measure your own with `docker image inspect node:20-slim --format '{{.Size}}'` and pin the digest if you need the number to stay true — `node:20-slim` is a moving target, so any size you quote in a doc is a snapshot of one particular build.
+2. **`npm ci --omit=dev`**:
+   * `npm ci` installs strictly from `package-lock.json`, so the image is byte-reproducible against a known lockfile — unlike `npm install`, which will silently resolve a newer version if the lockfile drifted.
+   * `--omit=dev` skips `devDependencies` (`jest`, `eslint`, `prettier`, `typescript`). **Do not use `--only=production`**: it is the deprecated spelling of this flag, npm 7+ prints a deprecation warning, and it is scheduled for removal. A build log full of warnings trains you to ignore build log warnings.
 3. **`USER node` (Non-Root Execution)**:
    * By default, Docker containers run as `root` (`UID 0`). If an attacker escapes a vulnerability in your Node app, they gain root access to the host. Switching to `USER node` drops privileges.
 4. **Exec Form (`CMD ["node", "server.js"]`) vs. Shell Form**:
@@ -181,4 +184,4 @@ In **[Part 2: Docker Multi-Stage Builds – Layer Optimization & Image Size Redu
 * Build a high-performance **3-stage pipeline** (`deps` → `builder` → `runner`).
 * Configure **BuildKit cache mounts** (`--mount=type=cache`) to make CI installs instant.
 * Reduce production container size from **1.2GB down to 130MB**.
-* Unpack real-world container traps: OverlayFS whiteouts, macOS bind-mount shadowing, and PID 1 zombie reaping.
+* Unpack real-world container traps: OverlayFS whiteouts that silently keep your deleted files, Alpine `musl` stack-size crashes, and PID 1 zombie reaping.

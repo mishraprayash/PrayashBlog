@@ -4,7 +4,7 @@ slug: "direct-media-uploads-s3-presigned-urls-nestjs"
 description: "Why proxying large file uploads through Node.js exhausts memory and bandwidth: exploring AWS SigV4 presigned URLs, MIME-type locking, and clean NestJS implementation."
 publishDate: "2026-08-23T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "aws", "s3", "architecture", "cloud", "backend"]
+tags: ["nestjs", "aws", "s3", "architecture", "backend"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Direct media upload architecture using AWS S3 presigned URLs in NestJS"
@@ -235,8 +235,13 @@ export class MediaStorageService {
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: storageKey,
+      // Signing content-type is safe: the client controls it and we hand the
+      // expected value back in the response so they can echo it exactly.
       ContentType: dto.contentType,
-      ContentLength: dto.fileSizeBytes, // Binds signature to exact size
+      // NOTE: do NOT set ContentLength here, and do NOT add 'content-length'
+      // to signableHeaders. See the pitfall below — it is the single most
+      // common cause of a 403 SignatureDoesNotMatch on uploads that work
+      // perfectly in Postman and curl.
       Metadata: {
         'uploaded-by': userId,
         'original-filename': encodeURIComponent(dto.fileName),
@@ -247,7 +252,7 @@ export class MediaStorageService {
       // Cryptographically sign the command
       const uploadUrl = await getSignedUrl(this.s3Client, command, {
         expiresIn: expiresInSeconds,
-        signableHeaders: new Set(['content-type', 'content-length']),
+        signableHeaders: new Set(['content-type']),
       });
 
       this.logger.log(`Generated presigned upload URL for user ${userId}: ${storageKey}`);
@@ -337,23 +342,144 @@ Because the client browser initiates an HTTP `PUT` directly to `https://my-bucke
 
 ---
 
-## 6. Real-World Limitations & Asynchronous Post-Processing
+## 6. Edge Cases
 
-While Presigned URLs solve the bandwidth and scalability bottlenecks of file uploads, they introduce new architectural trade-offs:
+Presigned uploads look simple and fail in ways that are not obvious until you
+have real users on real networks. These are the ones that actually page you.
 
-1. **Missing In-Line Virus Scanning & Image Resizing**:
-   * Because files bypass your API server, you cannot run Sharp image resizing or ClamAV virus scanning synchronously during the upload.
-   * **Solution**: Use **S3 Event Notifications → AWS SQS → NestJS Worker** (or AWS Lambda) to asynchronously generate thumbnails and scan files after upload.
-2. **Abandoned Uploads**:
-   * A user may request a presigned URL but close the browser before uploading, leaving orphaned keys or empty state.
-   * **Solution**: Use **S3 Lifecycle Rules** to automatically delete objects in `uploads/temp/` that are older than 24 hours if unconfirmed.
+### ⚠️ Pitfall: Signing `content-length` Breaks Every Browser Upload
+
+The original version of this service set `ContentLength` on the command and
+added `'content-length'` to `signableHeaders`, commented "Binds signature to
+exact size." It is a tempting idea and it is wrong.
+
+SigV4 works by hashing the headers you signed. Whatever appears in
+`X-Amz-SignedHeaders` **must arrive at S3 byte-for-byte identical** or the
+signature does not match and you get:
+
+```
+HTTP 403
+<Code>SignatureDoesNotMatch</Code>
+<Message>The request signature we calculated does not match the signature you provided. Check your key and signing method.</Message>
+```
+
+`Content-Length` is a **forbidden header name** in the Fetch spec. Your
+JavaScript cannot set it. The browser computes it from the body and, for a
+stream it cannot measure in advance, may switch to `Transfer-Encoding: chunked`
+and send no length at all. Either way the header you signed does not arrive, and
+the upload fails.
+
+**Symptom → cause → fix:** `403 SignatureDoesNotMatch` on every browser upload,
+while the identical `curl -T` from a terminal succeeds → `content-length` is in
+your `X-Amz-SignedHeaders` → remove it from both `PutObjectCommand` and
+`signableHeaders`. `curl` succeeds because it *can* set the header, which is
+exactly what makes this so confusing to debug.
+
+The legitimate worry behind the original comment — "a client could upload a
+100 GB object" — is real, and it is not solved by signing. See the next item.
+
+### ⚠️ Pitfall: The Presigned URL Does Not Enforce Your Size Limit
+
+`GeneratePresignedUrlDto` validates `fileSizeBytes` at the API boundary, and
+then that value is thrown away. Nothing binds it to the upload. A client can
+request a URL for "5 MB", ignore the response, and `PUT` a 5 GB object with the
+same valid signature. Your DTO validation is a suggestion.
+
+Three ways to actually enforce a ceiling, in increasing order of cost:
+
+| Approach | How | Trade-off |
+|---|---|---|
+| **Bucket policy** | `deny` any `PutObject` where `s3:content-length-range` exceeds your max | Strongest, no app changes, but a policy change is an infra change and the error surfaces to the client as `AccessDenied`, not a friendly 413 |
+| **POST policy** (`createPresignedPost`) | Conditions travel with the signature and are enforced atomically | The right answer for browser form uploads; requires `POST` to a generated form, not `PUT` to a URL |
+| **Quotas / `Content-Length` condition** | Narrow, awkward, still client-visible | Not worth it |
+
+For a `PUT`-based presigned URL, use the bucket policy. For a form upload, use a
+POST policy — it is the only one of these where the limit is enforced by the
+same signature that authorizes the upload.
+
+### ⚠️ Pitfall: `content-type` Must Match Exactly, Including Parameters
+
+If you sign `content-type: image/jpeg` and the browser sends
+`image/jpeg; charset=binary`, the header differs and you get another
+`SignatureDoesNotMatch`. This bites when the client derives the type from
+`File.type` rather than echoing the value you returned.
+
+Return the signed content type in your API response and have the client use
+that value verbatim. Do not let the client decide.
+
+```typescript
+// Client: use the server's value, not file.type
+await fetch(uploadUrl, {
+  method: 'PUT',
+  headers: { 'Content-Type': response.contentType },
+  body: file,
+});
+```
+
+`file.type` is also frequently the empty string for types the OS does not
+recognise, which produces a signed header of `""` and an immediate mismatch.
+
+### Edge case: files larger than the 5 GB single-`PUT` limit
+
+`PutObject` caps at 5 GB. Past that you need S3 multipart upload, which means
+`CreateMultipartUpload` / `UploadPart` / `CompleteMultipartUpload`, each part
+presigned separately, with the part numbers tracked client-side. A single
+presigned `PUT` URL cannot do it.
+
+"Direct media uploads **at scale**" means two different architectures depending
+on whether you need to cross 5 GB. Decide which one you are building before you
+promise it.
+
+### Edge case: abandoned uploads
+
+A user can request a URL and close the tab. Nothing is written, so there is no
+object to clean up — but if your flow is *confirm-then-orphan* rather than
+*upload-then-confirm*, you accumulate unreferenced rows in your database.
+Prefer a lifecycle rule on a `uploads/pending/` prefix as a backstop, and treat
+the database as the source of truth rather than the bucket listing.
+
+### Edge case: CORS failures masquerading as signature errors
+
+A preflight failure and a signature failure both surface in the browser console
+as a 403 on `PUT`. Check whether `OPTIONS` succeeded before you start reading
+SigV4. `ExposeHeaders` matters too: without it the browser cannot read
+`ETag` or `x-amz-version-id` from the response, so your client-side confirmation
+step has nothing to read.
+
+### Edge case: `us-east-1` path-style URLs are deprecated
+
+The example URL above is path-style:
+
+```
+https://my-bucket.s3.us-east-1.amazonaws.com/uploads/user-123/avatar.png
+```
+
+AWS is retiring path-style addressing. Use virtual-hosted style — the SDK
+produces it by default for most regions, so this is mostly a matter of not
+hand-constructing URLs, and of not assuming a custom endpoint resolver is
+required for `us-east-1` specifically.
+
+---
+
+## 7. Verifying the Upload
+
+`HeadObject` confirms the object exists, but existence is not integrity. If you
+care about the bytes — and for uploads you then serve to other users, you should
+— verify a checksum. Have the client compute one, send it, and have S3 verify it
+server-side rather than trusting a round trip through your own API.
 
 ---
 
 ## Summary Architecture Checklist
 
-* [x] **Zero Server Bandwidth**: Transfer media directly from client to S3 using HTTP `PUT`.
-* [x] **SigV4 Security**: Lock signed URLs with short expiration (300s) and strict `ContentType` headers.
-* [x] **DTO Perimeter Validation**: Validate MIME types and size limits in NestJS before generating URLs.
-* [x] **HeadObject Verification**: Verify file existence and non-zero byte length before persisting database records.
-* [x] **CORS Policy**: Enable `PUT` and `HEAD` methods on your S3 bucket for allowed origins.
+Verify each of these against your own deployment. They are claims to test, not
+boxes to tick.
+
+* [ ] **Zero server bandwidth**: media moves client → S3 over `PUT`; your API only signs and confirms.
+* [ ] **Short expiry**: 300s is a reasonable default. Confirm it is long enough for your slowest real connection on a large file, and short enough that a leaked URL is not a permanent write capability.
+* [ ] **`content-length` is not signed.** Check `X-Amz-SignedHeaders` in a generated URL and confirm the only entries are `host` and `content-type`.
+* [ ] **`content-type` is returned to the client** and echoed verbatim, not re-derived from `File.type`.
+* [ ] **Size limit is enforced by S3**, not only by the DTO. Confirm with a deliberately oversized `PUT`.
+* [ ] **Bucket CORS** permits `PUT`, `HEAD`, and `OPTIONS` from your origins, and `ExposeHeaders` includes `ETag`.
+* [ ] **Post-upload processing is wired** (S3 event → queue → worker) for virus scanning and thumbnailing, or you have accepted that uploaded files are unscanned.
+* [ ] **Abandoned uploads** are handled by a lifecycle rule or are a non-issue by design.

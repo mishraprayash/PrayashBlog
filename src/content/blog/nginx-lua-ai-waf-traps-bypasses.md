@@ -4,7 +4,7 @@ slug: "nginx-lua-ai-waf-traps-bypasses"
 description: "The hard lessons learned deploying an AI WAF: the silent get_body_data() disk-spill bypass, ephemeral socket exhaustion, zero-latency shared-memory circuit breakers, and adversarial evasion."
 publishDate: "2026-06-29T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nginx", "lua", "waf", "security", "ml", "openresty"]
+tags: ["nginx", "lua", "waf", "security", "ml"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Nginx Lua AI WAF edge cases, circuit breaker, and disk spillage diagram"
@@ -55,31 +55,74 @@ Content-Length: 20540
 Nginx buffers the body to disk. `ngx.req.get_body_data()` returns `nil`. The Lua gatekeeper falls back to `body = ""` (empty string), scores the request as safe, and passes the raw malicious 20KB payload straight to the backend!
 
 ### The Production Fix
-You must explicitly inspect `ngx.req.get_body_file()` when in-memory data is unavailable:
+You must explicitly inspect `ngx.req.get_body_file()` when in-memory data is unavailable — but **not** with `io.open`, which is the second half of this bug:
 
 ```lua
+-- ❌ WRONG. Fixes the bypass, introduces a worse one.
 local function get_sanitized_body()
-    -- 1. Try reading from memory buffer
     local body = ngx.req.get_body_data()
-    if body then
-        return body
-    end
+    if body then return body end
 
-    -- 2. Fallback: Read from the temporary disk spool file
     local body_file = ngx.req.get_body_file()
     if body_file then
-        local fh, err = io.open(body_file, "r")
+        local fh = io.open(body_file, "r")   -- BLOCKING syscall
         if fh then
-            -- Read up to our inspection budget (e.g., first 64KB)
             body = fh:read(65536)
             fh:close()
             return body or ""
         end
     end
-
     return ""
 end
 ```
+
+### ⚠️ Pitfall: `io.open` Is a Blocking Call in a Single-Threaded Event Loop
+
+OpenResty's Lua VM is single-threaded and cooperatively scheduled. Cosockets
+(`ngx.location.capture`, `httpc:*`, `ngx.timer`) yield, which is what lets one
+worker multiplex thousands of connections. The Lua standard library does not:
+`io.open`, `fh:read`, and `fh:close` are ordinary blocking syscalls that hold
+the worker until the kernel returns.
+
+Swap the bypass for a stall and the exploit gets easier. An attacker sends 200
+concurrent requests with 20 KB bodies. Nginx spools all 200 to disk. Every
+worker hits `io.open`/`read`/`close` and blocks. Those workers now serve
+*nothing* — not WAF inspection, not static assets, not health checks. You have
+replaced a request-scoped bypass with a worker-scoped denial of service, and
+you did it in the section labelled "the fix."
+
+**Symptom → cause → fix:** worker CPU near 0% while request latency climbs and
+`nginx` shows connections in ` Sending`/`Waiting` with no upstream → blocking
+file I/O on the request path → use `ngx.location.capture` with an
+`internal` location, or enforce a body-size ceiling at the `server` level so
+large bodies are rejected before they ever reach Lua.
+
+**The better fix is to stop spooling at all.** If you only need the first N KB
+for inference, cap the body and reject the rest — the WAF never has to read a
+file:
+
+```nginx
+server {
+    # Reject oversized bodies before Lua runs. Also makes
+    # ngx.req.get_body_data() non-nil for everything that gets through,
+    # which removes the disk path entirely.
+    client_max_body_size 64k;
+    client_body_buffer_size 64k;   # >= client_max_body_size: never spools
+
+    location / {
+        access_by_lua_file /etc/nginx/lua/gatekeeper.lua;
+        proxy_pass http://backend;
+    }
+}
+```
+
+The trap from §1 stops existing when `client_body_buffer_size` is at least
+`client_max_body_size`. That is a one-line fix to a bug that took an
+adversary one HTTP header to exploit.
+
+If you genuinely must inspect large bodies, read them asynchronously via
+`ngx.location.capture` to an `internal` location, or copy to shared memory with
+`ngx.on_abort`-aware coroutines — never `io.*` on the request path.
 
 ---
 
@@ -171,6 +214,61 @@ end
 shm:set("failure_count", 0)
 ```
 
+### ⚠️ Pitfall: This Circuit Is a Denial-of-Service Weapon aimed at You
+
+Read the code above again with an attacker's mindset. The breaker trips after
+**5 consecutive failures** and stays open for **30 seconds**, and while open,
+*every request passes uninspected*.
+
+An attacker does not need to exploit the ML model. They need to make it look
+unhealthy. If the sidecar is a shared inference service, or has a cold start, or
+has any path where a request can be made to take longer than your 100 ms read
+timeout, then:
+
+1. Attacker sends 5 requests designed to be slow to classify — long bodies, or
+   payloads that maximise tokenizer work.
+2. Circuit opens. For the next 30 seconds, **the WAF is off and the attacker
+   knows it**, because the timing is deterministic.
+3. Attacker sends the actual payload through the open circuit.
+4. Circuit closes. Attacker repeats.
+
+Five requests buys thirty seconds of unfiltered access, and the cycle is fully
+automatable. Worse, this is not even a bug in the ML path — it is a property of
+fail-open plus a low threshold plus a fixed window, and it exists in the design
+as written.
+
+Note also that `shm:incr("failure_count", 1, 0)` counts *consecutive* failures
+across **all** workers, because `lua_shared_dict` is shared. A single unlucky
+request anywhere increments the same counter that a coordinated attack is
+trying to push over the threshold. Low traffic plus one cold start can trip it
+by accident.
+
+**Symptom → cause → fix:** your own WAF's block rate drops to zero for 30-second
+intervals on a schedule → fail-open breaker tripped by an adversary → see below.
+
+**Fixes, in order of how much I would trust them:**
+
+1. **Fail closed on a tripped circuit**, at least for anything that looks like
+   an attack. An uninspected request is not a safe request. Serve 503 for
+   mutating endpoints rather than proxying blind.
+2. **Layer a deterministic filter underneath the breaker.** OWASP CRS or a
+   small set of high-confidence rules costs microseconds and does not care
+   whether the model is healthy. This is the actual answer — the ML layer is
+   defence in depth, never the only layer. The "best practices" section below
+   says this; it needs to be said *here*, because the breaker's whole purpose
+   is to disable it.
+3. **Trip on rate, not just consecutive failures**, and add a floor so a single
+   burst cannot open it.
+4. **Alarm on the trip.** The `ngx.log(ngx.ALERT, ...)` line above is correct
+   and almost nobody wires it to anything. If a breaker trips and no human
+   hears about it, you have no idea whether it was your model or an attacker.
+
+The honest framing: `Total Availability = Nginx × Model` is the right model for
+*choosing* a timeout, and it is the wrong reason to fail open. Availability
+gained by dropping your security control is not availability you get to keep.
+Budget for the model being down, and decide in advance what happens then —
+before an attacker decides for you.
+
 ---
 
 ## 4. Adversarial Evasion: Normalization & Encoding
@@ -209,7 +307,9 @@ def normalize_payload(text: str) -> str:
 
 ## Summary Architecture & Best Practices
 
-1. **Check Both RAM and Disk for Bodies**: Never assume `ngx.req.get_body_data()` is non-nil; always provide a fallback to `ngx.req.get_body_file()`.
-2. **Pool Sidecar Connections**: Use `set_keepalive(timeout, size)` to prevent ephemeral port exhaustion under heavy traffic.
-3. **Use Shared-Memory Circuit Breakers**: Wrap ML sidecars in a `lua_shared_dict` circuit breaker to prevent external latency from cascading into site outages.
-4. **Layered Defense**: Keep deterministic regex/rule engines (like OWASP CRS) as the primary filter for obvious attacks, and reserve ML models for complex, contextual payload inspection.
+1. **Set `client_body_buffer_size >= client_max_body_size`.** One line in `server {}` removes the disk-spill bypass entirely, because the body never leaves memory. Everything below is a mitigation for the case where you cannot bound the body size.
+2. **Never use `io.open` on the request path.** OpenResty's Lua VM is single-threaded; a blocking read stalls the worker. If you must read a spooled body, use `ngx.location.capture` against an `internal` location.
+3. **Pool sidecar connections** with `set_keepalive(timeout, size)` to avoid `TIME_WAIT` exhaustion. Return sockets to the pool on **every** exit path, including error paths — a socket dropped on an error is a socket that has to be reconnected next time, which is exactly the wrong behaviour under load.
+4. **Circuit-break the model, but never let the circuit be the only defence.** A `lua_shared_dict` breaker with a 5-failure threshold and a 30-second fail-open window is a 30-second WAF outage waiting for someone to induce it. Put OWASP CRS or an equivalent deterministic filter underneath, so "circuit open" degrades to "weaker inspection" rather than "no inspection".
+5. **Alert on breaker trips.** An unmonitored fail-open circuit is indistinguishable from a successful attack.
+6. **Validate the model offline.** The `> 0.85` threshold in Part 1 has no stated evaluation methodology. Before it gates production traffic, it needs a labelled set, a false-positive budget, and an ROC curve — otherwise you are trusting a number you cannot defend to an attacker who can measure it.

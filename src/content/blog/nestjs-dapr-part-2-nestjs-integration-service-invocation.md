@@ -123,6 +123,11 @@ export interface DaprModuleOptions {
   serverHost?: string;
   serverPort?: string;
   communicationProtocol?: CommunicationProtocolEnum;
+  /**
+   * Required whenever the sidecar runs with `dapr.io/enable-api-token` or a
+   * `--dapr-api-token` flag. Omit it locally, ship it everywhere else.
+   */
+  daprApiToken?: string;
 }
 
 export interface DaprOptionsFactory {
@@ -164,6 +169,7 @@ export class DaprModule {
           daprHost: daprOptions.daprHost || '127.0.0.1',
           daprPort: daprOptions.daprPort || '3500',
           communicationProtocol: daprOptions.communicationProtocol || CommunicationProtocolEnum.HTTP,
+          daprApiToken: daprOptions.daprApiToken,
         });
       },
       inject: [DAPR_MODULE_OPTIONS],
@@ -180,6 +186,7 @@ export class DaprModule {
             daprHost: daprOptions.daprHost || '127.0.0.1',
             daprPort: daprOptions.daprPort || '3500',
             communicationProtocol: daprOptions.communicationProtocol || CommunicationProtocolEnum.HTTP,
+            daprApiToken: daprOptions.daprApiToken,
           },
         });
       },
@@ -204,7 +211,37 @@ export class DaprModule {
         },
       ];
     }
-    throw new Error('Invalid DaprModuleAsyncOptions: useFactory is required.');
+
+    // `useClass` and `useExisting` have to be handled, not merely declared.
+    // If you advertise them in the interface and then throw here, anyone who
+    // uses the idiomatic NestJS form gets a runtime crash on bootstrap with a
+    // message that names a different option than the one they set.
+    if (options.useExisting) {
+      return [
+        {
+          provide: DAPR_MODULE_OPTIONS,
+          useFactory: (factory: DaprOptionsFactory) => factory.createDaprOptions(),
+          inject: [options.useExisting],
+        },
+      ];
+    }
+
+    if (options.useClass) {
+      return [
+        {
+          provide: DAPR_MODULE_OPTIONS,
+          useFactory: (factory: DaprOptionsFactory) => factory.createDaprOptions(),
+          inject: [options.useClass],
+        },
+        // The factory itself has to be provided, or DI cannot resolve the
+        // injection token above.
+        { provide: options.useClass, useClass: options.useClass },
+      ];
+    }
+
+    throw new Error(
+      'Invalid DaprModuleAsyncOptions: provide one of useFactory, useClass, or useExisting.',
+    );
   }
 }
 ```
@@ -216,9 +253,34 @@ export class DaprModule {
    * **`DaprServer`**: Sets up the listener infrastructure for incoming pub/sub topic subscriptions and external trigger bindings dispatched from the sidecar to our NestJS app (port 3000).
 3. **`inject: [DAPR_MODULE_OPTIONS]`**: Inversion of control ensures that our environment variables (e.g. `DAPR_HTTP_PORT`) are fully loaded and validated by NestJS `@nestjs/config` before the `DaprClient` is instantiated.
 
+### ⚠️ Pitfall: `useClass` and `useExisting` Declared but Not Implemented
+
+This is worth calling out because the interface and the implementation
+disagreed in an earlier draft of this module. The options type advertised both
+`useClass` and `useExisting`, but `createAsyncProviders` only ever inspected
+`useFactory` and threw otherwise:
+
+```
+Error: Invalid DaprModuleAsyncOptions: useFactory is required.
+```
+
+The nastiest part is the message. You configured `useClass`, and the error tells
+you `useFactory` is required — so you add a `useFactory` you did not need,
+alongside the `useClass` that was working fine in your head. The interface is a
+promise; if it advertises an option, the factory has to honour it.
+
+The rule generalises: **an options interface that accepts a form nobody
+implements is worse than one that rejects it**, because it converts a compile
+error you could have had into a bootstrap crash you will debug with a
+stack trace.
+
+**Symptom → cause → fix:** `Invalid DaprModuleAsyncOptions` on startup despite
+setting a documented option → that branch is unimplemented → implement it, or
+remove it from the interface so TypeScript rejects it at build time.
+
 ---
 
-## 2. Microservices Architecture Setup
+## 3. Microservices Architecture Setup
 
 We instantiate two isolated NestJS services configured to communicate through their respective Dapr sidecars:
 
@@ -234,7 +296,7 @@ We instantiate two isolated NestJS services configured to communicate through th
                    └─────────────────────────────────────────────────┘
 ```
 
-### 2.1 Importing `DaprModule` in `OrderService`
+### 3.1 Importing `DaprModule` in `OrderService`
 ```typescript
 // apps/order-service/src/app.module.ts
 import { Module } from '@nestjs/common';
@@ -253,6 +315,8 @@ import { OrderService } from './order.service';
         daprHost: config.get<string>('DAPR_HOST', '127.0.0.1'),
         daprPort: config.get<string>('DAPR_HTTP_PORT', '3500'),
         communicationProtocol: CommunicationProtocolEnum.HTTP,
+        // Undefined locally, mandatory once the sidecar enforces an API token.
+        daprApiToken: config.get<string>('DAPR_API_TOKEN'),
       }),
       inject: [ConfigService],
     }),
@@ -265,11 +329,11 @@ export class AppModule {}
 
 ---
 
-## 3. Service Invocation Layer: Synchronous Inter-Service Communication
+## 4. Service Invocation Layer: Synchronous Inter-Service Communication
 
 Now we implement synchronous communication where `OrderService` invokes `PaymentService` to process a credit transaction.
 
-### 3.1 The DTO Contracts
+### 4.1 The DTO Contracts
 ```typescript
 // shared/dto/payment.dto.ts
 import { IsNotEmpty, IsNumber, IsPositive, IsString, IsUUID } from 'class-validator';
@@ -371,7 +435,7 @@ export class OrderService {
 
 ---
 
-## 4. Declarative Resiliency: Retries & Circuit Breakers Without Code Changes
+## 5. Declarative Resiliency: Retries & Circuit Breakers Without Code Changes
 
 One of the biggest advantages of Dapr over manual Axios/Fetch calls in NestJS is **Declarative Resiliency**. If `PaymentService` starts failing, you don't write complex RxJS retry pipes or install resilience libraries in Node.js. You attach a Dapr Resiliency YAML:
 

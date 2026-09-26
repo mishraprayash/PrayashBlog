@@ -4,7 +4,7 @@ slug: "scaling-event-dispatching-nestjs-strategy-pattern"
 description: "How to eliminate massive switch statements in event-driven backends: polymorphic class-validator DTOs, dynamic NestJS strategy registries, hierarchical webhook handlers, and isolated queues."
 publishDate: "2026-07-16T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "typescript", "architecture", "design-patterns", "backend"]
+tags: ["nestjs", "typescript", "architecture", "backend", "event-driven"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "NestJS Strategy and Factory Pattern architecture diagram for multi-channel event dispatching"
@@ -15,7 +15,7 @@ Every backend notification system starts simple. You write a helper function to 
 
 Then product asks for **SMS alerts via Twilio**. Then **Webhooks for enterprise customers**. Then **Push notifications via FCM**, followed by **Slack bots and Discord integrations**.
 
-Within six months, that innocent helper function metastasizes into a **700-line monolithic `switch(channel)` monster**:
+Sooner or later that helper function becomes a monolithic `switch(channel)`:
 
 ```
 Request / Queue Event

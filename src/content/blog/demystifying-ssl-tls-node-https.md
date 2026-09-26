@@ -4,7 +4,7 @@ slug: "demystifying-ssl-tls-node-https"
 description: "A practical deep dive into Node.js TLS termination: how handshakes impact the event loop, why AIA chasing hides missing intermediate certs, and handling live cert rotation without downtime."
 publishDate: "2026-05-10T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["node", "backend", "security", "tls", "https"]
+tags: ["node", "backend", "security", "tls"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "TLS handshake and certificate chain validation diagram"

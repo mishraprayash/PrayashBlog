@@ -6,7 +6,7 @@ publishDate: "2026-08-25T10:00:00Z"
 updatedDate: "2026-09-09T22:50:00Z"
 updateSummary: "Refactored to be significantly more compact and experience-driven: removed textbook definitions, focused on practical trade-offs (consumer models, retention, ordering, and redeliveries), and streamlined the decision guide."
 author: "Prayash Mishra"
-tags: ["architecture", "backend", "distributed-systems", "microservices", "kafka", "rabbitmq", "aws"]
+tags: ["architecture", "backend", "distributed-systems", "microservices", "event-driven", "kafka", "rabbitmq"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Comparison architecture diagram showing Message Queues, Pub/Sub Topics, and Event Streams"
@@ -91,21 +91,78 @@ Low latency, zero retry.   Safe against data loss.      Safe, correct, productio
 
 In standard queues and streams, **at-least-once delivery is the reality**. If a worker executes a payment task and crashes right before sending the ACK, the broker redelivers the message to another worker.
 
-The only way to achieve reliable processing is **application-level idempotency**:
+The only way to achieve reliable processing is **application-level idempotency**. And it has to be correct under concurrency, not just under repetition — which is where the obvious implementation quietly fails:
 
 ```typescript
+// ❌ WRONG. Looks correct. Is not.
 async function processPayment(job: { id: string; orderId: string; amount: number }) {
-  // 1. Guard against redelivered duplicates via unique constraint
   const existing = await db.processedJobs.findUnique({ where: { jobId: job.id } });
-  if (existing) return; // Safe no-op ACK
+  if (existing) return; // no-op ACK
 
-  // 2. Execute side effect and record completion atomically
   await db.$transaction(async (tx) => {
     await tx.processedJobs.create({ data: { jobId: job.id, completedAt: new Date() } });
     await chargeStripeCustomer(job.orderId, job.amount);
   });
 }
 ```
+
+`findUnique` and the transaction are two separate round trips. Between them, a
+second redelivery of the same job — which is *exactly* what at-least-once means
+— can also pass the guard. Both see no existing row. Both charge the card. The
+unique constraint on `jobId` does not save you: the second `create` throws, but
+the Stripe charge in the same transaction is not part of the same database, so
+it has already happened. One customer, two charges, one rollback that rolls
+back nothing external.
+
+This is a time-of-check-to-time-of-use race, and the fix is to make the claim
+atomic rather than to check first:
+
+```typescript
+// ✅ The unique constraint IS the lock.
+async function processPayment(job: { id: string; orderId: string; amount: number }) {
+  try {
+    // INSERT first. Exactly one concurrent caller can win this.
+    await db.processedJobs.create({ data: { jobId: job.id, status: 'IN_PROGRESS' } });
+  } catch (err) {
+    if (isUniqueViolation(err)) return; // already claimed — safe no-op ACK
+    throw err;
+  }
+
+  try {
+    await chargeStripeCustomer(job.orderId, job.amount);
+    await db.processedJobs.update({
+      where: { jobId: job.id },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
+  } catch (err) {
+    // Release the claim so a retry can win it, and do NOT cache the failure
+    // as a completed job.
+    await db.processedJobs.delete({ where: { jobId: job.id } });
+    throw err;
+  }
+}
+```
+
+Two details in that version matter more than the shape:
+
+* **The claim is taken before the side effect, not after.** Claiming afterwards
+  is the same bug with extra steps.
+* **A failed job deletes its claim.** If you leave the row in place, that job
+  can never be retried — you have converted a transient Stripe timeout into
+  permanent data loss, and the broker's redelivery will no-op forever.
+
+**If your side effect is a database write**, do the claim insert and the effect
+in one transaction and skip all of this. Reach for the split above only when the
+side effect is external (a payment API, an email send) and cannot participate
+in your transaction. That distinction — *can this be atomic?* — is the real
+decision, and it is covered properly in
+[Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems),
+including why keeping idempotency state in Redis next to a Postgres source of
+truth is a category of bug rather than an optimisation.
+
+For the publisher side of the same problem — how a message gets into the broker
+in the first place without a dual-write gap — see
+[The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities).
 
 * **Throughput Buffering & Backpressure**: Queues act as shock absorbers. When an upstream service spikes to 10,000 requests/sec, the queue buffers the surge. Workers continue pulling at a stable, rate-limited pace (e.g., 100/sec), preventing downstream relational databases from falling over.
 
@@ -117,7 +174,7 @@ async function processPayment(job: { id: string; orderId: string; amount: number
 
 In microservice architectures, you should almost never have a Pub/Sub topic invoke service HTTP webhooks directly. A sudden spike in signups will overwhelm downstream endpoints, and if an endpoint is temporarily down, the event is lost.
 
-The battle-tested solution is the **Topic-to-Queue Fan-Out**:
+The standard solution is the **Topic-to-Queue Fan-Out**:
 
 ```
                             ┌───────────────────────────────────┐
@@ -213,3 +270,26 @@ The biggest mental shift is realizing that **messaging systems are defined by th
 * If you care about **durable history and ordered playback**, you want a **Stream**.
 
 Start with the simplest model that satisfies your requirements. For 80% of backend workloads, a managed message queue like SQS or BullMQ paired with a Pub/Sub topic will take you surprisingly far—without the operational complexity of maintaining distributed stream clusters.
+
+---
+
+## Series Navigation
+
+This is **Part 1** of a three-part series. Choosing a transport is the easy part;
+the hard part is what happens at the two boundaries where your application meets
+it, and neither is solved by the broker:
+
+1. **Message Queues, Topics, and Event Streams** (you are here) — the transport
+   primitives and what each delivery guarantee actually means.
+2. **[The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)**
+   — the *producer* boundary. How do you commit to your database and publish to
+   the broker as one logical act, without a window where one succeeded and the
+   other did not?
+3. **[Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems)**
+   — the *consumer* boundary. At-least-once means duplicates, so how do you make
+   a redelivered message safe to process twice?
+
+If you take one thing from this series: the transport does not give you
+exactly-once, and no amount of broker configuration will. At-least-once plus an
+idempotent consumer is the strongest guarantee you can actually build, and
+Parts 2 and 3 are how you get there.

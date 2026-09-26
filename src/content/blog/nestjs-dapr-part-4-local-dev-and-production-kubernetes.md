@@ -4,10 +4,10 @@ slug: "nestjs-dapr-local-dev-production-kubernetes"
 description: "How to ship NestJS and Dapr microservices: multi-container local Docker Compose pipelines, Kubernetes sidecar injection, production YAML components, and OpenTelemetry observability."
 publishDate: "2026-08-21T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "dapr", "kubernetes", "docker", "devops", "observability", "production"]
+tags: ["nestjs", "dapr", "kubernetes", "docker", "devops", "observability"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Kubernetes cluster architecture showing Dapr control plane, sidecar injection, and production OpenTelemetry observability"
+featuredImageAlt: "Kubernetes cluster architecture showing Dapr control plane, sidecar injection, and production Zipkin tracing"
 draft: false
 ---
 
@@ -15,7 +15,7 @@ In **[Part 1](/blog/nestjs-dapr-core-fundamentals-architecture)**, **[Part 2](/b
 
 Now comes the hard part: **How do we run this locally without pulling our hair out, and how do we harden it for enterprise Kubernetes production?**
 
-Here is the complete blueprint.
+Below is the full local-to-production path, including the parts that will bite you.
 
 ---
 
@@ -32,7 +32,7 @@ In local development, you can run services via the Dapr CLI (`dapr run --app-id 
 │  └───────────────────────┘        └──────────┬───────────┘  │
 │                                              │              │
 │  ┌───────────────────────┐        ┌──────────┴───────────┐  │
-│  │ payment-service(:3001)│ ◄────► │ payment-dapr (:3501) │  │
+│  │ payment-service(:3001)│ ◄────► │ payment-dapr (:3500) │  │
 │  └───────────────────────┘        └──────────┬───────────┘  │
 │                                              │              │
 │                 ┌────────────────────────────┴───┐          │
@@ -82,7 +82,7 @@ spec:
 ### 1.2 The Multi-Container `docker-compose.yml`
 ```yaml
 # docker-compose.yml
-version: '3.8'
+# No top-level `version:` key — it is obsolete in Compose v2 and emits a warning.
 
 services:
   # 1. Shared Infrastructure
@@ -92,7 +92,9 @@ services:
       - "6379:6379"
 
   zipkin:
-    image: openzipkin/zipkin:latest
+    # Pin the tag. `:latest` means your local tracing backend can change under
+    # you, and a Zipkin major bump has broken the v2 spans endpoint before.
+    image: openzipkin/zipkin:3.4
     ports:
       - "9411:9411"
 
@@ -105,6 +107,9 @@ services:
       - "3000:3000"
     environment:
       - DAPR_HOST=127.0.0.1
+      # Keep this identical to the Kubernetes manifest. The sidecar port is
+      # per-network-namespace, so there is no reason for it to differ per
+      # service — see the pitfall below.
       - DAPR_HTTP_PORT=3500
     depends_on:
       - redis
@@ -136,7 +141,8 @@ services:
       - "3001:3001"
     environment:
       - DAPR_HOST=127.0.0.1
-      - DAPR_HTTP_PORT=3501
+      # Same as order-service. Uniform, so local matches prod.
+      - DAPR_HTTP_PORT=3500
     depends_on:
       - redis
 
@@ -146,12 +152,18 @@ services:
       "./daprd",
       "-app-id", "payment-app",
       "-app-port", "3001",
-      "-dapr-http-port", "3501",
-      "-dapr-grpc-port", "50002",
-      "-components-path", "/components"
+      # Uniform 3500/50001. Safe because `network_mode` puts this sidecar in
+      # payment-service's namespace, not order-service's.
+      "-dapr-http-port", "3500",
+      "-dapr-grpc-port", "50001",
+      "-components-path", "/components",
+      # Was missing here while order-dapr had it. A sidecar without -config
+      # silently gets different tracing/sampling behaviour than its sibling.
+      "-config", "/config/config.yaml"
     ]
     volumes:
       - "./components:/components"
+      - "./config:/config"
     depends_on:
       - payment-service
     network_mode: "service:payment-service" # Shares network namespace with app container
@@ -161,6 +173,21 @@ services:
 * Notice `network_mode: "service:order-service"` on the `order-dapr` container.
 * In standard Docker Compose, each container gets its own isolated network interface and IP address.
 * By specifying `network_mode: "service:order-service"`, Docker attaches `order-dapr` directly to `order-service`'s Linux network namespace. Both containers share `127.0.0.1` (localhost), exactly mirroring how a multi-container Kubernetes Pod operates!
+
+### ⚠️ Pitfall: One Port Per Namespace, Not Per Host
+
+The instinct when you see `order-dapr` on 3500 is to move `payment-dapr` to 3501 "so they don't collide." There is no collision. `network_mode` puts each sidecar in **its own app's network namespace**, so both can bind 3500.
+
+The cost of moving it is real and quiet. If `payment-service` reads `DAPR_HTTP_PORT=3501` locally but the Kubernetes manifest injects `DAPR_HTTP_PORT=3500`, then:
+
+* the app works on every developer's machine,
+* the app works in local Compose,
+* the app 502s on the first pod it meets in staging, with a connection-refused
+  on `127.0.0.1:3500` that points at nothing useful.
+
+Nothing warns you. The value is just wrong in one environment. Pin sidecar ports to the defaults everywhere and let namespace isolation do what it exists to do.
+
+**Symptom → cause → fix:** connection refused to `127.0.0.1:3500` in K8s but fine locally → the app is reading a port from a local-only env var → set the port from a single source (the injected `DAPR_HTTP_PORT`) and never hardcode a per-service variant.
 
 ---
 
@@ -359,8 +386,13 @@ new DaprClient({
 });
 ```
 
-### 3. OpenTelemetry Distributed Tracing
-Configure Dapr to stream W3C distributed traces to OpenTelemetry collectors (Grafana Tempo, Datadog, or Jaeger):
+### 3. Distributed Tracing
+
+Dapr can export W3C trace context to several backends, but the exporter you
+choose determines the whole `spec.tracing` block. Pick one and commit to it.
+
+**Option A — Zipkin** (what the Compose stack above runs, and what the manifest
+below configures). Spans go to Zipkin's v2 JSON endpoint:
 
 ```yaml
 # k8s/config/dapr-config.yaml
@@ -371,25 +403,77 @@ metadata:
   namespace: production
 spec:
   tracing:
-    samplingRate: "1" # 100% sample rate (tune to 0.1 for high-volume prod)
+    # NOT "1". Sampling every trace in production is how a tracing bill becomes
+    # a tracing incident. Start here and tune against real span volume.
+    samplingRate: "0.1"
     zipkin:
-      endpointAddress: "http://otel-collector.monitoring.svc.cluster.local:9411/api/v2/spans"
+      endpointAddress: "http://zipkin.monitoring.svc.cluster.local:9411/api/v2/spans"
 ```
+
+**Option B — OpenTelemetry Collector** (Grafana Tempo, Jaeger via OTel, Datadog
+via OTel). This is a *different block*, not a different hostname in the one
+above — the `zipkin:` key and the `otlp:` key are mutually exclusive, and
+setting the wrong one produces an opaque export failure rather than a useful
+error:
+
+```yaml
+spec:
+  tracing:
+    samplingRate: "0.1"
+    otlp:
+      endpointAddress: "http://otel-collector.monitoring.svc.cluster.local:4317"
+      isSecure: false
+      protocol: "grpc"
+```
+
+Pick A or B. Do not run Zipkin locally and point the production manifest at a
+collector hostname, which is the mistake this section originally shipped.
+
+### ⚠️ Pitfall: `samplingRate: "1"` in a Production Manifest
+
+Shipping `samplingRate: "1"` because it is convenient locally is the single most expensive default in this file. At 100% sampling every sidecar retains and exports a span for every request, every publish, every state read, and every service invocation — including the health checks.
+
+The failure is not immediate and not loud. What you get instead:
+
+* Tracing storage cost grows linearly with traffic, with no ceiling.
+* The sidecar's memory footprint grows, because it buffers spans for export.
+* When the collector falls behind, the sidecar applies backpressure — and now
+  your *application* is slow because tracing is slow.
+
+There is no `samplingRate` value that is correct in the abstract. It depends on
+your span volume, your retention window, and how many traces you actually read
+during an incident. A reasonable starting point for a service mesh is `0.1`
+(10%), and then: measure how many spans an incident actually needs, and set the
+rate so that an incident fits inside your retention window.
+
+One caveat that is easy to miss: head-based sampling means a trace is sampled
+whole or not at all. If one very high-volume service dominates your span count
+at 10%, the low-volume service you are trying to debug may be sampled too
+sparsely to be useful. Tail-based sampling (sampling after the fact, in the
+collector) solves this, at the cost of buffering — which is a collector-side
+concern, not a Dapr one.
+
+**Symptom → cause → fix:** sidecar memory climbing while throughput is flat →
+100% trace sampling with a slow collector → lower `samplingRate`, and confirm
+the collector is keeping up before raising it again.
 
 ---
 
-## 4. Full Series Wrap-Up & Production Checklist
+## 4. Series Wrap-Up
 
-Congratulations! You have transformed your NestJS backend into an enterprise-grade cloud-native microservices mesh.
+That is the full local-to-production path. Before you call it done, walk this list yourself — it is a set of claims to verify, not achievements to tick off.
 
-### The Complete Production Architecture Checklist
-* [x] **Separation of Concerns**: Zero cloud SDKs in Node.js application code; all infrastructure managed via Dapr components.
-* [x] **Synchronous RPC**: Service Invocation with automatic name discovery, mTLS, and sidecar retry policies.
-* [x] **Asynchronous Messaging**: Pub/Sub with CloudEvents envelopes and automatic distributed trace context propagation.
-* [x] **State & Concurrency**: ETag-driven optimistic locking preventing dirty writes across pod replicas.
-* [x] **Dynamic Configuration**: Subscribing to real-time config changes without pod redeployments.
-* [x] **Local Development Parity**: Multi-container Docker Compose replicating exact Kubernetes networking.
-* [x] **Kubernetes Deployment**: Automatic sidecar injection, health probes, and OpenTelemetry observability.
+### What to verify before shipping
+
+- [ ] **Separation of concerns holds.** No cloud SDK imports anywhere in application code; every cloud dependency lives in a Dapr component file. `grep -r "aws-sdk\|@azure/\|@google-cloud/" apps/ --include=*.ts` should return nothing outside infrastructure directories.
+- [ ] **Service invocation retries are bounded.** Default Dapr retry policy has no cap. Confirm your `resiliency` config sets a max retry count and timeout, then verify a slow dependency actually trips it.
+- [ ] **Pub/Sub consumers are idempotent.** The sidecar guarantees at-least-once delivery, so duplicates are expected, not exceptional. See [Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems) for the pattern and [the outbox post](/blog/transactional-outbox-pattern-production-realities) for the publisher half.
+- [ ] **State writes actually carry an ETag.** The optimistic-locking path in [Part 3](/blog/nestjs-dapr-state-secrets-config-pubsub) only engages if you read the ETag off the sidecar's HTTP response header. A repository that reads the ETag from the SDK's return value silently runs last-write-wins. Assert on the conflict, not on the code.
+- [ ] **Config subscriptions seed before they stream.** A subscription delivers changes, not current state. A pod that boots without an initial `get()` serves hardcoded defaults until someone edits the key.
+- [ ] **Local and Kubernetes agree on ports.** Both must resolve `DAPR_HTTP_PORT` the same way. A per-service port that only exists in Compose fails at the first staging pod.
+- [ ] **Tracing sample rate is deliberate.** `0.1` is a starting point, not a recommendation. Confirm it against your span volume and retention window, and confirm the collector keeps up.
+- [ ] **Sidecars are pinned.** `daprio/daprd` and any tracing backend on `:latest` will change under you between a green deploy and a rollback.
+- [ ] **Health probes bypass the sidecar.** Probe the app container directly. A probe routed through `daprd` reports the sidecar's health, not your service's.
 
 ---
 
@@ -397,4 +481,4 @@ Congratulations! You have transformed your NestJS backend into an enterprise-gra
 1. **[Part 1: Core Fundamentals & Architecture](/blog/nestjs-dapr-core-fundamentals-architecture)**
 2. **[Part 2: NestJS Module & Service Invocation](/blog/nestjs-dapr-nestjs-integration-service-invocation)**
 3. **[Part 3: State, Secrets, Config & Pub/Sub](/blog/nestjs-dapr-state-secrets-config-pubsub)**
-4. **Part 4: Local Dev & Production Kubernetes (Current)**
+4. **Part 4: Local Dev & Production Kubernetes (you are here)**

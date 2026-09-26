@@ -6,6 +6,7 @@ publishDate: "2026-09-09T23:15:00Z"
 author: "Prayash Mishra"
 tags: ["architecture", "backend", "postgresql", "kafka", "distributed-systems", "microservices"]
 category: "engineering"
+featured: true
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Transactional Outbox Pattern architecture diagram showing dual-write failure and outbox table relay"
 draft: false
@@ -208,24 +209,56 @@ When the worker restarts, it sees the outbox event as still `PENDING`. It sends 
 
 If your downstream billing consumer assumes every event is unique, you will double-charge the customer. **The Transactional Outbox is useless without idempotent consumers on the other side.**
 
-Always enforce deduplication on the consumer using database unique constraints:
+Deduplicate on the consumer with a unique constraint, and claim the event
+**before** performing the side effect:
 
 ```typescript
 // Downstream Consumer: Idempotent Handling
 async function handleOrderCreated(event: { eventId: string; orderId: string; amount: number }) {
-  // Rely on unique constraint on event_id to silently ignore duplicate deliveries
-  const result = await db.processedEvents.create({
-    data: { eventId: event.eventId, processedAt: new Date() },
+  // 1. Claim the event. The unique constraint on event_id is the lock:
+  //    exactly one concurrent redelivery can win this insert.
+  const claim = await db.processedEvents.create({
+    data: { eventId: event.eventId, status: 'IN_PROGRESS', claimedAt: new Date() },
   }).catch((err) => {
-    if (err.code === 'P2002') return null; // Unique constraint violation -> safe no-op
+    if (err.code === 'P2002') return null; // already claimed -> safe no-op
     throw err;
   });
 
-  if (!result) return; // Duplicate event ignored safely
+  if (!claim) return; // Duplicate delivery, already being handled
 
-  await processPayment(event.orderId, event.amount);
+  try {
+    // 2. Side effect (external — cannot join our transaction)
+    await processPayment(event.orderId, event.amount);
+    await db.processedEvents.update({
+      where: { eventId: event.eventId },
+      data: { status: 'COMPLETED', processedAt: new Date() },
+    });
+  } catch (err) {
+    // 3. Release the claim so a redelivery can retry.
+    await db.processedEvents.delete({ where: { eventId: event.eventId } });
+    throw err;
+  }
 }
 ```
+
+Step 3 is the part that gets omitted, and omitting it converts at-least-once
+into at-most-once. If `processPayment` throws — a Stripe timeout, a deadlock —
+and you leave the claim row in place, every future redelivery of that event
+no-ops on the unique constraint. The payment never happens, nothing retries,
+and your consumer reports healthy while silently dropping money.
+
+This is the same failure mode, in mirror image, as the publisher-side dual-write
+problem: there, you write to two systems and one can fail; here, you record one
+piece of state and the *other* thing can fail. Both are fixed by being explicit
+about which write is the commit point, and by making every other write
+reversible.
+
+The full treatment — including why the idempotency record belongs in the same
+database and the same transaction as the business state, and why Redis is the
+wrong place for it — is in
+[Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems).
+For the transport primitives this all sits on top of, start with
+[Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained).
 
 ---
 
@@ -233,4 +266,4 @@ async function handleOrderCreated(event: { eventId: string; orderId: string; amo
 
 1. **Under 100 events/sec**: Don't deploy Debezium. A simple polling worker with `SELECT ... FOR UPDATE SKIP LOCKED` and an index on `status` will run reliably for years. Just make sure you clean up dead tuples or partition the table.
 2. **Above 500 events/sec**: Polling query load and table bloat will start degrading your database. Move to CDC (Debezium), but set `max_slot_wal_keep_size` and monitor replication slot lag alerts before you sleep.
-3. **Always build idempotent consumers**: No outbox implementation will save you if downstream services can't handle receiving the same message twice.
+3. **Always build idempotent consumers**: No outbox implementation will save you if downstream services can't handle receiving the same message twice. And make them release the claim on failure — a consumer that never retries is worse than one that double-processes, because it fails silently.

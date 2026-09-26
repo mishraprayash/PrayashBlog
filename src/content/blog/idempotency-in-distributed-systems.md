@@ -4,12 +4,7 @@ slug: "idempotency-in-distributed-systems"
 description: "Why distributed retries make duplicate operations inevitable, why Redis locks fall short, and how to build truly idempotent APIs using ACID state engines and two-phase writes."
 publishDate: "2026-09-09T23:50:00Z"
 author: "Prayash Mishra"
-tags:
-  - "distributed-systems"
-  - "architecture"
-  - "backend"
-  - "database"
-  - "api-design"
+tags: ["distributed-systems", "architecture", "backend", "postgresql"]
 category: "engineering"
 featuredImage: "/images/uploads/placeholder.svg"
 featuredImageAlt: "Idempotency in Distributed Systems diagram showing request deduplication and safe state transitions"
@@ -27,6 +22,22 @@ The client has no idea. Your server doesn't either—unless you engineered an ex
 In distributed systems, networks drop packets. Gateways time out. Worker nodes crash mid-transaction. Because of this, **at-least-once delivery is the only guarantee physical networks can ever give you.** Exactly-once delivery is a marketing myth. If clients retry—and they must—your APIs have to make duplicate executions safe.
 
 That is idempotency. Not textbook math formulas, but the practical engineering required so a retried network request doesn't bill a user twice or corrupt your ledger.
+
+> **Where this sits in the bigger picture.** This post is about the *consumer* half
+> of reliable messaging. The two halves fail independently and both have to be
+> solved:
+>
+> - **Getting the message into the broker** without a gap between "committed to
+>   the database" and "published to Kafka" →
+>   [The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)
+> - **Handling the message more than once** on the other side → this post.
+>
+> The transport guarantees underneath both are in
+> [Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained).
+>
+> If you take one thing from this post: the outbox guarantees **at-least-once**,
+> and at-least-once is only safe if the consumer is idempotent. Neither half
+> works alone.
 
 ---
 
@@ -307,3 +318,23 @@ Building reliable distributed systems comes down to three operational rules:
 1. **Keep state together:** Never store idempotency tokens in an in-memory cache while your business data lives in PostgreSQL. When the process crashes between them, your data corrupts.
 2. **Hash the payload:** An idempotency key without a payload hash check is an invitation for silent data corruption.
 3. **Plan for table growth:** Idempotency tables collect massive volume quickly. Partition by month or run a scheduled cleanup job deleting records older than 30 days. After a month, an in-flight retry is no longer a retry; it's a completely new business event.
+
+One more that is specific to the key-derivation step in Pattern 3: if you derive
+the upstream call's idempotency key from the incoming one
+(`charge_${incomingKey}`), you are depending on that provider's key-retention
+window. Stripe retains idempotency keys for **24 hours**; after that, a replayed
+request with the same key is treated as a brand-new charge. That is longer than
+most retry windows and comfortably longer than gateway timeouts, so it is
+usually safe — but it is a dependency with an expiry date, and it is different
+for every provider. Check the retention window before you rely on it, and do not
+assume it is unbounded because nothing has failed yet.
+
+---
+
+## Series Navigation
+
+This is **Part 3** of a three-part series on reliable event-driven systems:
+
+1. **[Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained)** — transport primitives and what each delivery guarantee actually means.
+2. **[The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)** — getting events into the broker without a dual-write gap.
+3. **Idempotency in Distributed Systems** (you are here) — surviving the duplicates that at-least-once guarantees will hand you.
