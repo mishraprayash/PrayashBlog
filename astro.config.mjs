@@ -12,7 +12,15 @@ export default defineConfig({
   },
   markdown: {
     shikiConfig: {
-      theme: "github-dark-default",
+      // Dual themes: tokens are emitted as CSS custom properties and the
+      // active palette is switched by the `.dark` class in global.css. The
+      // previous single `github-dark-default` theme meant light mode rendered
+      // near-black code slabs on a cream page.
+      themes: {
+        light: "github-light-default",
+        dark: "github-dark-default",
+      },
+      defaultColor: false,
       wrap: false,
     },
   },

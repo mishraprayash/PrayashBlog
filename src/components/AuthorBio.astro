@@ -6,13 +6,13 @@ export interface Props {
 const { author } = Astro.props;
 ---
 
-<div class="my-10 p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/40 backdrop-blur-sm flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left shadow-sm shadow-[#ece5d8]/40 dark:shadow-none">
-  <div class="h-14 w-14 rounded-xl bg-gradient-to-tr from-brand-700 to-emerald-500 flex items-center justify-center text-white font-mono font-bold text-lg shrink-0 shadow-md shadow-brand-600/20">
+<div class="my-10 p-6 rounded-2xl border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 backdrop-blur-sm flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left shadow-sm shadow-black/[0.04] dark:shadow-none">
+  <div class="h-14 w-14 rounded-xl bg-gradient-to-tr from-brand-700 to-emerald-500 flex items-center justify-center text-white font-mono font-bold text-lg shrink-0 shadow-md shadow-brand-800/20">
     PM
   </div>
   <div class="space-y-2">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-      <h3 class="text-base font-bold text-[#1c1915] dark:text-zinc-100">
+      <h3 class="text-base font-bold text-paper-950 dark:text-zinc-100">
         Written by {author}
       </h3>
       <div class="flex items-center justify-center sm:justify-start gap-3">
@@ -36,7 +36,7 @@ const { author } = Astro.props;
         </a>
       </div>
     </div>
-    <p class="text-xs sm:text-sm text-[#5c5344] dark:text-zinc-400 leading-relaxed">
+    <p class="text-xs sm:text-sm text-paper-900 dark:text-zinc-400 leading-relaxed">
       Distributed Systems & AI Engineer specializing in cloud-native microservices, event-driven architectures, and agentic RAG systems. Bridging advanced AI logic with enterprise-grade backend stability.
     </p>
   </div>

@@ -6,6 +6,7 @@ import SeriesBanner from "../../components/SeriesBanner.astro";
 import ShareWidget from "../../components/ShareWidget.astro";
 import PostNavigation from "../../components/PostNavigation.astro";
 import AuthorBio from "../../components/AuthorBio.astro";
+import { SITE, canonicalFor, socialImage } from "../../lib/seo";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog", ({ data }) => {
@@ -37,7 +38,9 @@ function estimateReadingTime(body: string | null | undefined): number {
 }
 
 const readingTime = estimateReadingTime(post.body);
-const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmishra.com").href;
+const site = Astro.site ?? new URL(SITE.url);
+const currentUrl = canonicalFor(`/blog/${post.id}`, site);
+const socialCard = socialImage(post.data.featuredImage, site);
 ---
 
 <BaseLayout
@@ -49,77 +52,102 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
 >
   <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.data.title,
-    description: post.data.description,
-    image: new URL(post.data.featuredImage, Astro.site ?? "https://prayashmishra.com").href,
-    datePublished: post.data.publishDate.toISOString(),
-    ...(post.data.updatedDate
-      ? { dateModified: post.data.updatedDate.toISOString() }
-      : {}),
-    author: {
-      "@type": "Person",
-      name: post.data.author,
-    },
-    mainEntityOfPage: currentUrl,
-    ...(post.data.tags.length > 0 ? { keywords: post.data.tags.join(", ") } : {}),
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": `${currentUrl}#article`,
+        isPartOf: { "@id": `${SITE.url}/#website` },
+        headline: post.data.title,
+        description: post.data.description,
+        image: socialCard.href,
+        datePublished: post.data.publishDate.toISOString(),
+        ...(post.data.updatedDate
+          ? { dateModified: post.data.updatedDate.toISOString() }
+          : {}),
+        author: {
+          "@id": `${SITE.url}/#person`,
+          "@type": "Person",
+          name: post.data.author,
+        },
+        publisher: { "@id": `${SITE.url}/#person` },
+        mainEntityOfPage: { "@type": "WebPage", "@id": currentUrl },
+        inLanguage: "en-US",
+        articleSection: post.data.category,
+        ...(post.data.tags.length > 0 ? { keywords: post.data.tags.join(", ") } : {}),
+        wordCount: post.body ? post.body.split(/\s+/).length : undefined,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE.url}/` },
+          { "@type": "ListItem", position: 2, name: "Publications", item: `${SITE.url}/blog` },
+          ...(post.data.category
+            ? [{
+                "@type": "ListItem",
+                position: 3,
+                name: post.data.category,
+                item: `${SITE.url}/blog?category=${encodeURIComponent(post.data.category)}`,
+              }]
+            : []),
+          { "@type": "ListItem", position: post.data.category ? 4 : 3, name: post.data.title, item: currentUrl },
+        ],
+      },
+    ],
   })} />
 
   <!-- Scroll Reading Progress Bar -->
-  <div id="reading-progress" class="fixed top-0 left-0 w-0 h-1 bg-brand-600 dark:bg-brand-500 z-50 transition-all duration-100"></div>
-
-  <div class="mx-auto max-w-6xl px-6 py-10 sm:py-16 relative z-10">
+  <div class="mx-auto max-w-shell px-5 sm:px-8 py-10 sm:py-14 relative z-10">
     <!-- Breadcrumb Routing Path -->
-    <nav class="flex flex-wrap items-center gap-2 text-xs font-mono text-[#7d7260] dark:text-zinc-500 mb-8" aria-label="Breadcrumb">
-      <a href="/" class="hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+    <nav class="flex flex-wrap items-center gap-2 text-xs font-mono text-paper-800 dark:text-zinc-500 mb-8" aria-label="Breadcrumb">
+      <a href="/" class="hover:text-brand-800 dark:hover:text-brand-300 transition-colors">
         Home
       </a>
-      <span class="text-[#d5ccba] dark:text-zinc-700">/</span>
-      <a href="/blog" class="hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+      <span class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">/</span>
+      <a href="/blog" class="hover:text-brand-800 dark:hover:text-brand-300 transition-colors">
         Publications
       </a>
       {
         post.data.category && (
           <>
-            <span class="text-[#d5ccba] dark:text-zinc-700">/</span>
+            <span class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">/</span>
             <a
-              href={`/blog?tag=${encodeURIComponent(post.data.category)}`}
-              class="hover:text-brand-700 dark:hover:text-brand-300 uppercase font-semibold text-[10px] tracking-wider text-brand-700 dark:text-brand-300"
+              href={`/blog?category=${encodeURIComponent(post.data.category)}`}
+              class="hover:text-brand-800 dark:hover:text-brand-300 uppercase font-semibold text-[10px] tracking-wider text-brand-700 dark:text-brand-300"
             >
               {post.data.category}
             </a>
           </>
         )
       }
-      <span class="text-[#d5ccba] dark:text-zinc-700">/</span>
-      <span class="text-[#1c1915] dark:text-zinc-300 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+      <span class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">/</span>
+      <span class="text-paper-950 dark:text-zinc-300 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md">
         {post.data.title}
       </span>
     </nav>
 
     <!-- Header Section -->
-    <header class="max-w-3xl mb-12">
+    <header class="max-w-4xl mb-14">
       {
         post.data.category && (
-          <span class="inline-block text-xs font-bold tracking-widest uppercase text-brand-700 dark:text-brand-300 mb-4 bg-[#f4eee3] dark:bg-brand-500/20 px-3 py-1 rounded-md border border-[#e8e2d5] dark:border-transparent font-mono">
+          <span class="inline-block text-xs font-bold tracking-widest uppercase text-brand-700 dark:text-brand-300 mb-4 bg-paper-200 dark:bg-brand-500/20 px-3 py-1 rounded-md border border-paper-400 dark:border-transparent font-mono">
             {post.data.category}
           </span>
         )
       }
 
-      <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#1c1915] dark:text-zinc-50 mb-6 leading-tight">
+      <h1 class="text-[1.75rem] sm:text-4xl md:text-[2.5rem] font-black tracking-tight text-paper-950 dark:text-zinc-50 mb-5 leading-[1.12] text-balance">
         {post.data.title}
       </h1>
 
-      <p class="text-base sm:text-lg text-[#5c5344] dark:text-zinc-400 leading-relaxed mb-6 font-normal">
+      <p class="text-base sm:text-lg text-paper-900 dark:text-zinc-400 leading-relaxed mb-6 font-normal max-w-2xl">
         {post.data.description}
       </p>
 
-      <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-[#7d7260] dark:text-zinc-400 border-y border-[#e8e2d5] dark:border-zinc-800 py-3.5">
-        <span class="font-semibold text-[#1c1915] dark:text-zinc-200">
+      <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-paper-800 dark:text-zinc-400 border-y border-paper-400 dark:border-zinc-800 py-3.5">
+        <span class="font-semibold text-paper-950 dark:text-zinc-200">
           {post.data.author}
         </span>
-        <span aria-hidden="true" class="text-[#d5ccba] dark:text-zinc-700">&middot;</span>
+        <span aria-hidden="true" class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">&middot;</span>
         <time datetime={post.data.publishDate.toISOString()}>
           {post.data.publishDate.toLocaleDateString("en-US", {
             year: "numeric",
@@ -130,7 +158,7 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
         {
           post.data.updatedDate && (
             <>
-              <span aria-hidden="true" class="text-[#d5ccba] dark:text-zinc-700">&middot;</span>
+              <span aria-hidden="true" class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">&middot;</span>
               <span class="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
                 <span>
@@ -147,8 +175,8 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
             </>
           )
         }
-        <span aria-hidden="true" class="text-[#d5ccba] dark:text-zinc-700">&middot;</span>
-        <span class="bg-[#f4eee3] dark:bg-zinc-800 px-2 py-0.5 rounded text-xs font-mono text-[#5c5344] dark:text-zinc-300">{readingTime} min read</span>
+        <span aria-hidden="true" class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">&middot;</span>
+        <span class="bg-paper-200 dark:bg-zinc-800 px-2 py-0.5 rounded text-xs font-mono text-paper-900 dark:text-zinc-300">{readingTime} min read</span>
       </div>
 
       {
@@ -157,7 +185,7 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
             {post.data.tags.map((tag) => (
               <a
                 href={`/blog?tag=${encodeURIComponent(tag)}`}
-                class="inline-block text-xs font-mono px-2.5 py-1 rounded-md bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600 dark:hover:border-brand-400 transition-colors shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+                class="inline-block text-xs font-mono px-2.5 py-1 rounded-md bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-400 border border-paper-400 dark:border-zinc-800 hover:border-brand-600 dark:hover:border-brand-400 transition-colors shadow-sm shadow-black/[0.04] dark:shadow-none"
               >
                 #{tag}
               </a>
@@ -167,9 +195,18 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
       }
     </header>
 
-    <!-- Two-Column Layout: Article Body + Sticky Sidebar ToC -->
-    <div class="flex flex-col lg:flex-row gap-12 items-start">
-      <article class="flex-1 min-w-0 max-w-3xl">
+    <!--
+      Three columns at xl. The extra width is spent on rails, not on the prose:
+      the measure stays capped so line length remains readable.
+      lg  = prose + right rail (no ToC, it lives in the mobile disclosure)
+      xl  = ToC rail + prose + right rail
+    -->
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[15rem_minmax(0,1fr)_18rem] gap-10 lg:gap-12 xl:gap-14 items-start">
+
+      <!-- Left rail: sticky table of contents (xl and up) -->
+      <TableOfContents headings={headings} mode="desktop" />
+
+      <article class="min-w-0 max-w-prose mx-auto lg:mx-0 xl:mx-auto w-full">
         {
           post.data.updatedDate && (
             <div class="mb-8 p-4 sm:p-5 rounded-2xl border border-emerald-600/25 bg-emerald-500/5 dark:bg-emerald-950/20 backdrop-blur-sm">
@@ -182,11 +219,11 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
                     <span class="text-xs font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                       Article Revised
                     </span>
-                    <span class="text-[11px] font-mono text-[#7d7260] dark:text-zinc-400">
+                    <span class="text-[11px] font-mono text-paper-800 dark:text-zinc-400">
                       ({post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })})
                     </span>
                   </div>
-                  <p class="text-xs sm:text-sm text-[#3c3630] dark:text-zinc-300 leading-relaxed font-normal">
+                  <p class="text-xs sm:text-sm text-paper-900 dark:text-zinc-300 leading-relaxed font-normal">
                     {post.data.updateSummary ?? "This publication was recently updated with revised benchmarks, architectural changes, or new production insights."}
                   </p>
                 </div>
@@ -204,12 +241,15 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
         <!-- Prose Content -->
         <div
           class="prose prose-zinc dark:prose-invert max-w-none
-            prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-[#1c1915] dark:prose-headings:text-zinc-50
-            prose-h2:text-2xl prose-h2:sm:text-3xl prose-h2:mt-12 prose-h2:mb-4
-            prose-h3:text-xl prose-h3:sm:text-2xl prose-h3:mt-8 prose-h3:mb-3
-            prose-p:leading-relaxed prose-p:text-[#3c3630] dark:prose-p:text-zinc-300 prose-p:mb-5 prose-p:text-sm sm:prose-p:text-base
-            prose-a:text-brand-700 dark:prose-a:text-brand-400 prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
-            prose-li:marker:text-brand-600
+            prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-paper-950 dark:prose-headings:text-zinc-50
+            prose-h2:text-[1.6rem] prose-h2:sm:text-[1.9rem] prose-h2:mt-16 prose-h2:mb-5 prose-h2:leading-[1.2]
+            prose-h3:text-xl prose-h3:sm:text-2xl prose-h3:mt-10 prose-h3:mb-4
+            prose-p:leading-[1.75] prose-p:text-paper-900 dark:prose-p:text-zinc-300 prose-p:mb-6 prose-p:text-[1.0625rem]
+            prose-a:text-brand-800 dark:prose-a:text-brand-300 prose-a:font-medium prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-paper-950 dark:prose-strong:text-zinc-50
+            prose-li:marker:text-brand-600 prose-li:leading-[1.7]
+            prose-hr:border-paper-400 dark:prose-hr:border-zinc-800
+            prose-table:text-sm
           "
         >
           <Content />
@@ -218,8 +258,11 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
         <!-- Series Banner (Bottom) -->
         <SeriesBanner currentSlug={post.id} />
 
-        <!-- Share Widget -->
-        <ShareWidget title={post.data.title} url={currentUrl} />
+        <!-- Share widget lives in the right rail; on mobile it falls back
+             to an inline row so it is never unreachable. -->
+        <div class="lg:hidden">
+          <ShareWidget title={post.data.title} url={currentUrl} instance="inline" />
+        </div>
 
         <!-- Post Navigation (Prev/Next) -->
         <PostNavigation prevPost={prevPost} nextPost={nextPost} />
@@ -228,8 +271,46 @@ const currentUrl = new URL(`/blog/${post.id}`, Astro.site ?? "https://prayashmis
         <AuthorBio author={post.data.author} />
       </article>
 
-      <!-- Desktop Sidebar ToC (Only on >= lg screens) -->
-      <TableOfContents headings={headings} mode="desktop" />
+      <!-- Right rail: sticky metadata. On lg it sits beside the prose; at xl it
+           balances the ToC on the other side. -->
+      <aside class="hidden lg:block w-72 shrink-0 sticky top-24 self-start">
+        <div class="space-y-5 max-h-[calc(100vh-8rem)] overflow-y-auto pb-8 pr-1">
+          <div class="card p-5">
+            <p class="text-[11px] font-mono uppercase tracking-wider text-paper-800 dark:text-zinc-400 mb-3">
+              Written by
+            </p>
+            <p class="text-sm font-bold text-paper-950 dark:text-zinc-100 mb-1">
+              {post.data.author}
+            </p>
+            <p class="text-xs text-paper-800 dark:text-zinc-400 leading-relaxed">
+              Distributed Systems &amp; AI Engineer working on event-driven
+              architecture and cloud-native backend reliability.
+            </p>
+            <div class="flex items-center gap-3 mt-4 pt-4 border-t border-paper-200 dark:border-zinc-800">
+              <a href="https://github.com/mishraprayash" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-brand-800 dark:text-brand-300 hover:underline">GitHub &rarr;</a>
+              <a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-brand-800 dark:text-brand-300 hover:underline">LinkedIn &rarr;</a>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <p class="text-[11px] font-mono uppercase tracking-wider text-paper-800 dark:text-zinc-400 mb-3">
+              Topics
+            </p>
+            <div class="flex flex-wrap gap-1.5">
+              {post.data.tags.map((tag) => (
+                <a
+                  href={`/blog?tag=${encodeURIComponent(tag)}`}
+                  class="text-[11px] font-mono px-2 py-1 rounded-md bg-paper-200 dark:bg-zinc-900 text-paper-900 dark:text-zinc-300 border border-paper-400/70 dark:border-zinc-800 hover:border-brand-600 dark:hover:border-brand-400 transition-colors"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <ShareWidget title={post.data.title} url={currentUrl} instance="inline" />
+        </div>
+      </aside>
     </div>
   </div>
 

@@ -2,29 +2,36 @@
 export interface Props {
   title: string;
   url: string;
+  /**
+   * Distinguishes instances on the same page. The article renders one copy
+   * inline (mobile) and one in the sticky rail (desktop); without this both
+   * copies would emit the same element IDs, which is invalid HTML and breaks
+   * the `getElementById` wiring.
+   */
+  instance?: string;
 }
 
-const { title, url } = Astro.props;
+const { title, url, instance = "default" } = Astro.props;
 const encodedTitle = encodeURIComponent(title);
 const encodedUrl = encodeURIComponent(url);
 ---
 
-<div class="my-8 py-6 border-y border-[#e8e2d5] dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-  <span class="text-xs font-semibold uppercase tracking-wider text-[#7d7260] dark:text-zinc-400">
+<div data-share-widget={instance} class="my-8 py-6 border-y border-paper-400 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+  <span class="text-xs font-semibold uppercase tracking-wider text-paper-800 dark:text-zinc-400">
     Share this publication
   </span>
   <div class="flex items-center gap-2">
     <!-- Copy Link Button -->
     <button
-      id="copy-link-btn"
+      data-copy-btn
       data-url={url}
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900 text-xs font-medium text-[#453e33] dark:text-zinc-300 hover:border-brand-600 transition-all cursor-pointer shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-paper-900 dark:text-zinc-300 hover:border-brand-600 transition-all cursor-pointer shadow-sm shadow-black/[0.04] dark:shadow-none"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="copy-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-copy-icon>
         <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
         <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
       </svg>
-      <span id="copy-btn-text">Copy Link</span>
+      <span data-copy-btn-text>Copy Link</span>
     </button>
 
     <!-- X / Twitter -->
@@ -32,7 +39,7 @@ const encodedUrl = encodeURIComponent(url);
       href={`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`}
       target="_blank"
       rel="noopener noreferrer"
-      class="p-2 rounded-lg border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900 text-[#453e33] dark:text-zinc-300 hover:text-brand-600 hover:border-brand-600 transition-all shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+      class="p-2 rounded-lg border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-300 hover:text-brand-600 hover:border-brand-600 transition-all shadow-sm shadow-black/[0.04] dark:shadow-none"
       aria-label="Share on X"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -45,7 +52,7 @@ const encodedUrl = encodeURIComponent(url);
       href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
       target="_blank"
       rel="noopener noreferrer"
-      class="p-2 rounded-lg border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900 text-[#453e33] dark:text-zinc-300 hover:text-brand-600 hover:border-brand-600 transition-all shadow-sm shadow-[#ece5d8]/40 dark:shadow-none"
+      class="p-2 rounded-lg border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-300 hover:text-brand-600 hover:border-brand-600 transition-all shadow-sm shadow-black/[0.04] dark:shadow-none"
       aria-label="Share on LinkedIn"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -72,4 +79,35 @@ const encodedUrl = encodeURIComponent(url);
       }, 2000);
     });
   }
+</script>
+
+<script>
+  // Scoped per instance and re-run on Astro view transitions, so both the
+  // inline (mobile) and rail (desktop) copies wire up their own button.
+  function initShareWidgets() {
+    document.querySelectorAll<HTMLElement>("[data-share-widget]").forEach((root) => {
+      const btn = root.querySelector<HTMLButtonElement>("[data-copy-btn]");
+      const text = root.querySelector<HTMLElement>("[data-copy-btn-text]");
+      if (!btn || !text || btn.dataset.ready === "true") return;
+      btn.dataset.ready = "true";
+
+      btn.addEventListener("click", async () => {
+        const url = btn.dataset.url || window.location.href;
+        try {
+          await navigator.clipboard.writeText(url);
+          text.textContent = "Copied!";
+          btn.classList.add("border-brand-600", "text-brand-800", "dark:text-brand-300");
+          setTimeout(() => {
+            text.textContent = "Copy Link";
+            btn.classList.remove("border-brand-600", "text-brand-800", "dark:text-brand-300");
+          }, 2000);
+        } catch {
+          text.textContent = "Press ⌘C";
+        }
+      });
+    });
+  }
+
+  initShareWidgets();
+  document.addEventListener("astro:after-swap", initShareWidgets);
 </script>

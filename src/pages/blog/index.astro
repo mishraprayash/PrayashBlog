@@ -21,16 +21,16 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
   title="Publications & Deep Dives"
   description="Technical analysis, systems engineering deep dives, and production debugging notes."
 >
-  <div class="mx-auto max-w-5xl px-6 py-12 sm:py-20 relative z-10">
+  <div class="mx-auto max-w-shell px-5 sm:px-8 py-12 sm:py-20 relative z-10">
     <header class="mb-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-[#f4eee3] dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-[#e8e2d5] dark:border-brand-500/20 mb-4">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-paper-200 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-paper-400 dark:border-brand-500/20 mb-4">
         <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400"></span>
         Technical Publications
       </div>
-      <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-[#1c1915] dark:text-zinc-50 mb-3">
+      <h1 class="text-4xl sm:text-5xl font-black tracking-tighter text-paper-950 dark:text-zinc-50 mb-4">
         Articles & Deep Dives
       </h1>
-      <p class="text-base sm:text-lg text-[#5c5344] dark:text-zinc-400 max-w-2xl leading-relaxed">
+      <p class="text-lg text-paper-900 dark:text-zinc-300 max-w-3xl leading-relaxed">
         Deep analysis on backend architectures, network protocols, container storage, and real-time AI security.
       </p>
     </header>
@@ -49,19 +49,19 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
         <a
           href="/blog"
           id="series-banner-clear"
-          class="text-xs font-mono text-[#5c5344] dark:text-zinc-400 hover:text-brand-700 dark:hover:text-brand-300 hover:underline"
+          class="text-xs font-mono text-paper-900 dark:text-zinc-400 hover:text-brand-800 dark:hover:text-brand-300 hover:underline"
         >
           &times; Clear series filter
         </a>
       </div>
-      <h2 id="series-banner-title" class="text-xl sm:text-2xl font-bold text-[#1c1915] dark:text-zinc-50 mb-2"></h2>
-      <p id="series-banner-desc" class="text-sm text-[#5c5344] dark:text-zinc-300 leading-relaxed max-w-3xl"></p>
+      <h2 id="series-banner-title" class="text-xl sm:text-2xl font-bold text-paper-950 dark:text-zinc-50 mb-2"></h2>
+      <p id="series-banner-desc" class="text-sm text-paper-900 dark:text-zinc-300 leading-relaxed max-w-3xl"></p>
     </div>
 
     <!-- Search & Filter Controls -->
     <div class="mb-10 space-y-4">
-      <div class="relative max-w-md">
-        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#a89d89]">
+      <div class="relative max-w-xl">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-paper-800">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -70,13 +70,13 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
           id="search-input"
           type="text"
           placeholder="Filter by title, tag, or topic..."
-          class="block w-full pl-10 pr-4 py-2 bg-[#ffffff] dark:bg-zinc-900 border border-[#e8e2d5] dark:border-zinc-800 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 rounded-xl text-sm placeholder-[#a89d89] text-[#1c1915] dark:text-zinc-100 outline-none transition-all shadow-sm shadow-[#ece5d8]/30 dark:shadow-none"
+          class="block w-full pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-paper-400 dark:border-zinc-800 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 rounded-xl text-sm placeholder-paper-800 dark:placeholder-zinc-500 text-paper-950 dark:text-zinc-100 outline-none transition-all shadow-sm shadow-black/[0.03] dark:shadow-none"
         />
       </div>
 
       <!-- Curated Series Filter -->
       <div class="space-y-1.5">
-        <div class="text-[11px] font-mono uppercase tracking-wider text-[#7d7260] dark:text-zinc-500 flex items-center gap-1.5">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-paper-800 dark:text-zinc-500 flex items-center gap-1.5">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
             <path d="M6 6h10"></path>
@@ -89,7 +89,7 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
             href="/blog"
             data-filter-link
             data-series-button=""
-            class="inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-[#1c1915] text-white dark:bg-zinc-100 dark:text-zinc-900 border-transparent font-semibold shadow-sm"
+            class="inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-paper-950 text-white dark:bg-zinc-100 dark:text-zinc-1000 border-transparent font-semibold shadow-sm"
           >
             all ({allPosts.length})
           </a>
@@ -99,7 +99,7 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
                 href={`/blog?series=${encodeURIComponent(s.id)}`}
                 data-filter-link
                 data-series-button={s.id}
-                class="inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
+                class="inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-400 border-paper-400 dark:border-zinc-800 hover:border-brand-600/50"
               >
                 {s.shortTitle} <span class="opacity-70 text-[10px]">({s.posts.length})</span>
               </a>
@@ -112,7 +112,7 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
       {
         allTags.length > 0 && (
           <div class="space-y-1.5">
-            <div class="text-[11px] font-mono uppercase tracking-wider text-[#7d7260] dark:text-zinc-500">
+            <div class="text-[11px] font-mono uppercase tracking-wider text-paper-800 dark:text-zinc-500">
               Tags:
             </div>
             <nav class="flex flex-wrap gap-1.5" aria-label="Filter by tag">
@@ -124,7 +124,7 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
                       href={`/blog?tag=${encodeURIComponent(tag)}`}
                       data-filter-link
                       data-tag-button={tag}
-                      class="inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50"
+                      class="inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-400 border-paper-400 dark:border-zinc-800 hover:border-brand-600/50"
                     >
                       #{tag} <span class="opacity-60 text-[10px]">({count})</span>
                     </a>
@@ -139,7 +139,7 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
 
     <!-- Posts Grid -->
     <div>
-      <div id="posts-grid" class="grid gap-6 sm:grid-cols-2">
+      <div id="posts-grid" class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {
           allPosts.map((post) => {
             const seriesInfo = getSeriesForPost(post.id);
@@ -150,12 +150,13 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
                 data-title={post.data.title.toLowerCase()}
                 data-description={post.data.description.toLowerCase()}
                 data-tags={post.data.tags.join(",").toLowerCase()}
+                data-category={(post.data.category ?? "").toLowerCase()}
                 data-series-id={seriesInfo ? seriesInfo.series.id : ""}
                 data-series-part={seriesInfo ? String(seriesInfo.part) : ""}
                 data-series-name={seriesInfo ? `${seriesInfo.series.title} ${seriesInfo.series.shortTitle}`.toLowerCase() : ""}
-                class="group flex flex-col p-6 rounded-2xl border border-[#e8e2d5] dark:border-zinc-800/80 bg-[#ffffff] dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm shadow-[#ece5d8]/30 hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
+                class="group flex flex-col p-6 rounded-2xl border border-paper-400 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm shadow-black/[0.03] hover:border-brand-600/40 hover:-translate-y-0.5 transition-all duration-200"
               >
-                <div class="flex items-center gap-2 text-xs text-[#7d7260] dark:text-zinc-500 mb-3 flex-wrap">
+                <div class="flex items-center gap-2 text-xs text-paper-800 dark:text-zinc-500 mb-3 flex-wrap">
                   <time datetime={post.data.publishDate.toISOString()}>
                     {post.data.publishDate.toLocaleDateString("en-US", {
                       year: "numeric",
@@ -189,17 +190,17 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
                   )}
                 </div>
 
-                <h2 class="text-lg sm:text-xl font-bold text-[#1c1915] dark:text-zinc-100 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors mb-2.5 leading-snug">
+                <h2 class="text-lg sm:text-xl font-bold text-paper-950 dark:text-zinc-100 group-hover:text-brand-800 dark:group-hover:text-brand-300 transition-colors mb-2.5 leading-snug">
                   {post.data.title}
                 </h2>
 
-                <p class="text-xs sm:text-sm text-[#5c5344] dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4 flex-grow">
+                <p class="text-sm text-paper-900 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-5 flex-grow">
                   {post.data.description}
                 </p>
 
-                <div class="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-[#f4eee3] dark:border-zinc-800/60">
+                <div class="flex flex-wrap gap-1.5 mt-auto pt-2 border-t border-paper-200 dark:border-zinc-800/60">
                   {post.data.tags.map((tag) => (
-                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#f4eee3] dark:bg-zinc-800 text-[#5c5344] dark:text-zinc-400 border border-[#e8e2d5]/60 dark:border-transparent">
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-paper-200 dark:bg-zinc-800 text-paper-900 dark:text-zinc-400 border border-paper-400/60 dark:border-transparent">
                       #{tag}
                     </span>
                   ))}
@@ -210,14 +211,14 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
         }
       </div>
 
-      <div id="no-results-message" class="hidden rounded-2xl border border-[#e8e2d5] dark:border-zinc-800 bg-[#ffffff] dark:bg-zinc-900/40 p-12 text-center mt-6">
-        <p class="text-[#7d7260] dark:text-zinc-400 text-sm">No publications matched your current filter.</p>
+      <div id="no-results-message" class="hidden card p-12 text-center mt-6">
+        <p class="text-paper-800 dark:text-zinc-400 text-sm">No publications matched your current filter.</p>
       </div>
     </div>
   </div>
 
   <!-- Series metadata for client script -->
-  <script id="series-data" type="application/json" set:html={JSON.stringify(seriesCatalog)} />
+  <script is:inline id="series-data" type="application/json" set:html={JSON.stringify(seriesCatalog)} />
 
   <script is:inline>
     (function () {
@@ -231,72 +232,96 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
       const seriesBannerTitle = document.getElementById("series-banner-title");
       const seriesBannerDesc = document.getElementById("series-banner-desc");
 
-      const seriesButtons = document.querySelectorAll("[data-series-button]");
-      const tagButtons = document.querySelectorAll("[data-tag-button]");
+      const seriesButtons = Array.from(document.querySelectorAll("[data-series-button]"));
+      const tagButtons = Array.from(document.querySelectorAll("[data-tag-button]"));
 
-      const seriesDataElement = document.getElementById("series-data");
-      const catalog = seriesDataElement ? JSON.parse(seriesDataElement.textContent || "[]") : [];
+      const catalog = (function () {
+        const el = document.getElementById("series-data");
+        try { return el ? JSON.parse(el.textContent || "[]") : []; } catch { return []; }
+      })();
 
       const initialOrder = [...posts];
 
+      const BTN_BASE =
+        "inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-400 border-paper-400 dark:border-zinc-800 hover:border-brand-600/50";
+      const BTN_ACTIVE =
+        "inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-brand-700 text-white border-brand-700 font-semibold shadow-sm";
+      const TAG_BASE =
+        "inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-400 border-paper-400 dark:border-zinc-800 hover:border-brand-600/50";
+      const TAG_ACTIVE =
+        "inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-brand-700 text-white border-brand-700 font-semibold shadow-sm";
+
+      /** Current filter state, always derived from the URL so it is shareable. */
+      function readState() {
+        const p = new URLSearchParams(window.location.search);
+        return {
+          series: p.get("series") || "",
+          tag: (p.get("tag") || "").toLowerCase().trim(),
+          category: (p.get("category") || "").toLowerCase().trim(),
+          q: (p.get("q") || "").toLowerCase().trim(),
+        };
+      }
+
+      function writeState(next, replace) {
+        const p = new URLSearchParams();
+        if (next.series) p.set("series", next.series);
+        if (next.tag) p.set("tag", next.tag);
+        if (next.category) p.set("category", next.category);
+        if (next.q) p.set("q", next.q);
+        const qs = p.toString();
+        const url = qs ? "/blog?" + qs : "/blog";
+        history[replace ? "replaceState" : "pushState"]({}, "", url);
+      }
+
       function applyFilters() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const activeSeriesId = urlParams.get("series") || "";
-        const activeTag = (urlParams.get("tag") || "").toLowerCase().trim();
-        const query = (searchInput?.value || "").toLowerCase().trim();
+        const state = readState();
+        const hasAnyFilter = Boolean(state.series || state.tag || state.category || state.q);
 
-        // 1. Update Series Buttons active state
+        // 1. Series buttons
         seriesButtons.forEach((btn) => {
-          const btnSeries = btn.getAttribute("data-series-button");
-          const isActive = (btnSeries === "" && !activeSeriesId && !activeTag) || (btnSeries !== "" && btnSeries === activeSeriesId);
-          if (isActive) {
-            btn.className = "inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-brand-700 text-white border-brand-700 font-semibold shadow-sm";
-          } else {
-            btn.className = "inline-block text-xs font-mono px-3 py-1.5 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50";
-          }
+          const id = btn.getAttribute("data-series-button") || "";
+          const isActive = id === "" ? !hasAnyFilter : id === state.series;
+          btn.className = isActive ? BTN_ACTIVE : BTN_BASE;
         });
 
-        // 2. Update Tag Buttons active state
+        // 2. Tag buttons
         tagButtons.forEach((btn) => {
-          const btnTag = (btn.getAttribute("data-tag-button") || "").toLowerCase().trim();
-          const isActive = (btnTag === activeTag);
-          if (isActive) {
-            btn.className = "inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-brand-700 text-white border-brand-700 font-semibold shadow-sm";
-          } else {
-            btn.className = "inline-block text-xs font-mono px-2.5 py-1 rounded-lg border transition-all bg-[#ffffff] dark:bg-zinc-900 text-[#5c5344] dark:text-zinc-400 border-[#e8e2d5] dark:border-zinc-800 hover:border-brand-600/50";
-          }
+          const tag = (btn.getAttribute("data-tag-button") || "").toLowerCase().trim();
+          btn.className = tag === state.tag ? TAG_ACTIVE : TAG_BASE;
         });
 
-        // 3. Update Series Banner
-        const currentSeries = catalog.find((s) => s.id === activeSeriesId);
+        // 3. Series banner
+        const currentSeries = catalog.find((s) => s.id === state.series);
         if (currentSeries && seriesBanner) {
           seriesBanner.classList.remove("hidden");
-          if (seriesBannerBadge) seriesBannerBadge.textContent = `Series Collection · ${currentSeries.posts.length} Parts`;
+          if (seriesBannerBadge) seriesBannerBadge.textContent = "Series Collection \u00b7 " + currentSeries.posts.length + " Parts";
           if (seriesBannerTitle) seriesBannerTitle.textContent = currentSeries.title;
           if (seriesBannerDesc) seriesBannerDesc.textContent = currentSeries.description;
         } else if (seriesBanner) {
           seriesBanner.classList.add("hidden");
         }
 
-        // 4. Filter Posts
+        // 4. Filter cards
         let visibleCount = 0;
         posts.forEach((post) => {
           const title = post.getAttribute("data-title") || "";
           const description = post.getAttribute("data-description") || "";
-          const rawTags = post.getAttribute("data-tags") || "";
-          const tags = rawTags.split(",").map(t => t.trim());
+          const tags = (post.getAttribute("data-tags") || "").split(",").map((t) => t.trim());
+          const category = post.getAttribute("data-category") || "";
           const seriesId = post.getAttribute("data-series-id") || "";
           const seriesName = post.getAttribute("data-series-name") || "";
 
-          const matchesSeries = !activeSeriesId || seriesId === activeSeriesId;
-          const matchesTag = !activeTag || tags.includes(activeTag);
-          const matchesQuery = !query || 
-            title.includes(query) || 
-            description.includes(query) || 
-            tags.some((t) => t.includes(query)) || 
-            seriesName.includes(query);
+          const matchesSeries = !state.series || seriesId === state.series;
+          const matchesTag = !state.tag || tags.includes(state.tag);
+          const matchesCategory = !state.category || category === state.category;
+          const matchesQuery =
+            !state.q ||
+            title.includes(state.q) ||
+            description.includes(state.q) ||
+            tags.some((t) => t.includes(state.q)) ||
+            seriesName.includes(state.q);
 
-          if (matchesSeries && matchesTag && matchesQuery) {
+          if (matchesSeries && matchesTag && matchesCategory && matchesQuery) {
             post.classList.remove("hidden");
             visibleCount++;
           } else {
@@ -304,32 +329,33 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
           }
         });
 
-        // 5. Order visible posts: sequential by part for series, original chronological when cleared
+        // 5. Order: sequential by part inside a series, chronological otherwise
         if (postsGrid) {
           if (currentSeries) {
-            const seriesCards = posts.filter((p) => p.getAttribute("data-series-id") === activeSeriesId);
-            seriesCards.sort((a, b) => {
-              const partA = parseInt(a.getAttribute("data-series-part") || "0", 10);
-              const partB = parseInt(b.getAttribute("data-series-part") || "0", 10);
-              return partA - partB;
-            });
-            seriesCards.forEach((card) => postsGrid.appendChild(card));
+            posts
+              .filter((p) => p.getAttribute("data-series-id") === state.series)
+              .sort(
+                (a, b) =>
+                  parseInt(a.getAttribute("data-series-part") || "0", 10) -
+                  parseInt(b.getAttribute("data-series-part") || "0", 10),
+              )
+              .forEach((card) => postsGrid.appendChild(card));
           } else {
             initialOrder.forEach((card) => postsGrid.appendChild(card));
           }
         }
 
-        // 6. Handle No Results State
-        if (visibleCount === 0) {
-          noResultsMessage?.classList.remove("hidden");
-        } else {
-          noResultsMessage?.classList.add("hidden");
+        // 6. Empty state
+        if (noResultsMessage) {
+          noResultsMessage.classList.toggle("hidden", visibleCount !== 0);
         }
       }
 
-      // Intercept filter links for instant client-side transitions
+      // Intercept filter links for instant client-side transitions. They are real
+      // hrefs, so this degrades to normal navigation without JS.
       document.querySelectorAll("[data-filter-link]").forEach((link) => {
         link.addEventListener("click", (e) => {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
           e.preventDefault();
           const href = link.getAttribute("href") || "/blog";
           history.pushState({}, "", href);
@@ -340,16 +366,29 @@ const allTags = [...new Set(allPosts.flatMap((p) => p.data.tags))].sort();
       document.getElementById("series-banner-clear")?.addEventListener("click", (e) => {
         e.preventDefault();
         history.pushState({}, "", "/blog");
+        if (searchInput) searchInput.value = "";
         applyFilters();
       });
 
-      // Listen for browser back/forward navigation
-      window.addEventListener("popstate", applyFilters);
+      // Typing updates the URL (replaceState, so back/forward stays usable) and
+      // keeps the other active filters intact.
+      let debounce;
+      searchInput?.addEventListener("input", () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          writeState({ ...readState(), q: searchInput.value.trim() }, true);
+          applyFilters();
+        }, 180);
+      });
 
-      // Listen for search input typing
-      searchInput?.addEventListener("input", applyFilters);
+      window.addEventListener("popstate", () => {
+        if (searchInput) searchInput.value = readState().q;
+        applyFilters();
+      });
 
-      // Run on page load immediately
+      // Hydrate the input from ?q= before first paint of results
+      const initial = readState();
+      if (searchInput && initial.q) searchInput.value = initial.q;
       applyFilters();
     })();
   </script>
