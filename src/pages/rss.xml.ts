@@ -10,11 +10,10 @@ export async function GET(context: APIContext) {
     return true;
   });
 
-  posts.sort((a, b) => {
-    const dateA = a.data.updatedDate ? Math.max(a.data.publishDate.getTime(), a.data.updatedDate.getTime()) : a.data.publishDate.getTime();
-    const dateB = b.data.updatedDate ? Math.max(b.data.publishDate.getTime(), b.data.updatedDate.getTime()) : b.data.publishDate.getTime();
-    return dateB - dateA;
-  });
+  posts.sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime());
+  const lastBuild = new Date(
+    Math.max(...posts.map((p) => (p.data.updatedDate ?? p.data.publishDate).getTime())),
+  ).toUTCString();
 
   const site = context.site ?? "https://prayashmishra.com";
 
@@ -22,7 +21,8 @@ export async function GET(context: APIContext) {
     posts.map(async (post) => {
       const { Content } = await render(post);
       const container = await AstroContainer.create();
-      const html = await container.renderToString(Content);
+      // Copy buttons are page UI; in a feed reader they would show up as stray text.
+      const html = (await container.renderToString(Content)).replace(/<button[^>]*>.*?<\/button>/g, "");
       return {
         title: post.data.title,
         description: post.data.updateSummary
@@ -41,14 +41,14 @@ export async function GET(context: APIContext) {
   );
 
   return rss({
-    title: "Prayash Mishra Blog",
+    title: SITE.name,
     description: "Backend engineering: distributed systems, reliability, and the network edge.",
     site,
     items,
     // `dc:date` is emitted per item when a post has been revised, so the `dc`
     // prefix has to be declared on the root element or strict readers reject
     // the whole feed.
-    customData: `<language>en-us</language><dc:creator>${SITE.name}</dc:creator>`,
+    customData: `<language>en-us</language><lastBuildDate>${lastBuild}</lastBuildDate><dc:creator>${SITE.name}</dc:creator>`,
     xmlns: { dc: "http://purl.org/dc/elements/1.1/" },
   });
 }

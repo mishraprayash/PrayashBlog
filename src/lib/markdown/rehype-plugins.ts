@@ -61,19 +61,31 @@ export function transformerCodeBlock(): ShikiTransformer {
   };
 }
 
-/** Wraps tables in a focusable scroll container so they never widen the page. */
+/**
+ * Wraps tables in a focusable scroll container so they never widen the page.
+ * Each container is a labelled region, named after the table's column
+ * headings so screen reader users can tell the tables on a page apart.
+ */
 export function rehypeTables() {
   return (tree: Root) => {
+    const used = new Map<string, number>();
     visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "table" || !parent || index === undefined) return;
       if (parent.type === "element" && (parent as Element).properties.className?.toString().includes("table-wrap")) return;
-      parent.children[index] = el("div", { className: ["table-wrap"], tabIndex: 0, role: "region", ariaLabel: "Table" }, [node]);
-      for (const th of node.children.flatMap((c) => (c.type === "element" ? c.children : []))) {
-        if (th.type !== "element") continue;
-        for (const cell of th.children) {
-          if (cell.type === "element" && cell.tagName === "th") cell.properties.scope = "col";
-        }
-      }
+
+      const headers: string[] = [];
+      visit(node, "element", (cell) => {
+        if (cell.tagName !== "th") return;
+        cell.properties.scope = "col";
+        headers.push(toText(cell).trim());
+      });
+      let label = headers.filter(Boolean).length ? `Table: ${headers.filter(Boolean).join(", ")}` : "Table";
+      const seen = (used.get(label) ?? 0) + 1;
+      used.set(label, seen);
+      if (seen > 1) label += ` (${seen})`;
+
+      parent.children[index] = el("div", { className: ["table-wrap"], tabIndex: 0, role: "region", ariaLabel: label }, [node]);
+      return [visit.SKIP, index + 1];
     });
   };
 }
@@ -135,4 +147,29 @@ export function rehypeTodos() {
       return index + parts.length;
     });
   };
+}
+
+/**
+ * GFM task lists render disabled checkboxes with no label, which screen
+ * readers announce as an unlabelled form control. Label each one with the
+ * item's own text.
+ */
+export function rehypeTaskLists() {
+  return (tree: Root) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "li") return;
+      const box = node.children.find(
+        (c): c is Element => c.type === "element" && c.tagName === "input" && c.properties.type === "checkbox",
+      );
+      if (!box) return;
+      const label = toText(node).trim().replace(/\s+/g, " ").slice(0, 120);
+      box.properties.ariaLabel = `${box.properties.checked ? "Done" : "To check"}: ${label}`;
+    });
+  };
+}
+
+function toText(node: Element | ElementContent): string {
+  if (node.type === "text") return node.value;
+  if (node.type === "element") return node.children.map(toText).join("");
+  return "";
 }

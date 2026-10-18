@@ -7,7 +7,8 @@ export const SITE = {
   locale: "en_US",
 } as const;
 
-export const DEFAULT_OG_IMAGE = "/images/default-og.png";
+// Generated at build time by src/pages/og/[slug].png.ts.
+export const DEFAULT_OG_IMAGE = "/og/site.png";
 
 /**
  * Extensions that X, LinkedIn, Facebook and Slack will actually render in a

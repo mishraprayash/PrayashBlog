@@ -9,6 +9,8 @@ Manage the background server with:
 - `astro dev status`
 - `astro dev logs`
 
+After changing anything in `src/lib/markdown/` or the `markdown` block of `astro.config.mjs`, clear Astro's content cache (`rm -rf .astro node_modules/.astro`); rendered Markdown is cached by content, so plugin changes are otherwise ignored.
+
 To verify TypeScript and frontmatter schema correctness:
 ```bash
 npm run build

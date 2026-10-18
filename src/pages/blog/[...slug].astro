@@ -1,5 +1,6 @@
 ---
 import { render } from "astro:content";
+import monoLatin from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import TableOfContents from "../../components/post/TableOfContents.astro";
 import SeriesNav from "../../components/post/SeriesNav.astro";
@@ -30,11 +31,14 @@ const series = seriesFor(post, posts);
 const partIndex = series ? series.parts.findIndex((p) => p.id === post.id) : -1;
 const related = relatedPosts(post, posts);
 const minutes = readingTime(post.body);
-const socialCard = socialImage(data.featuredImage, site);
+// A raster featuredImage wins; otherwise the card generated for this post.
+const ogImage = data.featuredImage ?? `/og/${post.id}.png`;
+const socialCard = socialImage(ogImage, site);
 ---
 
-<BaseLayout title={data.title} description={data.description} ogImage={data.featuredImage} canonicalURL={url} ogType="article">
+<BaseLayout title={data.title} description={data.description} ogImage={ogImage} canonicalURL={url} ogType="article">
   <Fragment slot="head">
+    {post.body?.includes("```") && <link rel="preload" href={monoLatin} as="font" type="font/woff2" crossorigin />}
     <meta property="article:published_time" content={data.publishDate.toISOString()} />
     {data.updatedDate && <meta property="article:modified_time" content={data.updatedDate.toISOString()} />}
     <script is:inline type="application/ld+json" set:html={JSON.stringify({
