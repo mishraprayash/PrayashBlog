@@ -21,6 +21,18 @@ In this 2-part guide, we break down Docker mechanics from first principles:
 * **Part 1 (Current)**: Core container mechanics, layer caching, `.dockerignore` discipline, and crafting a clean, secure single-stage build.
 * **[Part 2](/blog/docker-production-traps-edge-cases)**: Transitioning to multi-stage builds, BuildKit cache mounts, radical image size reduction, and container runtime traps.
 
+The diagram below walks through the four ideas this part covers before we get to the Dockerfile.
+
+<div class="story" data-diagram="docker-layers">
+
+1. **A process, not a VM.** A VM runs its own guest kernel on a hypervisor. A container is a Linux process on the host kernel, kept apart by namespaces (what it can see) and cgroups (what it can use).
+2. **An image is a stack of layers.** Each `FROM`, `COPY` and `RUN` adds a read-only layer on top of the last. Running the image adds one writable container layer above them.
+3. **A change rebuilds everything above it.** A `COPY` layer's cache key is the checksum of the copied files. Edit one source file and `COPY . .` changes, so `npm ci` after it runs again on every commit.
+4. **Copy the package files first.** With `package.json` and `package-lock.json` copied on their own, `npm ci` stays cached until the lockfile changes. Only the final `COPY . .` is rebuilt when you edit code.
+5. **Keep the build context small.** `docker build .` tars the directory and sends it to the daemon. `.dockerignore` keeps `node_modules`, `.git` and `.env` out of that tarball.
+
+</div>
+
 ---
 
 ## 1. What is a Docker Container? (It's Not a VM)

@@ -336,6 +336,18 @@ export class AppModule {}
 
 Now we implement synchronous communication where `OrderService` invokes `PaymentService` to process a credit transaction.
 
+The diagram follows one invocation from `OrderService` to `PaymentService`, then shows what the resiliency policy from section 5 does when the call starts failing.
+
+<div class="story" data-diagram="dapr-invoke">
+
+1. **Call your own sidecar.** `OrderService` calls `daprClient.invoker.invoke` with the app id `payment-app` and the route `payments/process`. It never needs an IP address or hostname for `PaymentService`.
+2. **Sidecar to sidecar.** The calling sidecar finds where `payment-app` runs and forwards the request to that service's sidecar. Between the two sidecars the call goes over gRPC with mTLS.
+3. **Into the controller.** `PaymentService`'s sidecar forwards the request to `POST /payments/process` on the NestJS controller, and the response, with `status: 'SUCCESS'`, travels back the same way.
+4. **Retries happen in the sidecar.** If `PaymentService` fails, the `paymentRetry` policy retries with exponential backoff, up to 3 retries with at most 3s between them. The backoff runs in the sidecar, not in Node.js.
+5. **The circuit opens.** After 5 consecutive failures the `paymentCB` circuit breaker trips. For the next 10 seconds the sidecar fails the call straight away instead of sending it to `payment-app`.
+
+</div>
+
 ### 4.1 The DTO Contracts
 ```typescript
 // shared/dto/payment.dto.ts

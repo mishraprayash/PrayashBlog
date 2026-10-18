@@ -59,10 +59,13 @@
   flex-direction: column;
   justify-content: center;
   border-top: 0;
-  opacity: 0.3;
-  transition: opacity 0.4s;
+  transition: color 0.4s;
 }
-.story--live .step[data-current] { opacity: 1; }
+/* Steps not being read are dimmed by colour, not opacity, so they keep
+   4.5:1 (#8f8c85 on the panel is 5.5:1). */
+.story--live .step:not([data-current]) { color: #8f8c85; }
+.story--live .step:not([data-current]) :is(.step__t, .step__label, a, code) { color: #8f8c85; }
+.story--live .step:not([data-current]) :not(pre) > code { background: none; }
 .story--live .story__fig {
   position: sticky;
   top: var(--bar-h);
@@ -74,10 +77,16 @@
   .post-body > .story { grid-template-columns: minmax(0, 1fr); }
   .story__fig { order: -1; border-left: 0; border-bottom: 1px solid var(--night-line); padding: 12px; }
   .story__steps { padding: 0 var(--gutter); }
-  .story--live .story__fig { z-index: 1; height: 52vh; background: var(--night); }
-  .story--live .story__frame svg { max-height: calc(52vh - 24px); }
-  .story--live .step { min-height: 64vh; justify-content: flex-start; padding-top: 32px; }
+  /* The diagram takes the top 46% of the screen and one step fills the rest. */
+  .story--live .story__fig { z-index: 1; height: 46vh; background: var(--night); }
+  .story--live .story__frame svg { max-height: calc(46vh - 24px); }
+  .story--live .step { min-height: 54vh; justify-content: flex-start; padding: 24px 0 32px; }
   .step__t { font-size: 1.5rem; }
+}
+@media (min-width: 560px) and (max-width: 900px) {
+  /* The header is sticky here, so the diagram starts below it. */
+  .story--live .story__fig { height: calc(46vh - var(--bar-h)); }
+  .story--live .story__frame svg { max-height: calc(46vh - var(--bar-h) - 24px); }
 }
 @media (max-width: 559px) {
   .story--live .story__fig { top: 0; }

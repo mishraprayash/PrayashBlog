@@ -6,7 +6,7 @@ export interface Props {
 const items = Astro.props.headings
   .filter((h) => h.depth === 2 || h.depth === 3)
   // The heading anchor plugin appends a "#" link to each heading.
-  .map((h) => ({ ...h, text: h.text.replace(/\s*#$/, "") }));
+  .map((h) => ({ ...h, text: h.text.replace(/\s*#$/, "").replace(/^\d+\.\s+/, "") }));
 const sections = items.filter((h) => h.depth === 2).length;
 const show = sections >= 4;
 ---

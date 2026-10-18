@@ -19,6 +19,17 @@ Now comes the hard part: **How do we run this locally without pulling our hair o
 
 Below is the full local-to-production path, including the parts that will bite you.
 
+The diagram follows one service from Docker Compose to a hardened Kubernetes pod.
+
+<div class="story" data-diagram="dapr-k8s">
+
+1. **Compose: one namespace per app.** `network_mode: "service:order-service"` puts `order-dapr` in `order-service`'s network namespace, so the two share `127.0.0.1` the way containers in a pod do. `payment-dapr` joins `payment-service`'s namespace, so both sidecars can bind 3500 without colliding.
+2. **Kubernetes: annotations and the injector.** You don't write the sidecar container yourself. With `dapr.io/enabled: "true"` on the pod template, Dapr's sidecar injector, a mutating admission webhook, adds the `daprd` container, configured from `dapr.io/app-id` and `dapr.io/app-port`.
+3. **Readiness waits for the sidecar.** The readiness probe calls the app's `/health`, and the Dapr health indicator behind it calls the sidecar's `/v1.0/healthz/outbound`. That returns 204 only once the sidecar's components, such as the ElastiCache state store, are initialized, so Kubernetes holds traffic until then.
+4. **mTLS and an API token.** Dapr Sentry issues the certificates the sidecars use for mTLS with each other. An API token, set with `dapr.io/api-token-secret`, stops other local processes from calling the sidecar, and the app sends it through `DaprClient`'s `daprApiToken`.
+
+</div>
+
 ---
 
 ## 1. Local Development: Production-Like Docker Compose Setup

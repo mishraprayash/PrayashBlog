@@ -20,6 +20,18 @@ While synchronous RPC is necessary for immediate queries, production cloud-nativ
 
 In this guide, we implement full production-grade code for four core Dapr building blocks inside NestJS.
 
+The diagram walks through the four building blocks in the order this post covers them.
+
+<div class="story" data-diagram="dapr-state">
+
+1. **Reading state with its ETag.** A `GET` on the sidecar's state API returns the order as the body and its version in the `ETag` response header. `daprClient.state.get()` returns only the body, so the ETag never reaches your code that way.
+2. **Two writers, one ETag.** Two replicas read `order_1` with the same ETag and both save with `first-write` concurrency. The first save succeeds and the store moves to a new ETag. The second is rejected with a 409, which the repository turns into a `ConflictException`.
+3. **Secrets through the sidecar.** `secret.get('vault-secretstore', key)` asks the sidecar, and the sidecar reads Vault. The app carries no Vault or AWS SDK.
+4. **Config: seed, then stream.** `configuration.get()` loads the current values at boot, and `configuration.subscribe()` then pushes changes as they happen. A subscription only delivers changes, and a severed stream raises no error where you called it.
+5. **Pub/sub in two steps.** On startup the sidecar calls `GET /dapr/subscribe`, and the app answers with the topic and the route to deliver to. When an event arrives, the sidecar posts it to `/events/orders/created`. A 200 acks the message; `RETRY` or a 500 leaves it to be retried or sent to a dead letter queue.
+
+</div>
+
 ---
 
 ## 1. State Store: Key-Value Storage with ETag Concurrency

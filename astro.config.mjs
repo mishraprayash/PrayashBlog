@@ -7,6 +7,7 @@ import { pressTheme } from "./src/lib/markdown/shiki-themes";
 import {
   rehypeCallouts,
   rehypeHeadingAnchors,
+  rehypeSectionNumbers,
   rehypeTables,
   rehypeTaskLists,
   rehypeTodos,
@@ -30,6 +31,6 @@ export default defineConfig({
     // Custom plugins need the unified pipeline (@astrojs/markdown-remark);
     // rehypeHeadingIds runs first so the heading anchors have ids to link to.
     // rehypeStories builds the scroll diagrams from src/lib/diagrams.
-    rehypePlugins: [rehypeHeadingIds, rehypeStories, rehypeCallouts, rehypeTables, rehypeHeadingAnchors, rehypeTodos, rehypeTaskLists],
+    rehypePlugins: [rehypeHeadingIds, rehypeSectionNumbers, rehypeStories, rehypeCallouts, rehypeTables, rehypeHeadingAnchors, rehypeTodos, rehypeTaskLists],
   },
 });

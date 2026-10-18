@@ -44,6 +44,18 @@ Here is how I architected our notification and event dispatching engine using **
 
 ---
 
+The rest of the post in five steps, from the switch to the queue problems that show up once it's gone:
+
+<div class="story" data-diagram="dispatch">
+
+1. **The switch.** One service holds every SDK and checks every `payload: any` by hand. Adding Discord means editing and redeploying the file that also sends password resets.
+2. **A registry of strategies.** Validation rejects a bad payload with a `400` before any strategy runs. The registry looks up the strategy for the channel, so a new channel is a new class and the dispatcher doesn't change.
+3. **The poison pill.** A job with an invalid payload fails on every retry. Validate inside the worker as well, and send a job that fails validation to a dead letter queue with zero retries.
+4. **Slow webhook starvation.** In one shared pool, 50 slow webhooks can take all 50 concurrency slots for up to 30 seconds each, and password reset emails wait behind them.
+5. **A queue per channel.** `notifications-email` and `notifications-webhook` get their own workers, so a slow customer endpoint only fills the webhook workers. The webhook strategy also stops waiting after 5 seconds.
+
+</div>
+
 ## 1. The Anti-Pattern: The Monolithic `switch` Monster
 
 Here is the bad code pattern that plagues growing codebases:

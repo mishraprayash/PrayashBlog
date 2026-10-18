@@ -25,6 +25,18 @@ Retries aren't the edge case here; they're how you get reliability out of a netw
 
 This post is about doing that for HTTP APIs and message consumers that keep their state in PostgreSQL. It's the third part of a series. [Part 2](/blog/transactional-outbox-pattern-production-realities) covers getting events into the broker without losing them, and explains why that guarantees duplicates on this side.
 
+Before the details, here is the whole argument in five steps: the Redis lock, the claim row that replaces it, and the case where the work leaves the database.
+
+<div class="story" data-diagram="idempotency">
+
+1. **The Redis lock.** The worker sets `idem:123` with `SET NX`, then dies before anything reaches Postgres or the card. The key stays, so the retry gets a `409` for a payment that never happened.
+2. **The claim in the same transaction.** Request A inserts its claim row and does the transfer in one Postgres transaction. Both commit together, and until then no other transaction can see the claim.
+3. **A duplicate waits.** Request B's `INSERT … ON CONFLICT DO NOTHING` runs into A's uncommitted row, so Postgres makes it wait for A. The handler caps that wait with a 5 second `lock_timeout`, after which B returns a `409`.
+4. **The replay.** A commits with its `201` stored in the claim row. B's insert now returns 0 rows, so B reads the stored response and returns the same `201` if the request hash matches, or a `422` if it doesn't. There is still one transfer.
+5. **An external call.** Stripe can't join the transaction, so the claim is committed first as `IN_PROGRESS` and Stripe gets a key derived from yours. A duplicate now sees the claim and gets a `409` with `Retry-After`. A claim that goes quiet for five minutes can be taken over, and the same key means Stripe returns the payment it already made.
+
+</div>
+
 ## Why a Redis lock isn't enough
 
 The quick version you'll find in a lot of places: put an `Idempotency-Key` header on the request, and in middleware run

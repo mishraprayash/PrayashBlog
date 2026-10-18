@@ -25,6 +25,18 @@ They call it a day and move on. But in production, this is where the real headac
 
 Here is what is actually happening beneath the Node.js TLS layer, why things break, and how to configure HTTPS reliably.
 
+The diagram below walks through the handshake and the three ways it goes wrong in production.
+
+<div class="story" data-diagram="tls">
+
+1. **The handshake.** Before any HTTP is sent, the client sends a ClientHello and the server answers with its certificate chain and its key share. Encrypted application data only flows once both sides have finished.
+2. **The CPU cost.** Node hands the crypto to OpenSSL, but the asymmetric key exchange in each handshake still costs CPU. When hundreds of clients connect at once, that work can saturate cores and delay event-loop timers and I/O callbacks. That's section 1.
+3. **The missing intermediate.** Load `cert.pem` and the server sends only the leaf. Chrome fetches the intermediate from the AIA URL and passes, while curl and the Node, Go and Python clients fail with `unable to verify the first certificate`. That's section 2.
+4. **The full chain.** Load `fullchain.pem` into `cert` and the intermediate goes out with the leaf, so every client can build the chain up to a root it already trusts.
+5. **Live rotation.** A certificate read at boot stays in memory after it's renewed on disk. `server.setSecureContext()` swaps in the new one: new handshakes get it, and open connections keep the old context until they close. That's section 3.
+
+</div>
+
 ---
 
 ## 1. What Actually Happens During a Handshake

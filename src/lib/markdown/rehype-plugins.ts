@@ -118,6 +118,37 @@ export function rehypeCallouts() {
   };
 }
 
+const UNNUMBERED = /^(summary|further reading|what'?s next|what comes next|the takeaway|where to start|series wrap-up|production rules)/i;
+
+/**
+ * Section labels ("01", "02" …) above each h2, shown by CSS from `data-n`.
+ * A post that numbers its own headings ("## 1. The poller") keeps its numbers,
+ * moved from the text into the label; otherwise h2s are counted, skipping
+ * closing sections such as "Summary". Runs after rehypeHeadingIds, so ids
+ * (and links to them) don't change.
+ */
+export function rehypeSectionNumbers() {
+  return (tree: Root) => {
+    const h2s: Element[] = [];
+    visit(tree, "element", (node) => {
+      if (node.tagName === "h2") h2s.push(node);
+    });
+    const manual = h2s.some((h) => /^\s*\d+\.\s/.test(toText(h)));
+    let n = 0;
+    for (const h of h2s) {
+      const first = h.children[0];
+      if (manual) {
+        const m = first?.type === "text" ? first.value.match(/^\s*(\d+)\.\s+/) : null;
+        if (!m || first?.type !== "text") continue;
+        first.value = first.value.slice(m[0].length);
+        h.properties.dataN = m[1].padStart(2, "0");
+      } else if (!UNNUMBERED.test(toText(h).trim())) {
+        h.properties.dataN = String(++n).padStart(2, "0");
+      }
+    }
+  };
+}
+
 /** Adds a hover/focus `#` link to each h2 and h3 that has an id. */
 export function rehypeHeadingAnchors() {
   return (tree: Root) => {

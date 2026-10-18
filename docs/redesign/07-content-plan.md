@@ -104,6 +104,86 @@ Each plan lists, in priority order, what to **fix** (wrong or unverified), **add
 
 ---
 
+## Found while drawing the diagrams (October 2026)
+
+Each post's scroll diagram was drawn from that post alone, so reading the posts closely turned up the problems below. The diagrams avoid every doubtful claim listed here, but the post text still contains them. Fix them in the posts.
+
+**Docker, part 1**
+- It says every instruction, including `CMD`, creates a layer. Only `RUN`, `COPY` and `ADD` add filesystem layers; `CMD` is metadata.
+- "1.2GB down to 130MB" here, but part 2's table says 142 MB. Neither has a source.
+- "An attacker who escapes gets root on the host" only holds for an escape without user namespaces.
+
+**Docker, part 2**
+- "Pod eviction will wait 10 seconds": the Kubernetes default `terminationGracePeriodSeconds` is 30s. 10s is the default for `docker stop`.
+- tini forwards SIGTERM, but draining in-flight requests still needs a handler in Node.
+- Whiteouts are `.wh.` files in layer tarballs (the `0:0` character device is the on-disk overlayfs form), and the marker is tiny, so "adds layer size" is misleading.
+- The checklist contradicts the Dockerfile ("no node_modules/.bin", "numeric UID" vs `USER node`).
+- "88% reduction" and "25 s to under 3 s" have no source.
+
+**k9s**
+- The skin YAML doesn't match k9s's skin schema (`k9s: body: fgColor:` …).
+- The `securityContext` example puts container-level fields (`capabilities`, `readOnlyRootFilesystem`) at pod level, and "ephemeral containers inherit the pod's securityContext" is doubtful. The refusal is more likely Pod Security Admission.
+- The plugin passes the pod name to `--target`, which expects a container name.
+- `eks:DescribeCluster` is needed by `update-kubeconfig`, not by `get-token`.
+- Check whether `p` toggles previous logs from the log view or the pod view.
+
+**Queues, topics and streams**
+- The "correct" `processPayment` has no lease (a crash after the claim leaves the job IN_PROGRESS forever) and no Stripe idempotency key. Fix it or link to Pattern 3 of the idempotency post.
+- Unsourced: "millions of events/sec", Redis pub/sub dropping messages "if a subscriber is offline for even 100 milliseconds", "80% of backend workloads".
+- Em dashes and ❌/✅ in code comments, against the style guide.
+
+**Event dispatching (strategy pattern)**
+- Trap 3's fix doesn't work. A deterministic BullMQ `jobId` stops a second job with the same id being added, but not a retry of the same job after Twilio has accepted the SMS.
+- BullMQ makes one attempt by default; "retries 5 times" needs `attempts` configured.
+- `UserVerifiedTransformer` is never registered, so `user.verified` goes out unredacted, contradicting the PII bullet.
+- `@IsPhoneNumber()` without a region isn't an E.164 check.
+- "15 different dependencies" has no source; "the entire worker crashes" on a webhook timeout is overstated.
+
+**NestJS and Dapr series**
+- **Part 1:**
+  - "typically sub-millisecond on loopback" has no source;
+  - "Zero Infrastructure SDKs… High-Performance Sidecar" is hype.
+- **Part 2:**
+  - The ASCII topology says `pay-app`, but the code says `payment-app`.
+  - The payment sidecar uses ports 3501/50002, which part 4 calls a mistake.
+  - The `./dapr/dapr.module` import doesn't match the `libs/dapr` layout.
+  - The subsection numbers are out of order.
+  - "Zero Node.js CPU Overhead" is overstated.
+- **Part 3:**
+  - `DAPR_HTTP_URL` and `DAPR_API_TOKEN` are injected but never exported by the part 2 module.
+  - "On mismatch Dapr returns 409" needs a source.
+  - "Sidecars cache resolved secret values with configurable TTLs" looks wrong.
+  - The config stream is server-streaming, not bidirectional.
+  - Check the SDK's `configuration.subscribe` and `get` return shapes.
+  - Emoji headings and em dashes.
+- **Part 4:**
+  - The checklist says "health probes bypass the sidecar", but section 3 wires readiness to `/v1.0/healthz/outbound`.
+  - `-components-path` is deprecated in favour of `-resources-path`.
+  - Check "the default retry policy has no cap" against the Dapr docs.
+
+**S3 presigned uploads**
+- The size-limit table's "bucket policy with `s3:content-length-range`" row is doubtful: `content-length-range` is a POST-policy condition, so for a presigned PUT this may not work. Verify against the AWS docs before anyone relies on it (this was already the top item above).
+- The post tells the client to echo `response.contentType`, but `PresignedUrlResponse` doesn't return it.
+- The checklist says CORS should allow `OPTIONS`, but S3 CORS `AllowedMethods` doesn't take `OPTIONS`.
+- "5 TB", "under 5 milliseconds" and "~5 MB / ~50 MB" have no source.
+
+**TLS in Node**
+- The handshake art labels the traffic "HTTP/2", but `https.createServer` serves HTTP/1.1.
+- "Existing keepalive connections continue on the previous context" and "ECDSA … significantly faster" have no source.
+
+**ML filter, part 1**
+- The art says "score > 0.85", but the code uses `>=`.
+- The post recommends `access_by_lua_block`, but the config uses `access_by_lua_file`.
+- Reading the body in the access phase depends on `lua_need_request_body on`; say so.
+- "`content_by_lua` + `proxy_pass` throws a conflict on reload" is unverified.
+
+**ML filter, part 2**
+- `lua_shared_dict` isn't lock-free (it uses a mutex).
+- "< 0.05 ms" has no source.
+- A subrequest via `ngx.location.capture` doesn't read the parent's spooled body file.
+- `normalize_payload` decodes two rounds, not "fully".
+- Em dashes in both WAF posts.
+
 ## Ten new post ideas
 
 Each fits a pillar. Most are things the existing posts touch without going into.

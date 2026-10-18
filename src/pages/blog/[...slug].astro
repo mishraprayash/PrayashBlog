@@ -217,7 +217,7 @@ const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  .p-meta b { display: block; font-weight: 600; opacity: 0.75; }
+  .p-meta b { display: block; font-weight: 700; }
   .p-meta__revised summary { list-style: none; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 0.25em; }
   .p-meta__revised summary::-webkit-details-marker { display: none; }
   .p-meta__revised p {
@@ -242,14 +242,13 @@ const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 42rem) minmax(0, 1fr);
     grid-template-areas: ". toc ." ". body ." ". end .";
-    column-gap: 40px;
     padding: 56px var(--gutter) 64px;
   }
   .article__toc { grid-area: toc; min-width: 0; }
   .post-body { grid-area: body; min-width: 0; }
   .article__end { grid-area: end; min-width: 0; display: grid; gap: 36px; margin-top: 64px; }
   @media (min-width: 1280px) {
-    .article { grid-template-areas: "toc body ." "toc end ."; }
+    .article { grid-template-areas: "toc body ." "toc end ."; column-gap: 40px; }
     .article__toc { justify-self: end; width: 100%; max-width: 15rem; }
   }
   .article__share { display: grid; gap: 14px; padding-top: 20px; border-top: var(--rule-w) solid var(--line); }

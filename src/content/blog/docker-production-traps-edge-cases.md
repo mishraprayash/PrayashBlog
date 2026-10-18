@@ -19,6 +19,18 @@ If your production container ships with the TypeScript compiler, test frameworks
 
 In this guide, we'll build a production 3-stage pipeline, configure BuildKit cache mounts, and look at the kernel-level edge cases that cause subtle bugs when stripping down images.
 
+The diagram below follows the build through its three stages, then the two traps from section 5.
+
+<div class="story" data-diagram="docker-multistage">
+
+1. **deps installs everything.** The first stage copies the package files and runs `npm ci`, so its `node_modules` holds dev and production packages alike.
+2. **builder compiles, then prunes.** It takes `node_modules` from `deps`, copies the source, runs `npm run build` to produce `dist/`, and then `npm prune --omit=dev` drops the build tools.
+3. **runner gets only what runs.** The final stage copies the pruned `node_modules`, `dist/` and `package.json` from `builder`. TypeScript, the source and the tests stay behind in a stage that never ships.
+4. **Deleting in a later layer.** If one `RUN` downloads a file and a later `RUN` deletes it, the later layer only adds a whiteout marker that hides it. The file is still in the layer below and every pull downloads it. Do the download, extract and delete in one `RUN`.
+5. **PID 1 needs an init.** Node as PID 1 gets no default signal handling and doesn't reap orphaned children, so they pile up as zombies and a stop ends in `SIGKILL`. With `tini` as PID 1, signals reach Node and zombies are reaped.
+
+</div>
+
 ---
 
 ## 1. The Multi-Stage Paradigm: Build Environment vs. Runtime

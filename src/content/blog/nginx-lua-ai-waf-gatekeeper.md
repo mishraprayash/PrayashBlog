@@ -20,6 +20,18 @@ I wanted to see what it takes to build an **intelligent, real-time attack gateke
 
 Here is how I architected and implemented the system end-to-end.
 
+The diagram follows one request through the gatekeeper.
+
+<div class="story" data-diagram="waf-gatekeeper">
+
+1. **TLS ends at Nginx.** Nginx decrypts the request, so the Lua code and the model see the plaintext method, URI, query string and body.
+2. **The access phase.** `access_by_lua_file` runs after the body has been read and before the content handler runs `proxy_pass`. The script takes a snapshot of the method, URI, query, two headers and the body.
+3. **Ask the sidecar.** The script POSTs the snapshot to `/analyze` on `127.0.0.1:5000` with `resty.http`, whose cosockets yield instead of blocking the worker. The timeouts are 50 ms to connect and 100 ms to send and read.
+4. **Block.** If the sidecar answers `malicious` (a score of 0.85 or more), the script returns 403 and the upstream never sees the request.
+5. **Pass.** Otherwise the script returns and the request falls through to `proxy_pass`. If the sidecar can't be reached, the request passes too: the prototype fails open, which Part 2 comes back to.
+
+</div>
+
 ---
 
 ## 1. The High-Level Architecture

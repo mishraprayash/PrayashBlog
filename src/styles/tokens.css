@@ -38,7 +38,7 @@
   --pg: #2f5bff;
   --pg-text: #2a50e8;
   --run: #00b874;
-  --run-text: #007a52;
+  --run-text: #006b47;
   --edge: #9f7aff;
   --edge-text: #6d3fd8;
 
@@ -325,7 +325,7 @@
 /* Narrow screens: the links get their own row. */
 @media (max-width: 559px) {
   .bar__in { flex-wrap: wrap; gap: 0 8px; padding-top: 4px; }
-  .bar__logo { flex: 1; }
+  .bar__tools { margin-left: auto; }
   .bar__issue { display: none; }
   .bar nav { order: 3; flex-basis: 100%; margin-left: -10px; }
   .bar { position: static; }

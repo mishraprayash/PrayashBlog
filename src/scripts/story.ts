@@ -20,13 +20,14 @@ for (const story of document.querySelectorAll<HTMLElement>(".story")) {
   };
   setCurrent(steps[0]);
 
-  // On narrow screens the diagram sits on top, so read lower down the screen.
+  // On narrow screens the diagram covers the top 46% of the screen, so a
+  // step is current once its top clears the diagram.
   const narrow = matchMedia("(max-width: 900px)").matches;
   const io = new IntersectionObserver(
     (entries) => {
       for (const e of entries) if (e.isIntersecting) setCurrent(e.target as HTMLElement);
     },
-    { rootMargin: narrow ? "-62% 0px -25% 0px" : "-45% 0px -45% 0px" },
+    { rootMargin: narrow ? "-50% 0px -49% 0px" : "-45% 0px -45% 0px" },
   );
   for (const s of steps) io.observe(s);
 }

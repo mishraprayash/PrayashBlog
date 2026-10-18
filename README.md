@@ -6,7 +6,8 @@ Source for [prayashmishra.com](https://prayashmishra.com): writing on how backen
 
 - **Astro 7**, static output, with the unified Markdown pipeline (`@astrojs/markdown-remark`) for the custom plugins in `src/lib/markdown/`
 - **Plain CSS on design tokens:** `src/styles/tokens.css`, `prose.css`, `pages.css`, `print.css`. Values and contrast ratios are in `docs/redesign/04-design-system.md`.
-- **Self-hosted fonts:** Source Serif 4 and JetBrains Mono, via fontsource
+- **Self-hosted fonts:** Archivo, Newsreader and IBM Plex Mono, via fontsource
+- **Covers and diagrams:** an animated SVG cover per post (`src/lib/covers.ts`) and scroll-driven diagrams built into the posts at build time (`src/lib/diagrams/`); no client framework
 - **Build-time output:** syntax highlighting with a custom light/dark Shiki theme pair, social cards (Satori + resvg), RSS and sitemap
 - **Hosting:** Vercel (`vercel.json` holds headers and redirects for old URLs)
 
@@ -20,6 +21,7 @@ Source for [prayashmishra.com](https://prayashmishra.com): writing on how backen
 | `npm run check` | Astro and TypeScript checks |
 | `npm run test:pages` | Every built page at 360px and 1440px, light and dark: sideways scroll, JS errors, one `<h1>`, axe. Needs Chromium (set `CHROMIUM_PATH` if Playwright doesn't manage one). |
 | `npm run todos` | Lists `[TODO: …]` placeholders still in the content |
+| `node scripts/preview-diagram.mjs src/lib/diagrams/<id>.ts out/` | Renders one scroll diagram at every step, without a build |
 
 ## Writing a post
 
@@ -32,7 +34,9 @@ slug: "lowercase-with-hyphens"   # the URL; never change it once published
 description: "Up to 160 characters."
 publishDate: "2026-11-01T09:00:00Z"
 author: "Prayash Mishra"
+headline: "Short display title"   # optional, ≤48 characters
 pillar: "messaging"              # messaging | postgresql | running-services | network-edge
+cover: "outbox"                  # optional, from src/lib/covers.ts
 tags: ["postgresql"]             # from src/data/taxonomy.ts, max 4
 series: "reliable-messaging"     # optional, with seriesPart
 seriesPart: 4

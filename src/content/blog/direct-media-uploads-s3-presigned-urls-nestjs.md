@@ -19,6 +19,18 @@ The fix isn't allocating more RAM to your API pods. It's getting file bytes off 
 
 With presigned URLs, your backend only ever handles tiny JSON authorization payloads—signing an S3 upload URL in under 5 milliseconds—while the client streams raw bytes directly to object storage.
 
+The diagram walks through the flow, then the two constraints that catch people out.
+
+<div class="story" data-diagram="s3">
+
+1. **Ask and sign.** The client asks the API for an upload URL. The API validates the DTO, picks the storage key, and signs a URL that expires in 300 seconds and covers `host` and `content-type`.
+2. **Upload straight to S3.** The client PUTs the file to the presigned URL. S3 recomputes the SigV4 signature and accepts the upload if it matches, so the file bytes never pass through the API.
+3. **Confirm.** The client calls `confirm-upload`, and the API checks the object with `HeadObject` before saving the record. That proves the object exists, not that its bytes are right.
+4. **Content-type must match.** The `content-type` header has to arrive exactly as signed. Sending `image/jpeg; charset=binary` against a signed `image/jpeg` gets `403 SignatureDoesNotMatch`, so the client should send the value the API gave it, not `file.type`. That's section 6.
+5. **The size limit isn't in the URL.** The DTO checks `fileSizeBytes`, and then the value goes nowhere. A client can PUT a much larger object with the same valid signature, so the limit has to be enforced by S3 itself. Section 6 covers that too.
+
+</div>
+
 ---
 
 ## 1. System Architecture: The Presigned URL Flow

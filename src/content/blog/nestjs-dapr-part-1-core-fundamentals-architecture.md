@@ -21,6 +21,17 @@ If your NestJS service needed pub/sub, you imported an AMQP or Kafka client, wro
 
 In this 4-part series, we'll walk through marrying NestJS with Dapr sidecars in real Kubernetes clusters. 
 
+The diagram follows one app and its sidecar, then compares the setup with `@nestjs/microservices`.
+
+<div class="story" data-diagram="dapr-sidecar">
+
+1. **The sidecar is on localhost.** Your NestJS code never talks to Redis or Kafka. It calls the Dapr sidecar running next to it, over HTTP on port 3500 or gRPC on port 50001, with the same small API for every building block.
+2. **The sidecar talks to the infrastructure.** Each building block is backed by a component defined in YAML: Redis for state, a broker for pub/sub, Vault for secrets. The sidecar turns the app's request into calls on those systems.
+3. **Swapping the broker.** Moving pub/sub from Redis to Kafka is a change to the component YAML. The app's code and its calls to the sidecar stay the same.
+4. **Without a sidecar.** With `@nestjs/microservices`, the Kafka driver and the retry logic live inside the Node.js process, so changing the transport means changing the application.
+
+</div>
+
 ---
 
 ## 1. What is Dapr? The Sidecar Runtime

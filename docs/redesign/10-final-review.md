@@ -1,5 +1,23 @@
 # Phase 10: Final review
 
+## Update: the magazine redesign
+
+The first design was replaced after review, because it looked like every other backend blog. What's live on this branch now:
+
+- **Design:** a bold editorial magazine with one colour per topic (orange messaging, blue PostgreSQL, green running services, violet network edge), huge Archivo headlines, Newsreader text and Plex Mono labels. Light and dark themes both work. See `04-design-system.md`.
+- **Covers:** every post has an animated SVG cover drawn from its subject (the outbox losing a dual write, three retries collapsing into one row, the missing TLS intermediate, and so on).
+- **Scroll diagrams:** every post has one. They come from a numbered list in the markdown, so the steps stay real text that you can edit. The diagram beside them changes as you scroll, and the build fails if the list and the diagram disagree on the number of steps.
+- **Labs:** the Outbox post has an interactive one (the ghost row), where you step the two transactions and the relay yourself and switch the query.
+- **Short headlines:** each post has a `headline` for the hero, cards and social card. The long titles stay as the page title for search.
+- **Motion control:** a pause/play button in the header. It defaults to paused under reduced motion, and off-screen animation is always paused.
+- **Social cards:** these are in the new style, in the post's colour.
+
+Drawing a diagram for each post meant reading every post closely. The doubtful claims that turned up are listed in `07-content-plan.md` under "Found while drawing the diagrams". The diagrams avoid those claims, but the post text still contains them.
+
+Everything below this section is the review of the first design. Its checklist still applies.
+
+---
+
 _Walked through on the built site (local preview of the branch), 18 Oct 2026._
 
 ## Three visitors

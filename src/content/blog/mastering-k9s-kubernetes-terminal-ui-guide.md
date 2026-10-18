@@ -29,6 +29,18 @@ Enter **k9s** — a keyboard-driven TUI for Kubernetes. The same operations beco
 
 This post covers connecting to **AWS EKS, Azure AKS, and GCP GKE**, multi-cluster context switching, debugging workflows, custom plugins, and the production safety locks — including the two configuration mistakes that stop per-cluster skinning and ephemeral debug containers from working at all.
 
+The diagram below follows the setup and a triage session from the sections that follow.
+
+<div class="story" data-diagram="k9s">
+
+1. **A local binary on your kubeconfig.** k9s installs nothing in the cluster. It reads the contexts and tokens in `~/.kube/config` and talks to that cluster's API server, so any cluster you can reach with `kubectl` works.
+2. **Switch with `:ctx`, and see it.** Moving from `k3d-local` to `eks-prod` loads that context's own `config.yaml`, where `skin: prod-alert` turns the screen red. The skin is a signal, not a control.
+3. **Read-only mode, then RBAC.** `--readonly` turns off `Ctrl+D` and `e` in the UI. It does nothing for a `kubectl` in another terminal, so the real control is a context whose credentials can't delete.
+4. **Triage one crashing pod.** In `CrashLoopBackOff`, `l` shows the container that just restarted, and `p` switches to the previous one with the crash in it. `s` opens a shell and `Shift+F` starts a port-forward.
+5. **The debug container a hardened pod refuses.** `Shift+D` runs `kubectl debug` with netshoot, which needs `NET_ADMIN` and `NET_RAW`. A pod that drops all capabilities and uses a read-only root filesystem won't take it, and the error doesn't say why.
+
+</div>
+
 ---
 
 ## 1. How k9s Operates Under the Hood

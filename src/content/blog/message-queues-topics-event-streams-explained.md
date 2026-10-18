@@ -28,6 +28,18 @@ A queue is not SQS; a stream is not Kafka; a topic is not SNS. A queue is an abs
 
 Here is the mental model I now use, the subtle trade-offs that actually matter in production, and how I decide between them.
 
+The three patterns, and the two combinations from section 4, step by step:
+
+<div class="story" data-diagram="queues">
+
+1. **Queue: one task, one worker.** Workers compete for tasks, and each task goes to only one of them. When that worker sends an `ACK`, the broker deletes the message.
+2. **Topic: one event, every subscriber.** The broker copies each event to every subscriber. The publisher doesn't know who is listening.
+3. **Stream: a log that keeps its records.** Reading doesn't delete anything. Each consumer keeps its own offset, so a new service can start at `0` and replay history while another reads near the head.
+4. **Topic to queues.** An SNS topic fans out to one SQS queue per subscriber. If the billing database goes down, the billing queue buffers while the email workers carry on, and each queue gets its own rate limit and dead letter queue. That's pattern 1 in section 4.
+5. **A consumer group as an ordered work queue.** Kafka splits a topic's partitions among the workers in a group. Partitioning on `accountId` keeps each account's events in order, but a slow task holds up everything behind it in its partition. That's pattern 2.
+
+</div>
+
 ---
 
 ## 1. The Mental Model I Use

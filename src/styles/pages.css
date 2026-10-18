@@ -289,4 +289,4 @@ a.row:hover { background: var(--card-hover); padding-left: calc(var(--gutter) + 
 }
 .tile .tile__h { margin: 0; font: 800 1.75rem / 1.05 var(--display); font-stretch: 108%; letter-spacing: -0.02em; }
 .tile .tile__h a::after { content: ""; position: absolute; inset: 0; }
-.card__title a, .lead__title a, .tile a { text-decoration: none; }
+.card__title a, .lead__title a, .tile a, .next > a { text-decoration: none; }

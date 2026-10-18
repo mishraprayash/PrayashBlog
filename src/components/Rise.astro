@@ -10,12 +10,12 @@ export interface Props {
   id?: string;
 }
 const { text, as: Tag = "h1", class: cls, id } = Astro.props;
-const words = text.split(/\s+/).filter(Boolean);
+const words: string[] = text.split(/\s+/).filter(Boolean);
 ---
 
 <Tag class:list={["rise", cls]} id={id}>
   <span class="visually-hidden">{text}</span>
-  {words.map((w, i) => (
+  {words.map((w: string, i: number) => (
     <>
       <span aria-hidden="true"><span style={`--i:${i}`}>{w}</span></span>{i < words.length - 1 ? " " : ""}
     </>

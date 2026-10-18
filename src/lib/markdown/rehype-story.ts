@@ -28,7 +28,7 @@ const CLOSE = /^\s*<\/div>\s*$/;
 const LAB = /^\s*<div class="lab" data-lab="([a-z0-9-]+)"><\/div>\s*$/;
 
 type Raw = { type: "raw"; value: string };
-const isRaw = (n: RootContent | undefined): n is RootContent & Raw => (n as { type?: string } | undefined)?.type === "raw";
+const isRaw = (n: unknown): n is Raw => (n as { type?: string } | undefined)?.type === "raw";
 
 const el = (tagName: string, properties: Element["properties"], children: ElementContent[] = []): Element => ({
   type: "element",
@@ -39,7 +39,7 @@ const el = (tagName: string, properties: Element["properties"], children: Elemen
 
 export function rehypeStories() {
   return (tree: Root, file: VFile) => {
-    const kids = tree.children;
+    const kids = tree.children as (RootContent | Raw)[];
     for (let i = 0; i < kids.length; i++) {
       const node = kids[i];
       if (!isRaw(node)) continue;
@@ -48,7 +48,7 @@ export function rehypeStories() {
       if (lab) {
         const html = LABS[lab[1]];
         if (!html) throw new Error(`${file.path}: unknown lab "${lab[1]}"`);
-        (node as Raw).value = html;
+        node.value = html;
         continue;
       }
 
@@ -58,9 +58,9 @@ export function rehypeStories() {
       const diagram = DIAGRAMS[id];
       if (!diagram) throw new Error(`${file.path}: unknown diagram "${id}" (see src/lib/diagrams/index.ts)`);
 
-      const end = kids.findIndex((n, j) => j > i && isRaw(n) && CLOSE.test((n as Raw).value));
+      const end = kids.findIndex((n, j) => j > i && isRaw(n) && CLOSE.test(n.value));
       if (end === -1) throw new Error(`${file.path}: story "${id}" has no closing </div>`);
-      const list = kids.slice(i + 1, end).find((n): n is Element => n.type === "element" && n.tagName === "ol");
+      const list = kids.slice(i + 1, end).find((n): n is Element => n.type === "element" && (n as Element).tagName === "ol");
       if (!list) throw new Error(`${file.path}: story "${id}" needs a numbered list of steps`);
 
       const items = list.children.filter((c): c is Element => c.type === "element" && c.tagName === "li");
@@ -75,7 +75,7 @@ export function rehypeStories() {
           el("div", { className: ["story__frame"] }, [{ type: "raw", value: diagramSvg(id, diagram) } as unknown as ElementContent]),
         ]),
       ]);
-      kids.splice(i, end - i + 1, figure);
+      kids.splice(i, end - i + 1, figure as RootContent);
     }
   };
 }

@@ -78,7 +78,7 @@ export const COVERS = {
     <rect x="-600" y="-400" width="1600" height="1060" fill="${PAPER}"/>
     <g ${MONO} font-size="10" fill="${INK}"><text x="16" y="44">QUEUE</text><text x="16" y="124">TOPIC</text><text x="16" y="204">STREAM</text></g>
     <path d="M80 40H360" stroke="${INK}" stroke-width="2"/>
-    ${[0, 0.7, 1.4].map((d) => `<rect width="16" height="16" y="32" fill="${INK}"><animate attributeName="x" from="80" to="344" dur="2.1s" begin="${d}s" repeatCount="indefinite"/></rect>`).join("")}
+    ${[0, 0.7, 1.4].map((d) => `<rect x="80" width="16" height="16" y="32" fill="${INK}"><animate attributeName="x" from="80" to="344" dur="2.1s" begin="${d}s" repeatCount="indefinite"/></rect>`).join("")}
     <path d="M80 120H200M200 120L360 90M200 120H360M200 120L360 150" stroke="${INK}" stroke-width="2" fill="none"/>
     ${[90, 120, 150].map((y) => `<circle r="7" fill="${MSG}"><animateMotion dur="2s" repeatCount="indefinite" path="M80 120H200L360 ${y}"/></circle>`).join("")}
     ${range(14).map((i) => `<rect x="${80 + i * 20}" y="190" width="18" height="24" fill="${i % 3 ? INK : MSG}"/>`).join("")}

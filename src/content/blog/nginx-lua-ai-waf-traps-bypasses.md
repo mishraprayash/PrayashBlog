@@ -22,6 +22,18 @@ The prototype worked cleanly in local development. But when running load tests a
 
 Here is how each problem manifested and how to harden the system for production.
 
+The diagram shows each failure in turn.
+
+<div class="story" data-diagram="waf-bypass">
+
+1. **The body spills to disk.** A body bigger than `client_body_buffer_size` (8 KB by default on x86-64) goes partly to a temp file, and `ngx.req.get_body_data()` returns `nil`. The gatekeeper scores an empty body and the payload reaches the backend. That's section 1.
+2. **The 512-token cut.** Making the buffer at least as big as `client_max_body_size` stops the spill. The sidecar still truncates its input at 512 tokens, so padding at the front of the body pushes the payload past what the model reads.
+3. **Socket churn.** The Flask sidecar answers every request with `Connection: close`, so each inspection opens a new TCP connection and leaves a socket in `TIME_WAIT`. At a high enough rate, `connect()` fails with `cannot assign requested address`. That's section 2.
+4. **The breaker as a weapon.** Five consecutive failures trip the circuit breaker, and for 30 seconds every request passes uninspected. An attacker can send five slow requests to trip it, send the real payload, and repeat. That's section 3.
+5. **Encoding evasion.** If the edge decodes `%2527` once, the model sees `%27` while the backend decodes again and runs `'`. Fullwidth characters hide `<script>` the same way, so the sidecar has to normalize text the way the training data was normalized. That's section 4.
+
+</div>
+
 ---
 
 ## 1. The Silent WAF Bypass: The `get_body_data()` Disk Spill

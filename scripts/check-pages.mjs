@@ -43,6 +43,10 @@ for (const [width, height, scheme] of [[360, 740, "light"], [1440, 900, "dark"]]
   for (const url of pages) {
     errors.length = 0;
     await page.goto(base + url, { waitUntil: "load" });
+    // Check the settled page: reveal every scroll-in block and let the
+    // entrance animations (titles, reveals) finish before measuring contrast.
+    await page.evaluate(() => document.querySelectorAll(".rv").forEach((el) => el.classList.add("in")));
+    await page.waitForTimeout(1500);
     const r = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       h1: document.querySelectorAll("h1").length,
