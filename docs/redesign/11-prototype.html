@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outbox Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --measure: 66ch;
+  --body-size: 18px;
+  --radius: 10px;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0d10; --bg-2: #12151a; --bg-3: #191d24; --line: #262b33; --line-2: #39404b;
+  --ink: #eceff3; --ink-2: #b9c0ca; --muted: #8a93a0;
+  --accent: #ff6a3d; --accent-ink: #1a0b05; --accent-soft: rgb(255 106 61 / .14);
+  --ok: #4ade80; --ok-soft: rgb(74 222 128 / .14);
+  --wait: #fbbf24; --wait-soft: rgb(251 191 36 / .14);
+  --bad: #f87171; --bad-soft: rgb(248 113 113 / .16);
+  --info: #60a5fa;
+  --k: #ff8a65; --s: #86efac; --n: #fcd34d; --f: #93c5fd; --c: #7b8594;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f5f1; --bg-2: #ffffff; --bg-3: #eeece6; --line: #e2dfd7; --line-2: #c9c4b8;
+  --ink: #15171a; --ink-2: #3d434b; --muted: #636a74;
+  --accent: #d2400f; --accent-ink: #ffffff; --accent-soft: rgb(210 64 15 / .10);
+  --ok: #157f3b; --ok-soft: rgb(21 127 59 / .10);
+  --wait: #9a6500; --wait-soft: rgb(154 101 0 / .10);
+  --bad: #c0262d; --bad-soft: rgb(192 38 45 / .10);
+  --info: #1d5fbf;
+  --k: #b4320b; --s: #157f3b; --n: #8a5a00; --f: #1d5fbf; --c: #6b7280;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 88px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 var(--body-size)/1.7 var(--font-body); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* ---------------- header ---------------- */
+.top {
+  position: sticky; top: 0; z-index: 40;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--line);
+  transition: transform .25s ease;
+}
+.top__in { max-width: 1320px; margin: 0 auto; padding: 0 20px; height: 60px; display: flex; align-items: center; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 700 17px/1 var(--font-display); letter-spacing: -.01em; }
+.brand__mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font: 800 13px/1 var(--font-display); }
+.top__now { flex: 1; min-width: 0; font: 500 13px/1.2 var(--font-mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .2s; }
+.top__now.on { opacity: 1; }
+.top__now b { color: var(--ink); font-weight: 500; }
+.nav { display: flex; gap: 4px; }
+.nav a { text-decoration: none; padding: 8px 10px; border-radius: 8px; font-size: 15px; color: var(--ink-2); }
+.nav a:hover { background: var(--bg-3); color: var(--ink); }
+.chip-btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg-2); color: var(--ink-2); font-size: 14px; }
+.chip-btn:hover { border-color: var(--line-2); color: var(--ink); }
+.kbd { font: 500 11px/1 var(--font-mono); padding: 3px 5px; border-radius: 5px; border: 1px solid var(--line-2); color: var(--muted); }
+.progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.progress span { display: block; height: 100%; width: 0; background: var(--accent); }
+@media (max-width: 760px) { .nav { display: none; } .top__now { display: none; } .chip-btn .lbl { display: none; } }
+
+/* ---------------- layout ---------------- */
+.wrap { max-width: 1320px; margin: 0 auto; padding: 0 20px; display: grid; grid-template-columns: 260px minmax(0, 1fr) 260px; gap: 48px; }
+.wrap > .main { min-width: 0; }
+@media (max-width: 1180px) { .wrap { grid-template-columns: minmax(0, 1fr); } .rail, .aside { display: none; } }
+.main { max-width: var(--measure); width: 100%; margin: 0 auto; }
+body.focus .rail, body.focus .aside { opacity: .08; transition: opacity .3s; }
+body.focus .rail:hover, body.focus .aside:hover { opacity: 1; }
+
+/* ---------------- hero ---------------- */
+.hero { padding: 56px 0 28px; }
+.kicker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.tag { font: 500 12px/1 var(--font-mono); padding: 7px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); text-decoration: none; background: var(--bg-2); }
+.tag--accent { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
+h1 { font: 800 clamp(36px, 5.4vw, 64px)/1.02 var(--font-display); letter-spacing: -.035em; margin: 0; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+.dek { font-size: 1.2em; line-height: 1.5; color: var(--ink-2); margin: 20px 0 0; max-width: 58ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 22px; font: 500 13px/1.4 var(--font-mono); color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 500; }
+.revised { color: var(--ok); }
+
+/* failure map (tl;dr) */
+.fmap { margin: 34px 0 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); overflow: hidden; }
+.fmap__head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); font: 500 13px/1 var(--font-mono); color: var(--muted); }
+.fmap__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.fcard { display: block; padding: 16px; text-decoration: none; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background .15s; }
+.fcard:hover { background: var(--bg-3); }
+.fcard__sev { display: inline-block; font: 600 11px/1 var(--font-mono); padding: 5px 7px; border-radius: 6px; margin-bottom: 10px; }
+.sev-loss { background: var(--bad-soft); color: var(--bad); }
+.sev-down { background: var(--bad-soft); color: var(--bad); }
+.sev-stall { background: var(--wait-soft); color: var(--wait); }
+.sev-bloat { background: var(--wait-soft); color: var(--wait); }
+.sev-dup { background: var(--accent-soft); color: var(--accent); }
+.fcard__t { font: 600 15px/1.35 var(--font-body); display: block; }
+.fcard__d { font-size: 13px; line-height: 1.45; color: var(--muted); display: block; margin-top: 4px; }
+
+/* ---------------- trace rail (TOC) ---------------- */
+.rail { position: sticky; top: 84px; align-self: start; padding-top: 64px; }
+.rail__label { font: 500 12px/1 var(--font-mono); color: var(--muted); margin-bottom: 14px; display: flex; justify-content: space-between; }
+.trace { list-style: none; margin: 0; padding: 0; position: relative; }
+.trace li { margin: 0 0 10px; }
+.trace a { display: block; text-decoration: none; padding: 2px 0; }
+.trace__name { display: block; font-size: 13px; line-height: 1.35; color: var(--muted); margin-bottom: 6px; transition: color .15s; }
+.trace__bar { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--bg-3); overflow: hidden; }
+.trace__bar i { position: absolute; inset: 0; width: 0; background: var(--line-2); border-radius: 4px; }
+.trace__ms { float: right; font: 500 11px/1 var(--font-mono); color: var(--muted); }
+.trace li.active .trace__name { color: var(--ink); }
+.trace li.active .trace__bar i { background: var(--accent); }
+.trace li.done .trace__bar i { background: color-mix(in srgb, var(--accent) 45%, var(--bg-3)); }
+
+/* ---------------- aside (notes) ---------------- */
+.aside { position: sticky; top: 84px; align-self: start; padding-top: 64px; }
+.note-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--bg-2); font-size: 14px; line-height: 1.55; color: var(--ink-2); margin-bottom: 14px; }
+.note-card h4 { margin: 0 0 6px; font: 600 12px/1 var(--font-mono); color: var(--muted); }
+.env { font: 400 12px/1.7 var(--font-mono); color: var(--ink-2); }
+.env span { color: var(--muted); }
+
+/* ---------------- prose ---------------- */
+.prose h2 { font: 700 clamp(26px, 3vw, 34px)/1.15 var(--font-display); letter-spacing: -.025em; margin: 72px 0 16px; scroll-margin-top: 90px; display: flex; gap: 14px; align-items: baseline; }
+.prose h2 .n { font: 500 14px/1 var(--font-mono); color: var(--accent); flex: none; transform: translateY(-4px); }
+.prose h3 { font: 700 21px/1.3 var(--font-display); letter-spacing: -.015em; margin: 36px 0 10px; }
+.prose p { margin: 0 0 18px; color: var(--ink-2); }
+.prose p strong { color: var(--ink); font-weight: 600; }
+.prose ul { padding-left: 1.2em; color: var(--ink-2); }
+.prose li { margin-bottom: 6px; }
+.prose li::marker { color: var(--accent); }
+.prose a:not([class]) { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 2px; }
+code { font: 400 .86em/1 var(--font-mono); background: var(--bg-3); border: 1px solid var(--line); padding: .15em .35em; border-radius: 6px; color: var(--ink); }
+
+/* glossary terms */
+.term { all: unset; cursor: help; color: var(--ink); border-bottom: 1.5px dashed var(--accent); }
+.term:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.pop { position: absolute; z-index: 60; max-width: 300px; padding: 12px 14px; border-radius: 12px; background: var(--bg-2); border: 1px solid var(--line-2); box-shadow: 0 20px 40px -12px rgb(0 0 0 / .45); font-size: 14px; line-height: 1.5; color: var(--ink-2); opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; pointer-events: none; }
+.pop.on { opacity: 1; transform: none; }
+.pop b { display: block; color: var(--ink); font: 600 12px/1.4 var(--font-mono); margin-bottom: 4px; }
+
+/* ---------------- code tabs ---------------- */
+.codebox { margin: 26px 0; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-2); overflow: hidden; }
+.codebox__bar { display: flex; align-items: center; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); }
+.codebox__tab { border: 0; background: none; padding: 8px 12px; border-radius: 8px; font: 500 13px/1 var(--font-mono); color: var(--muted); display: inline-flex; gap: 8px; align-items: center; }
+.codebox__tab[aria-selected="true"] { background: var(--bg-3); color: var(--ink); }
+.codebox__tab .dot { width: 7px; height: 7px; border-radius: 50%; }
+.codebox__spacer { flex: 1; }
+.copy { border: 0; background: none; font: 500 12px/1 var(--font-mono); color: var(--muted); padding: 8px 10px; border-radius: 8px; }
+.copy:hover { background: var(--bg-3); color: var(--ink); }
+.codebox pre { margin: 0; padding: 16px 0; overflow-x: auto; font: 400 14px/1.75 var(--font-mono); }
+.codebox .ln { display: block; padding: 0 18px; position: relative; }
+.codebox .ln.hl { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.codebox .ln.bad { background: var(--bad-soft); box-shadow: inset 3px 0 0 var(--bad); }
+.codebox .ln[data-note] { cursor: help; }
+.codebox .ln[data-note]::after { content: "?"; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 600 11px/1 var(--font-body); background: var(--bg-3); color: var(--muted); border: 1px solid var(--line-2); }
+.codebox__note { border-top: 1px solid var(--line); padding: 12px 18px; font-size: 14px; color: var(--ink-2); min-height: 46px; background: var(--bg); }
+.codebox__note b { color: var(--ink); font-weight: 600; }
+.k { color: var(--k); } .s { color: var(--s); } .num { color: var(--n); } .fn { color: var(--f); } .cm { color: var(--c); font-style: italic; }
+
+/* ---------------- simulator ---------------- */
+.lab { margin: 30px 0; border: 1px solid var(--line); border-radius: 16px; background: var(--bg-2); overflow: hidden; }
+.lab__head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.lab__title { font: 600 13px/1 var(--font-mono); color: var(--ink); display: flex; gap: 8px; align-items: center; }
+.lab__title .live { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--bg-3); border: 1px solid var(--line); }
+.seg button { border: 0; background: none; padding: 7px 10px; border-radius: 7px; font: 500 12px/1 var(--font-mono); color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--bg-2); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .2); }
+.lab__body { display: grid; grid-template-columns: 1.05fr 1fr; gap: 0; }
+@media (max-width: 720px) { .lab__body { grid-template-columns: 1fr; } }
+.lab__panel { padding: 16px; }
+.lab__panel + .lab__panel { border-left: 1px solid var(--line); }
+@media (max-width: 720px) { .lab__panel + .lab__panel { border-left: 0; border-top: 1px solid var(--line); } }
+.lab__h { font: 500 11px/1 var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 10px; }
+.rows { display: grid; gap: 8px; margin-bottom: 18px; min-height: 104px; }
+.row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--line-2); font: 500 13px/1.3 var(--font-mono); transition: all .3s ease; }
+.row .id { color: var(--muted); }
+.row .st { font-size: 11px; padding: 4px 7px; border-radius: 6px; }
+.row.uncommitted { opacity: .75; border-color: var(--wait); background: var(--wait-soft); }
+.row.uncommitted .st { color: var(--wait); }
+.row.pending { border-style: solid; border-color: var(--line-2); }
+.row.pending .st { color: var(--ink-2); background: var(--bg-3); }
+.row.published { border-style: solid; border-color: transparent; background: var(--ok-soft); }
+.row.published .st { color: var(--ok); }
+.row.lost { border-style: solid; border-color: var(--bad); background: var(--bad-soft); animation: shake .4s; }
+.row.lost .st { color: var(--bad); }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.broker { display: flex; gap: 8px; flex-wrap: wrap; min-height: 34px; align-items: center; padding: 8px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+.msg { font: 500 12px/1 var(--font-mono); padding: 7px 9px; border-radius: 7px; background: var(--ok-soft); color: var(--ok); animation: pop .35s ease; }
+.broker .empty { font: 400 12px/1 var(--font-mono); color: var(--muted); padding: 0 4px; }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } }
+.cursor { font: 500 12px/1 var(--font-mono); color: var(--muted); margin-top: 10px; }
+.cursor b { color: var(--accent); }
+.log { margin: 0; padding: 0; list-style: none; font: 400 12.5px/1.6 var(--font-mono); max-height: 236px; overflow: auto; }
+.log li { padding: 6px 0; border-bottom: 1px dashed var(--line); color: var(--muted); }
+.log li.cur { color: var(--ink); }
+.log li .who { display: inline-block; min-width: 64px; color: var(--accent); }
+.log li .res { display: block; color: var(--ink-2); padding-left: 64px; }
+.log li .res.badres { color: var(--bad); }
+.log li .res.okres { color: var(--ok); }
+.lab__foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--bg); }
+.narr { font-size: 14px; line-height: 1.45; color: var(--ink); flex: 1 1 260px; min-height: 40px; }
+.ctrl { display: flex; gap: 6px; }
+.btn { border: 1px solid var(--line-2); background: var(--bg-2); padding: 9px 13px; border-radius: 9px; font: 500 13px/1 var(--font-body); }
+.btn:hover { border-color: var(--ink-2); }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn--primary:hover { filter: brightness(1.08); border-color: var(--accent); }
+.steps { display: flex; gap: 4px; }
+.steps i { width: 18px; height: 4px; border-radius: 2px; background: var(--line-2); }
+.steps i.on { background: var(--accent); }
+
+/* ---------------- WAL calculator ---------------- */
+.calc__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 22px; padding: 16px; }
+@media (max-width: 640px) { .calc__grid { grid-template-columns: 1fr; } }
+.field label { display: flex; justify-content: space-between; font: 500 12px/1 var(--font-mono); color: var(--muted); margin-bottom: 10px; }
+.field label output { color: var(--ink); }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.disk { padding: 0 16px 16px; }
+.disk__bar { position: relative; height: 34px; border-radius: 10px; background: var(--bg-3); border: 1px solid var(--line); overflow: hidden; }
+.disk__used { position: absolute; inset: 0 auto 0 0; width: 20%; background: var(--line-2); }
+.disk__wal { position: absolute; top: 0; bottom: 0; background: var(--wait); transition: width .25s, background .25s; }
+.disk__cap { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--info); }
+.disk__cap::after { content: "cap"; position: absolute; top: -16px; left: -9px; font: 500 10px/1 var(--font-mono); color: var(--info); }
+.disk__legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font: 400 12px/1 var(--font-mono); color: var(--muted); }
+.disk__legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.verdict { margin: 0 16px 16px; padding: 12px 14px; border-radius: 10px; font: 400 13px/1.6 var(--font-mono); }
+.verdict.ok { background: var(--ok-soft); color: var(--ok); }
+.verdict.warn { background: var(--wait-soft); color: var(--wait); }
+.verdict.bad { background: var(--bad-soft); color: var(--bad); }
+.verdict .t { font-weight: 600; display: block; margin-bottom: 2px; }
+
+/* ---------------- end of post ---------------- */
+.endcap { margin: 80px 0 40px; display: grid; gap: 14px; }
+.next { display: block; text-decoration: none; padding: 22px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(135deg, var(--accent-soft), transparent 60%), var(--bg-2); }
+.next small { font: 500 12px/1 var(--font-mono); color: var(--accent); }
+.next strong { display: block; font: 700 24px/1.2 var(--font-display); letter-spacing: -.02em; margin-top: 8px; }
+.endrow { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------------- palette ---------------- */
+.overlay { position: fixed; inset: 0; z-index: 80; background: rgb(0 0 0 / .45); backdrop-filter: blur(3px); display: none; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; }
+.overlay.on { display: flex; }
+.palette { width: min(620px, 100%); border-radius: 16px; background: var(--bg-2); border: 1px solid var(--line-2); box-shadow: 0 30px 80px -20px rgb(0 0 0 / .6); overflow: hidden; }
+.palette input { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 18px 20px; font: 500 17px/1 var(--font-body); color: var(--ink); outline: none; }
+.palette ul { list-style: none; margin: 0; padding: 6px; max-height: 50vh; overflow: auto; }
+.palette li { padding: 11px 14px; border-radius: 10px; display: flex; justify-content: space-between; gap: 12px; font-size: 15px; cursor: pointer; }
+.palette li small { font: 500 11px/1.6 var(--font-mono); color: var(--muted); white-space: nowrap; }
+.palette li.sel { background: var(--bg-3); }
+.palette__foot { padding: 10px 16px; border-top: 1px solid var(--line); font: 400 12px/1 var(--font-mono); color: var(--muted); display: flex; gap: 14px; }
+
+/* ---------------- settings ---------------- */
+.settings { position: fixed; z-index: 70; top: 68px; right: 20px; width: 290px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line-2); box-shadow: 0 24px 60px -18px rgb(0 0 0 / .55); padding: 14px; display: none; }
+.settings.on { display: block; }
+.settings h5 { margin: 4px 0 8px; font: 500 11px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.settings .seg { width: 100%; margin-bottom: 14px; }
+.settings .seg button { flex: 1; }
+.switch { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.switch input { accent-color: var(--accent); width: 18px; height: 18px; }
+
+.proto-note { max-width: 1320px; margin: 0 auto; padding: 10px 20px; font: 400 12px/1.5 var(--font-mono); color: var(--muted); border-bottom: 1px dashed var(--line); }
+</style>
+</head>
+<body>
+
+<p class="proto-note">Prototype · new reading experience · sample: the Outbox post. Try ⌘K / Ctrl K, the Aa button, hovering dashed terms, and the two interactive labs.</p>
+
+<header class="top" id="top">
+  <div class="top__in">
+    <a class="brand" href="#"><span class="brand__mark">PM</span><span>Prayash Mishra</span></a>
+    <div class="top__now" id="now">reading <b id="nowName"></b></div>
+    <nav class="nav" aria-label="Main"><a href="#">Writing</a><a href="#">Projects</a><a href="#">About</a></nav>
+    <button class="chip-btn" id="openPalette" aria-label="Search (Ctrl K)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="lbl">Search</span><span class="kbd">⌘K</span></button>
+    <button class="chip-btn" id="openSettings" aria-expanded="false" aria-controls="settings" aria-label="Reading settings">Aa</button>
+  </div>
+  <div class="progress"><span id="bar"></span></div>
+</header>
+
+<div class="settings" id="settings" role="dialog" aria-label="Reading settings">
+  <h5>Theme</h5>
+  <div class="seg" data-setting="theme"><button data-v="dark" aria-pressed="true">Dark</button><button data-v="light" aria-pressed="false">Light</button></div>
+  <h5>Text size</h5>
+  <div class="seg" data-setting="size"><button data-v="16px" aria-pressed="false">S</button><button data-v="18px" aria-pressed="true">M</button><button data-v="20px" aria-pressed="false">L</button></div>
+  <h5>Line width</h5>
+  <div class="seg" data-setting="measure"><button data-v="58ch" aria-pressed="false">Narrow</button><button data-v="66ch" aria-pressed="true">Comfort</button><button data-v="78ch" aria-pressed="false">Wide</button></div>
+  <label class="switch">Focus mode (dim side panels) <input type="checkbox" id="focusToggle"></label>
+</div>
+
+<div class="wrap">
+  <aside class="rail" aria-label="Contents">
+    <div class="rail__label"><span>trace · this post</span><span id="pct">0%</span></div>
+    <ol class="trace" id="trace"></ol>
+  </aside>
+
+  <main class="main">
+    <section class="hero">
+      <div class="kicker">
+        <a class="tag tag--accent" href="#">Messaging &amp; delivery</a>
+        <a class="tag" href="#">Part 2 / 3 · Reliable messaging</a>
+        <a class="tag" href="#">#postgresql</a><a class="tag" href="#">#kafka</a>
+      </div>
+      <h1>The outbox pattern, and the <em>five ways</em> it fails in Postgres</h1>
+      <p class="dek">A home-made outbox skips events, bloats, stalls when you drop partitions, and its CDC slot can fill the disk. Each failure reproduced on Postgres 16, with the fix.</p>
+      <div class="meta"><span><b>9 Sep 2026</b></span><span>13 min</span><span class="revised">● revised 18 Oct</span><span>tested on <b>Postgres 16.15</b></span></div>
+
+      <div class="fmap" aria-label="Failure map">
+        <div class="fmap__head"><span>failure map</span><span>click to jump</span></div>
+        <div class="fmap__grid">
+          <a class="fcard" href="#s1"><span class="fcard__sev sev-loss">DATA LOSS</span><span class="fcard__t">Poller skips rows</span><span class="fcard__d">Ids commit out of order</span></a>
+          <a class="fcard" href="#s2"><span class="fcard__sev sev-bloat">BLOAT</span><span class="fcard__t">Vacuum can't clean</span><span class="fcard__d">One open snapshot holds it</span></a>
+          <a class="fcard" href="#s3"><span class="fcard__sev sev-stall">STALL</span><span class="fcard__t">DROP partition blocks</span><span class="fcard__d">Lock queue on the parent</span></a>
+          <a class="fcard" href="#s4"><span class="fcard__sev sev-down">OUTAGE</span><span class="fcard__t">CDC fills the disk</span><span class="fcard__d">PANIC: no space left</span></a>
+          <a class="fcard" href="#s5"><span class="fcard__sev sev-dup">DUPLICATES</span><span class="fcard__t">At-least-once</span><span class="fcard__d">Consumers must cope</span></a>
+        </div>
+      </div>
+    </section>
+
+    <article class="prose" id="article">
+      <p>This code has a bug that won't show up in review or in staging. If the Kafka call fails after the insert commits, the order exists and nothing downstream ever hears about it.</p>
+
+      <div class="codebox" data-codebox>
+        <div class="codebox__bar" role="tablist">
+          <button class="codebox__tab" role="tab" aria-selected="true" data-tab="broken"><span class="dot" style="background:var(--bad)"></span>dual-write.ts</button>
+          <button class="codebox__tab" role="tab" aria-selected="false" data-tab="fixed"><span class="dot" style="background:var(--ok)"></span>with-outbox.ts</button>
+          <span class="codebox__spacer"></span>
+          <button class="copy" data-copy>Copy</button>
+        </div>
+        <pre data-pane="broken"><code><span class="ln"><span class="k">await</span> db.orders.<span class="fn">create</span>({ data: order });</span><span class="ln bad" data-note="&lt;b&gt;The commit point.&lt;/b&gt; Once this line returns, the order exists, whatever happens on the next line."><span class="cm">// ── process can die / broker can time out here ──</span></span><span class="ln"><span class="k">await</span> kafka.<span class="fn">send</span>({ topic: <span class="s">"orders"</span>, messages: [{ value: <span class="fn">JSON</span>.<span class="fn">stringify</span>(order) }] });</span></code></pre>
+        <pre data-pane="fixed" hidden><code><span class="ln"><span class="k">await</span> db.<span class="fn">$transaction</span>(<span class="k">async</span> (tx) =&gt; {</span><span class="ln">  <span class="k">await</span> tx.orders.<span class="fn">create</span>({ data: order });</span><span class="ln hl" data-note="&lt;b&gt;Same transaction.&lt;/b&gt; The event is written next to the order, so both commit or neither does.">  <span class="k">await</span> tx.outbox.<span class="fn">create</span>({ data: { aggregateId: order.id, payload: order } });</span><span class="ln">});</span><span class="ln hl" data-note="&lt;b&gt;Published later&lt;/b&gt; by a relay that can retry until Kafka accepts it."><span class="cm">// a separate relay reads the outbox and publishes</span></span></code></pre>
+        <div class="codebox__note" data-notebox>Hover or tap a marked line for a note.</div>
+      </div>
+
+      <p>The fix is an outbox: write the event into a table in the same transaction, and let a relay publish it. On a whiteboard that's a table and a loop. What follows is how that loop breaks, reproduced on Postgres 16.</p>
+
+      <h2 id="s1"><span class="n">01</span>The poller that skips rows</h2>
+      <p>The obvious relay remembers the highest id it published and asks for anything newer. It loses an event whenever two transactions commit in a different order from the one their ids were handed out in, because a <button class="term" data-term="sequence">sequence</button> assigns ids on insert, not on commit.</p>
+      <p>Step through it below, then switch the poller to the fixed query and run it again.</p>
+
+      <div class="lab" id="sim">
+        <div class="lab__head">
+          <span class="lab__title"><span class="live"></span>lab · ghost row</span>
+          <div class="seg" role="group" aria-label="Poller query">
+            <button data-mode="cursor" aria-pressed="true">WHERE id &gt; last_seen</button>
+            <button data-mode="status" aria-pressed="false">WHERE status = 'PENDING'</button>
+          </div>
+        </div>
+        <div class="lab__body">
+          <div class="lab__panel">
+            <p class="lab__h">outbox table</p>
+            <div class="rows" id="rows"></div>
+            <p class="lab__h">kafka topic</p>
+            <div class="broker" id="broker"><span class="empty">nothing published yet</span></div>
+            <p class="cursor" id="cursor"></p>
+          </div>
+          <div class="lab__panel">
+            <p class="lab__h">what each session ran</p>
+            <ol class="log" id="log"></ol>
+          </div>
+        </div>
+        <div class="lab__foot">
+          <div class="narr" id="narr" aria-live="polite">Press <b>Step</b> to start.</div>
+          <div class="steps" id="steps" aria-hidden="true"></div>
+          <div class="ctrl"><button class="btn" id="reset">Reset</button><button class="btn" id="play">Play</button><button class="btn btn--primary" id="step">Step →</button></div>
+        </div>
+      </div>
+
+      <p>Polling by state fixes the skipped row: A's row is still <code>PENDING</code> when it becomes visible. Add <button class="term" data-term="skiplocked">FOR UPDATE SKIP LOCKED</button> and several relays can poll at once without sending the same row twice.</p>
+
+      <h2 id="s2"><span class="n">02</span>Bloat, and what actually stops vacuum</h2>
+      <p>Marking a row as published leaves a dead tuple behind (<button class="term" data-term="mvcc">MVCC</button>). Autovacuum keeps up, as long as nothing holds back the <button class="term" data-term="xmin">xmin horizon</button>. One open <code>REPEATABLE READ</code> transaction was enough:</p>
+      <div class="codebox"><div class="codebox__bar"><button class="codebox__tab" aria-selected="true"><span class="dot" style="background:var(--muted)"></span>VACUUM (VERBOSE) outbox · output</button></div>
+        <pre><code><span class="ln bad">tuples: 0 removed, 10002 remain, 10000 are dead but not yet removable</span><span class="ln cm">-- the long transaction ends --</span><span class="ln">tuples: <span class="s">10000 removed</span>, 2 remain, 0 are dead but not yet removable</span></code></pre></div>
+
+      <h2 id="s3"><span class="n">03</span>Dropping partitions without stalling the poller</h2>
+      <p><code>DROP TABLE</code> on a partition needs an <code>ACCESS EXCLUSIVE</code> lock on the parent, and every new query queues behind it. In the test the poller waited <strong>3.04 s</strong>; with <code>DETACH … CONCURRENTLY</code> first, <strong>0.036 s</strong>.</p>
+
+      <h2 id="s4"><span class="n">04</span>Change data capture and the full disk</h2>
+      <p>A <button class="term" data-term="slot">replication slot</button> keeps every WAL file until its consumer confirms it. Stop the connector and the disk fills. Play with it:</p>
+
+      <div class="lab" id="calc">
+        <div class="lab__head"><span class="lab__title"><span class="live"></span>lab · stalled CDC slot</span><span class="tag">illustrative arithmetic</span></div>
+        <div class="calc__grid">
+          <div class="field"><label for="rate">WAL written per hour <output id="rateO"></output></label><input id="rate" type="range" min="1" max="40" value="6"></div>
+          <div class="field"><label for="down">connector down for <output id="downO"></output></label><input id="down" type="range" min="0" max="72" value="8"></div>
+          <div class="field"><label for="free">free disk on the WAL volume <output id="freeO"></output></label><input id="free" type="range" min="20" max="500" step="10" value="120"></div>
+          <div class="field"><label for="cap">max_slot_wal_keep_size <output id="capO"></output></label><input id="cap" type="range" min="0" max="200" step="10" value="0"></div>
+        </div>
+        <div class="disk">
+          <div class="disk__bar"><div class="disk__wal" id="wal"></div><div class="disk__cap" id="capMark"></div></div>
+          <div class="disk__legend"><span><i style="background:var(--wait)"></i>WAL held by the slot</span><span><i style="background:var(--bg-3);border:1px solid var(--line-2)"></i>free</span><span><i style="background:var(--info)"></i>cap</span></div>
+        </div>
+        <div class="verdict" id="verdict" aria-live="polite"></div>
+      </div>
+
+      <h2 id="s5"><span class="n">05</span>The outbox only covers the publishing side</h2>
+      <p>The relay can publish, crash before marking the row, and publish again on restart. Every consumer has to cope with seeing an event twice, which is the whole of the next post.</p>
+
+      <div class="endcap">
+        <a class="next" href="#"><small>NEXT IN SERIES · PART 3</small><strong>Idempotency in distributed systems</strong></a>
+        <div class="endrow"><button class="btn" id="copyLink">Copy link</button><a class="btn" href="#" style="text-decoration:none">RSS</a></div>
+      </div>
+    </article>
+  </main>
+
+  <aside class="aside" aria-label="Notes">
+    <div class="note-card"><h4>tested with</h4><div class="env">postgres <span>16.15</span><br>node <span>22.22</span><br>pg <span>8.13</span></div></div>
+    <div class="note-card"><h4>revised 18 oct</h4>Fixed the worker-sharding query: <code>% 4</code> skipped about a third of events.</div>
+    <div class="note-card"><h4>part of</h4>Reliable messaging, end to end · 3 posts</div>
+  </aside>
+</div>
+
+<div class="pop" id="pop" role="tooltip"></div>
+
+<div class="overlay" id="overlay">
+  <div class="palette" role="dialog" aria-label="Search">
+    <input id="q" placeholder="Search posts and sections…" autocomplete="off" aria-label="Search">
+    <ul id="results" role="listbox"></ul>
+    <div class="palette__foot"><span>↑↓ move</span><span>↵ open</span><span>esc close</span></div>
+  </div>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* ---------- glossary ---------- */
+const GLOSS = {
+  sequence: ["sequence", "Hands out the next number when a row is inserted. A transaction that started first can still commit last, so ids don't arrive in commit order."],
+  skiplocked: ["FOR UPDATE SKIP LOCKED", "Locks the rows a relay picked and lets other relays step over them instead of waiting, so two relays never take the same row."],
+  mvcc: ["MVCC", "Postgres never edits a row in place. An UPDATE or DELETE leaves the old version behind as a dead tuple until vacuum removes it."],
+  xmin: ["xmin horizon", "The oldest snapshot any open transaction might still read. Vacuum can't remove dead tuples newer than it, in any table."],
+  slot: ["replication slot", "A bookmark in the WAL for one consumer. Postgres keeps every WAL file after it until the consumer confirms, however long that takes."],
+};
+const pop = $("#pop");
+function showPop(el) {
+  const [t, d] = GLOSS[el.dataset.term]; pop.innerHTML = `<b>${t}</b>${d}`;
+  const r = el.getBoundingClientRect();
+  pop.style.left = Math.min(window.scrollX + r.left, window.scrollX + innerWidth - 316) + "px";
+  pop.style.top = window.scrollY + r.bottom + 8 + "px"; pop.classList.add("on");
+}
+$$(".term").forEach((el) => {
+  el.addEventListener("mouseenter", () => showPop(el));
+  el.addEventListener("focus", () => showPop(el));
+  el.addEventListener("click", () => showPop(el));
+  el.addEventListener("mouseleave", () => pop.classList.remove("on"));
+  el.addEventListener("blur", () => pop.classList.remove("on"));
+});
+
+/* ---------- code tabs + line notes ---------- */
+$$("[data-codebox]").forEach((box) => {
+  const note = $("[data-notebox]", box);
+  $$(".codebox__tab", box).forEach((tab) => tab.addEventListener("click", () => {
+    $$(".codebox__tab", box).forEach((t) => t.setAttribute("aria-selected", t === tab));
+    $$("pre", box).forEach((p) => (p.hidden = p.dataset.pane !== tab.dataset.tab));
+    note.innerHTML = "Hover or tap a marked line for a note.";
+  }));
+  $$(".ln[data-note]", box).forEach((ln) => {
+    const show = () => (note.innerHTML = ln.dataset.note);
+    ln.addEventListener("mouseenter", show); ln.addEventListener("click", show);
+  });
+  $("[data-copy]", box)?.addEventListener("click", async (e) => {
+    const pre = $$("pre", box).find((p) => !p.hidden);
+    try { await navigator.clipboard.writeText(pre.innerText); e.target.textContent = "Copied"; } catch { e.target.textContent = "Select + ⌘C"; }
+    setTimeout(() => (e.target.textContent = "Copy"), 1600);
+  });
+});
+
+/* ---------- ghost row simulator ---------- */
+const sim = (() => {
+  let mode = "cursor", step = 0, timer;
+  const rowsEl = $("#rows"), broker = $("#broker"), log = $("#log"), narr = $("#narr"), cursor = $("#cursor"), stepsEl = $("#steps");
+  const STEPS = 6;
+  stepsEl.innerHTML = Array.from({ length: STEPS }, () => "<i></i>").join("");
+  function frame(n) {
+    const rows = [], pub = [], lines = []; let last = 0, text = "";
+    const L = (who, sql, res, cls = "") => lines.push({ who, sql, res, cls });
+    // step 1: A inserts, uncommitted
+    if (n >= 1) { rows[1] = "uncommitted"; L("txn A", "BEGIN; INSERT INTO outbox … → id 1", "not committed yet (busy with other work)"); text = "Transaction A inserts its event and gets id 1, then carries on working. Nobody else can see the row yet."; }
+    if (n >= 2) { rows[2] = "pending"; L("txn B", "INSERT INTO outbox … → id 2; COMMIT", "committed", "okres"); text = "Transaction B inserts, gets id 2, and commits straight away."; }
+    if (n >= 3) {
+      if (mode === "cursor") { L("relay", "SELECT … WHERE id > 0", "sees: 2"); last = 2; }
+      else { L("relay", "SELECT … WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED", "sees: 2"); }
+      rows[2] = "published"; pub.push(2);
+      text = mode === "cursor" ? "The relay can only see committed rows. It publishes 2 and remembers last_seen = 2." : "The relay sees the only committed pending row, 2, publishes it and marks it published.";
+    }
+    if (n >= 4) { rows[1] = "pending"; L("txn A", "COMMIT", "row 1 is now visible", "okres"); text = "Transaction A finally commits. Row 1 becomes visible, with an id lower than one we've already passed."; }
+    if (n >= 5) {
+      if (mode === "cursor") { L("relay", "SELECT … WHERE id > 2", "0 rows", "badres"); text = "The next poll asks for id > 2. Row 1 is never returned."; }
+      else { L("relay", "SELECT … WHERE status = 'PENDING' …", "sees: 1"); rows[1] = "published"; pub.push(1); text = "The next poll asks for whatever is still pending. Row 1 is, so it goes out."; }
+    }
+    if (n >= 6) {
+      if (mode === "cursor") { rows[1] = "lost"; L("relay", "(every later poll)", "row 1 skipped forever · no error logged", "badres"); text = "Row 1 sits in the table forever. Nothing errors. You find out when someone asks why an order never shipped. Now switch the query at the top and run it again."; }
+      else { L("relay", "(every later poll)", "nothing pending · nothing lost", "okres"); text = "Both events published. Polling by state doesn't care what order the ids committed in."; }
+    }
+    return { rows, pub, lines, last, text };
+  }
+  const LABEL = { uncommitted: "uncommitted", pending: "PENDING", published: "published ✓", lost: "never published ✕" };
+  function render() {
+    const f = frame(step);
+    rowsEl.innerHTML = [1, 2].filter((i) => f.rows[i]).map((i) => `<div class="row ${f.rows[i]}"><span class="id">id ${i}</span><span>${i === 1 ? "OrderCreated #A" : "OrderCreated #B"}</span><span class="st">${LABEL[f.rows[i]]}</span></div>`).join("") || `<div class="row" style="opacity:.5"><span class="id">—</span><span>empty</span><span></span></div>`;
+    broker.innerHTML = f.pub.length ? f.pub.map((i) => `<span class="msg">event ${i}</span>`).join("") : `<span class="empty">nothing published yet</span>`;
+    log.innerHTML = f.lines.map((l, i) => `<li class="${i === f.lines.length - 1 ? "cur" : ""}"><span class="who">${l.who}</span>${l.sql}<span class="res ${l.cls}">→ ${l.res}</span></li>`).join("");
+    log.scrollTop = log.scrollHeight;
+    cursor.innerHTML = mode === "cursor" ? `relay state: <b>last_seen = ${f.last}</b>` : `relay state: <b>none, it asks for what's pending</b>`;
+    narr.innerHTML = step === 0 ? "Press <b>Step</b> to start." : f.text;
+    $$("i", stepsEl).forEach((el, i) => el.classList.toggle("on", i < step));
+    $("#step").disabled = step >= STEPS;
+  }
+  const stop = () => { clearInterval(timer); timer = null; $("#play").textContent = "Play"; };
+  $("#step").onclick = () => { stop(); step = Math.min(STEPS, step + 1); render(); };
+  $("#reset").onclick = () => { stop(); step = 0; render(); };
+  $("#play").onclick = () => {
+    if (timer) return stop();
+    if (step >= STEPS) step = 0;
+    $("#play").textContent = "Pause";
+    timer = setInterval(() => { step++; render(); if (step >= STEPS) stop(); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 2600 : 1700);
+  };
+  $$("#sim [data-mode]").forEach((b) => b.onclick = () => {
+    mode = b.dataset.mode; $$("#sim [data-mode]").forEach((x) => x.setAttribute("aria-pressed", x === b)); stop(); step = 0; render();
+  });
+  render();
+})();
+
+/* ---------- WAL calculator ---------- */
+(() => {
+  const rate = $("#rate"), down = $("#down"), free = $("#free"), cap = $("#cap");
+  function upd() {
+    const r = +rate.value, h = +down.value, f = +free.value, c = +cap.value;
+    $("#rateO").textContent = r + " GB"; $("#downO").textContent = h + " h"; $("#freeO").textContent = f + " GB"; $("#capO").textContent = c ? c + " GB" : "off (default -1)";
+    const held = r * h, limit = c ? Math.min(c, f) : f, shown = Math.min(held, limit);
+    $("#wal").style.width = Math.min(100, (shown / f) * 100) + "%";
+    $("#capMark").style.display = c && c < f ? "block" : "none"; $("#capMark").style.left = (c / f) * 100 + "%";
+    const v = $("#verdict");
+    if (c && held > c && c < f) {
+      v.className = "verdict warn"; $("#wal").style.background = "var(--wait)";
+      v.innerHTML = `<span class="t">slot "debezium": wal_status = lost · primary stays up</span>LOG: invalidating obsolete replication slot "debezium" — after ${(c / r).toFixed(1)} h. The connector needs a fresh snapshot.`;
+    } else if (held >= f) {
+      v.className = "verdict bad"; $("#wal").style.background = "var(--bad)";
+      v.innerHTML = `<span class="t">disk full after ${(f / r).toFixed(1)} h · primary down</span>PANIC: could not write to file "pg_wal/xlogtemp…": No space left on device`;
+    } else {
+      v.className = "verdict ok"; $("#wal").style.background = "var(--wait)";
+      v.innerHTML = `<span class="t">slot holding ${held} GB of ${f} GB free</span>${c ? "Under the cap." : "No cap: this keeps growing until the connector comes back or the disk fills."}`;
+    }
+  }
+  [rate, down, free, cap].forEach((i) => i.addEventListener("input", upd)); upd();
+})();
+
+/* ---------- trace rail + progress ---------- */
+const sections = $$(".prose h2").map((h) => ({ el: h, id: h.id, name: h.textContent.replace(/^\d+/, "").trim() }));
+const trace = $("#trace");
+const words = (a, b) => { let n = 0, el = a.nextElementSibling; while (el && el !== b) { n += (el.innerText || "").split(/\s+/).length; el = el.nextElementSibling; } return n; };
+sections.forEach((s, i) => { s.words = words(s.el, sections[i + 1]?.el ?? $(".endcap")); });
+const maxW = Math.max(...sections.map((s) => s.words));
+trace.innerHTML = sections.map((s) => `<li data-id="${s.id}"><a href="#${s.id}"><span class="trace__name"><span class="trace__ms">${Math.max(1, Math.round(s.words / 230 * 60))}s</span>${s.name}</span><span class="trace__bar" style="width:${30 + 70 * s.words / maxW}%"><i></i></span></a></li>`).join("");
+let lastY = 0;
+function onScroll() {
+  const doc = document.documentElement, y = scrollY;
+  const total = $("#article").offsetTop + $("#article").offsetHeight - innerHeight;
+  const p = Math.max(0, Math.min(1, (y - $("#article").offsetTop + 200) / (total - $("#article").offsetTop + 200)));
+  $("#bar").style.width = p * 100 + "%"; $("#pct").textContent = Math.round(p * 100) + "%";
+  let cur = -1;
+  sections.forEach((s, i) => { if (s.el.getBoundingClientRect().top < innerHeight * .35) cur = i; });
+  $$("#trace li").forEach((li, i) => {
+    li.classList.toggle("active", i === cur); li.classList.toggle("done", i < cur);
+    const start = sections[i].el.offsetTop, end = sections[i + 1]?.el.offsetTop ?? $(".endcap").offsetTop;
+    const f = Math.max(0, Math.min(1, (y + innerHeight * .35 - start) / (end - start)));
+    $("i", li).style.width = (i < cur ? 100 : i === cur ? f * 100 : 0) + "%";
+  });
+  $("#now").classList.toggle("on", cur >= 0); if (cur >= 0) $("#nowName").textContent = sections[cur].name;
+  if (document.body.classList.contains("focus")) $("#top").style.transform = y > lastY && y > 200 ? "translateY(-100%)" : "";
+  lastY = y;
+}
+addEventListener("scroll", onScroll, { passive: true }); onScroll();
+
+/* ---------- command palette ---------- */
+const ITEMS = [
+  ...sections.map((s) => ({ t: s.name, k: "section", href: "#" + s.id })),
+  { t: "Lab: ghost row simulator", k: "lab", href: "#sim" },
+  { t: "Lab: stalled CDC slot calculator", k: "lab", href: "#calc" },
+  { t: "Idempotency in Distributed Systems", k: "post", href: "#" },
+  { t: "Message Queues, Topics, and Event Streams", k: "post", href: "#" },
+  { t: "Building an AI-Powered WAF on Nginx: Traps and Bypasses", k: "post", href: "#" },
+  { t: "TLS in Node.js: Handshakes and Cert Chains", k: "post", href: "#" },
+  { t: "NestJS and Dapr: Local Development and Kubernetes", k: "post", href: "#" },
+  { t: "Topic: PostgreSQL under real load", k: "topic", href: "#" },
+  { t: "Projects", k: "page", href: "#" }, { t: "About", k: "page", href: "#" },
+];
+let sel = 0, shown = ITEMS;
+const overlay = $("#overlay"), q = $("#q"), results = $("#results");
+function renderResults() {
+  const s = q.value.toLowerCase().trim();
+  shown = ITEMS.filter((i) => !s || i.t.toLowerCase().includes(s) || i.k.includes(s)); sel = Math.min(sel, Math.max(0, shown.length - 1));
+  results.innerHTML = shown.map((i, n) => `<li role="option" class="${n === sel ? "sel" : ""}" data-n="${n}"><span>${i.t}</span><small>${i.k}</small></li>`).join("") || `<li><span style="color:var(--muted)">No matches</span></li>`;
+}
+function openPal() { overlay.classList.add("on"); q.value = ""; sel = 0; renderResults(); setTimeout(() => q.focus(), 10); }
+function closePal() { overlay.classList.remove("on"); $("#openPalette").focus(); }
+function go(i) { if (!i) return; closePal(); if (i.href !== "#") document.querySelector(i.href)?.scrollIntoView({ behavior: "smooth" }); }
+$("#openPalette").onclick = openPal;
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closePal(); });
+results.addEventListener("click", (e) => { const li = e.target.closest("[data-n]"); if (li) go(shown[+li.dataset.n]); });
+q.addEventListener("input", () => { sel = 0; renderResults(); });
+addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); overlay.classList.contains("on") ? closePal() : openPal(); return; }
+  if (e.key === "/" && !overlay.classList.contains("on") && document.activeElement.tagName !== "INPUT") { e.preventDefault(); openPal(); return; }
+  if (!overlay.classList.contains("on")) { if (e.key === "Escape") { $("#settings").classList.remove("on"); pop.classList.remove("on"); } return; }
+  if (e.key === "Escape") closePal();
+  if (e.key === "ArrowDown") { sel = Math.min(shown.length - 1, sel + 1); renderResults(); e.preventDefault(); }
+  if (e.key === "ArrowUp") { sel = Math.max(0, sel - 1); renderResults(); e.preventDefault(); }
+  if (e.key === "Enter") go(shown[sel]);
+});
+
+/* ---------- reading settings ---------- */
+const settings = $("#settings");
+$("#openSettings").onclick = () => { const on = settings.classList.toggle("on"); $("#openSettings").setAttribute("aria-expanded", on); };
+document.addEventListener("click", (e) => { if (!settings.contains(e.target) && e.target !== $("#openSettings")) settings.classList.remove("on"); });
+$$("[data-setting]").forEach((g) => $$("button", g).forEach((b) => b.onclick = () => {
+  $$("button", g).forEach((x) => x.setAttribute("aria-pressed", x === b));
+  const v = b.dataset.v, k = g.dataset.setting;
+  if (k === "theme") document.documentElement.dataset.theme = v;
+  if (k === "size") document.documentElement.style.setProperty("--body-size", v);
+  if (k === "measure") document.documentElement.style.setProperty("--measure", v);
+  onScroll();
+}));
+$("#focusToggle").onchange = (e) => { document.body.classList.toggle("focus", e.target.checked); $("#top").style.transform = ""; };
+$("#copyLink").onclick = async (e) => { try { await navigator.clipboard.writeText(location.href); e.target.textContent = "Copied"; } catch { e.target.textContent = location.href; } setTimeout(() => (e.target.textContent = "Copy link"), 1600); };
+</script>
+</body>
+</html>
