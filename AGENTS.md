@@ -30,9 +30,10 @@ npx astro check
 
 ## Blog Writing Style
 
-All blog content must follow `docs/blog-writing-guide.md`. Core rules:
-- Deep, first-principles analysis — not re-stated docs or listicles.
-- Every post must include dedicated **edge cases**, **pitfalls** (with symptoms + causes + fixes), and **best practices with trade-offs**.
-- Written in the voice of an experienced senior engineer: precise terminology, honest trade-offs, no marketing tone.
-- Prefer rare/non-obvious technical depth over shallow coverage.
-- **Never ship code you have not verified works.** Show real failure output (errors, stack traces). Flag version-sensitive claims, and cite the spec, RFC, or bug report you relied on. Publishing plausible-but-wrong config under a "production hardening" heading is worse than publishing nothing.
+All blog content follows `docs/blog-writing-guide.md`; start new posts from `docs/post-template.md`. Core rules:
+- Lead with the specific problem (the code, error or query), and say who the post is for.
+- Explain the mechanism and link the primary source (spec, docs, source line, bug report).
+- **Never ship code you have not run.** Name the versions, show real output, and say what you couldn't reproduce. Publishing plausible-but-wrong config under a "production hardening" heading is worse than publishing nothing.
+- Cover the failure cases the docs don't, and state trade-offs and the alternatives considered, inside the argument rather than as templated sections.
+- Numbers need a source. Experience claims must be true; where a fact is missing, leave a `[TODO: …]` (they render highlighted, and `npm run todos` lists them).
+- The voice is one engineer explaining to a colleague: plain words, varied sentences, sparing bold, no em dashes by default, no "Here's why", no closing aphorisms, no emoji headings.

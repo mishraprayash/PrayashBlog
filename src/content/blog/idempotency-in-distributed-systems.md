@@ -1,10 +1,10 @@
 ---
 title: "Idempotency in Distributed Systems: The Production Realities"
 slug: "idempotency-in-distributed-systems"
-description: "Why distributed retries make duplicate operations inevitable, why Redis locks fall short, and how to build truly idempotent APIs using ACID state engines and two-phase writes."
+description: "Clients retry, brokers redeliver, and some of those duplicates arrive while the first attempt is still running. Why a Redis lock doesn't make that safe, and how to do it inside one Postgres transaction, tested against Postgres 16."
 publishDate: "2026-09-09T23:50:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
-updateSummary: "Corrected how concurrent duplicates behave. With the claim and the business writes in one transaction, a duplicate never sees IN_PROGRESS. Postgres makes it wait on the key, then it replays the stored response. The handler now caps that wait with lock_timeout and only returns 409 when it expires. I also replaced the diagram, which the site wasn't rendering, and added the test results."
+updateSummary: "Rewritten. Corrected how concurrent duplicates behave: with the claim and the business writes in one transaction, a duplicate never sees IN_PROGRESS; Postgres makes it wait, then it replays the stored response. The handler now caps that wait with lock_timeout, and its behaviour is shown from a test run. The external-API section now covers what happens when the process dies mid-call. Also fixed the Redis command, which was SETNX with an EX argument that SETNX doesn't take."
 author: "Prayash Mishra"
 pillar: "messaging"
 tags: ["postgresql", "microservices"]
@@ -15,148 +15,115 @@ related: ["scaling-event-dispatching-nestjs-strategy-pattern"]
 draft: false
 ---
 
-A user taps "Confirm Payment". Their phone drops off 5G while walking into a subway station. Three seconds later, the HTTP request times out.
+A user taps "Confirm payment" as their phone drops off the network. Three seconds later the request times out, and the app retries.
 
-What does the mobile client do? It retries.
+The server has no way of knowing from the retry alone what happened to the first attempt. Maybe it never arrived. Maybe it arrived, charged the card, committed, and the connection died while the `200` was on its way back. If you treat the retry as a new request, the second case charges the customer twice.
 
-What actually happened on your backend? Did the first request die before reaching your API gateway? Or did your database commit the transaction, charge the card, and drop the connection right as it was writing the HTTP 200 response back to the client?
+Retries aren't the edge case here; they're how you get reliability out of a network that drops things. Mobile clients retry, load balancers retry, message brokers redeliver anything that wasn't acknowledged. So the question isn't how to prevent duplicates. It's how to make processing the same request twice have the same effect as processing it once.
 
-The client has no idea. Your server doesn't either—unless you engineered an explicit contract for it.
+This post is about doing that for HTTP APIs and message consumers that keep their state in PostgreSQL. It's the third part of a series. [Part 2](/blog/transactional-outbox-pattern-production-realities) covers getting events into the broker without losing them, and explains why that guarantees duplicates on this side.
 
-In distributed systems, networks drop packets. Gateways time out. Worker nodes crash mid-transaction. Because of this, **at-least-once delivery is the only guarantee physical networks can ever give you.** Exactly-once delivery is a marketing myth. If clients retry—and they must—your APIs have to make duplicate executions safe.
+## Why a Redis lock isn't enough
 
-That is idempotency. Not textbook math formulas, but the practical engineering required so a retried network request doesn't bill a user twice or corrupt your ledger.
+The quick version you'll find in a lot of places: put an `Idempotency-Key` header on the request, and in middleware run
 
-> **Where this sits in the bigger picture.** This post is about the *consumer* half
-> of reliable messaging. The two halves fail independently and both have to be
-> solved:
->
-> - **Getting the message into the broker** without a gap between "committed to
->   the database" and "published to Kafka" →
->   [The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)
-> - **Handling the message more than once** on the other side → this post.
->
-> The transport guarantees underneath both are in
-> [Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained).
->
-> If you take one thing from this post: the outbox guarantees **at-least-once**,
-> and at-least-once is only safe if the consumer is idempotent. Neither half
-> works alone.
-
----
-
-## The Naive Redis Trap: `SETNX` Is Not Idempotency
-
-Almost every online tutorial recommends the exact same quick fix:
-> *"Stick an `Idempotency-Key` header on the request. In your middleware, run `SETNX idempotency_key 1 EX 60` in Redis. If it returns 1, process the request. If it returns 0, throw a 409 Conflict."*
-
-It takes twenty lines of code. It passes unit tests. And in production, it will silently corrupt your business data.
-
-Here is why:
-
-```
-Client               API Gateway / App Worker               Redis                 Database
-  |                             |                             |                      |
-  |--- POST /pay (Key: 123) --->|                             |                      |
-  |                             |--- SETNX key_123 (OK) ----->|                      |
-  |                             |                                                    |
-  |                             |=========== WORKER OOM / NODE REBOOT ===============|
-  |                             | (Process dies before writing to DB or charging card)
-  |                             x
-  | (Timeout: 5s)
-  |
-  |--- RETRY POST (Key: 123) -->|
-                                |--- SETNX key_123 (EXISTS) ->|
-                                |<-- Return False ------------|
-                                |
-                                |---> Returns 409 Conflict (or "Already Processed")
+```bash
+SET idem:123 1 NX EX 60
 ```
 
-Look closely at what happens when things go wrong:
+If Redis sets the key, process the request. If the key already exists, return `409`.
 
-1. **The Crash Window:** Between the moment Redis returns `OK` for your lock and the moment your code finishes writing to PostgreSQL, your app can die. A Kubernetes node reschedule, an out-of-memory kill, or a sudden segfault. The key stays locked in Redis. The client retries, gets rejected with `409 Conflict` or a bogus "already processed" response, and the customer's payment is permanently lost.
-2. **Eviction and Failover:** Redis is an in-memory cache. Under memory pressure, keys get evicted under LRU policies. During a Sentinel or Cluster failover, asynchronous replication lag can drop keys that were acknowledged milliseconds earlier.
-3. **Execution Exceeds TTL:** If your database experiences a sudden lock spike, the request might take 65 seconds. If your Redis TTL was 60 seconds, Redis quietly expires the key. The client's retry arrives, acquires the lock again, and runs a second concurrent mutation against your database.
+It takes a few lines and passes every test with a single process in it. It goes wrong in three ways once real failures happen:
 
-The lesson is simple: **If your business state lives in a relational database, your idempotency state must live in the same database, committed inside the exact same ACID transaction.**
+```text
+Client                 API worker                  Redis             Postgres
+  |                        |                         |                   |
+  |-- POST /pay (key 123) ->|                         |                   |
+  |                        |-- SET idem:123 NX ----->| OK                |
+  |                        |                                             |
+  |                        x  worker killed (OOM, node drained) before   |
+  |                           anything reaches Postgres or the card      |
+  |  ...timeout...                                                       |
+  |-- retry (key 123) ---->|                                             |
+  |                        |-- SET idem:123 NX ----->| (key exists)      |
+  |<------- 409 -----------|                                             |
+```
 
----
+1. **The crash window.** The key is set before the work is done. If the worker dies in between, the key stays, every retry is turned away, and the payment never happens. The client sees a "duplicate" for a request that was never processed.
+2. **The key can disappear.** Under memory pressure Redis evicts keys if an eviction policy allows it, and after a failover, writes that hadn't reached the replica are gone. Either way, a retry gets through as a first attempt.
+3. **The TTL can expire mid-request.** If a slow database turns a 2-second request into a 65-second one, a 60-second key expires while the first attempt is still running, and a retry runs concurrently with it.
 
-## Pattern 1: Natural Idempotency (The Best Code is No Code)
+All three come from the same thing: the record that says "this was done" lives in a different system from the thing that was done, so they can disagree. If your data is in Postgres, put the idempotency record in Postgres, and write it in the same transaction as the work.
 
-Before adding tables, check whether your domain logic can be made idempotent by design. Many operations don't need dedicated tokens at all.
+## Pattern 1: make the operation idempotent by itself
 
-* **Non-idempotent:**
-  ```sql
-  UPDATE accounts SET balance = balance - 100 WHERE id = 42;
-  ```
-  Run this twice, lose $200.
+Before adding a table, check whether the operation can be made safe to repeat as written.
 
-* **Naturally idempotent state machine:**
-  ```sql
-  UPDATE orders 
-  SET status = 'CANCELLED', cancelled_at = NOW() 
-  WHERE id = 42 AND status IN ('PENDING', 'AWAITING_PAYMENT');
-  ```
-  Run this once: `rows_affected = 1`. Run it five more times: `rows_affected = 0`. The final state of the database is identical every single time.
+This one can't. Run it twice and the account loses 200:
 
-* **Naturally idempotent upsert:**
-  ```sql
-  INSERT INTO user_subscriptions (user_id, plan_id, billing_cycle_start)
-  VALUES (101, 'pro_annual', '2026-09-01')
-  ON CONFLICT (user_id, billing_cycle_start) 
-  DO UPDATE SET plan_id = EXCLUDED.plan_id;
-  ```
+```sql
+UPDATE accounts SET balance = balance - 100 WHERE id = 42;
+```
 
-If your operation is already an idempotent state transition or a unique composite-key upsert, don't overcomplicate it. You don't need an idempotency engine.
+These can. The first is a state transition that only applies once. The second is an upsert keyed on what makes the row unique:
 
----
+```sql
+UPDATE orders
+SET status = 'CANCELLED', cancelled_at = now()
+WHERE id = 42 AND status IN ('PENDING', 'AWAITING_PAYMENT');
+```
 
-## Pattern 2: The ACID Idempotency Engine
+```sql
+INSERT INTO user_subscriptions (user_id, plan_id, billing_cycle_start)
+VALUES (101, 'pro_annual', '2026-09-01')
+ON CONFLICT (user_id, billing_cycle_start)
+DO UPDATE SET plan_id = EXCLUDED.plan_id;
+```
 
-When an endpoint touches multiple tables, produces audit logs, or charges money, you need an atomic idempotency record.
+Run the cancellation five times and the first affects one row, the rest affect none, and the order ends up in the same state. When an operation can be written like this, it doesn't need anything else.
 
-Here is a schema that has survived heavy production traffic:
+## Pattern 2: an idempotency record in the same transaction
+
+When a request touches several tables, writes an audit log, or moves money, record the request itself:
 
 ```sql
 CREATE TABLE idempotency_records (
     idempotency_key VARCHAR(255) PRIMARY KEY,
     request_path    VARCHAR(255) NOT NULL,
-    request_hash    CHAR(64) NOT NULL,       -- SHA-256 of request payload
-    status          VARCHAR(32) NOT NULL,    -- 'IN_PROGRESS', 'COMPLETED', 'FAILED'
-    response_code   INT NULL,
-    response_body   JSONB NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    request_hash    CHAR(64)     NOT NULL,   -- SHA-256 of the request body
+    status          VARCHAR(32)  NOT NULL,   -- IN_PROGRESS, COMPLETED
+    response_code   INT,
+    response_body   JSONB,
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_idempotency_records_created_at 
-ON idempotency_records (created_at);
+CREATE INDEX idx_idempotency_records_created_at ON idempotency_records (created_at);
 ```
 
-### The Request Lifecycle
+### What a duplicate actually runs into
 
-The claim row and the business writes go in **one transaction**. That has a consequence that's easy to get wrong: nobody outside that transaction ever sees the row as `IN_PROGRESS`. Until request A commits, its claim is invisible.
+The claim row and the business writes go in one transaction. That has a consequence that's easy to get wrong: nobody outside that transaction ever sees the row as `IN_PROGRESS`. Until request A commits, its claim is invisible.
 
-So what does a duplicate actually hit? The primary key. When request B runs `INSERT ... ON CONFLICT DO NOTHING` for a key that A has inserted but not committed, Postgres can't tell yet whether A's row will exist, so B **waits** for A to finish. Then it reports the conflict, and B replays whatever A stored.
+So a duplicate doesn't find a row that says "in progress". It runs into the primary key. When request B runs `INSERT … ON CONFLICT DO NOTHING` for a key that A has inserted but not committed, Postgres can't tell yet whether A's row will end up existing, so B waits for A to finish. Then it gets the conflict, and B returns whatever A stored.
 
 ```text
 Request A (key "abc")                       Request B (same key, 300 ms later)
 ─────────────────────                       ──────────────────────────────────
 BEGIN                                       BEGIN
-INSERT claim ... ON CONFLICT DO NOTHING
+INSERT claim … ON CONFLICT DO NOTHING
   → 1 row (visible only to A)
-run the transfer (balances, ledger)         INSERT claim ... ON CONFLICT DO NOTHING
-                                              → blocks on A's uncommitted row
+run the transfer                            INSERT claim … ON CONFLICT DO NOTHING
+                                              → waits on A's uncommitted row
 UPDATE claim SET status = 'COMPLETED',
-  response_code = 201, response_body = ...
+  response_code = 201, response_body = …
 COMMIT ───────────────────────────────────►   → 0 rows (conflict)
 201 Created                                 SELECT stored response; COMMIT
                                             request_hash differs → 422
                                             request_hash matches → replay the 201
 ```
 
-Two other endings are worth knowing. If A rolls back, B's insert succeeds and B runs the transfer itself, which is what you want after a failure. If A takes longer than B is willing to wait, B gives up with a lock timeout, and that's the only point where returning `409` makes sense.
+Two other endings matter. If A rolls back, B's insert succeeds and B does the transfer itself, which is what you want after a failure. If A takes longer than B is willing to wait, B gives up with a lock timeout, and that's the only point where a `409` makes sense.
 
 ### Production Implementation
 
@@ -246,80 +213,68 @@ The cost of this design is that a duplicate holds a pooled connection while it w
 
 ---
 
-## Pattern 3: Two-Phase External API Calls (Stripe, Twilio)
 
-What happens when your endpoint has to talk to an external third-party API, like charging a card via Stripe or sending an SMS?
+## Pattern 3: when the work includes an external call
 
-You cannot roll back a credit card charge with a database `ROLLBACK`.
+Pattern 2 relies on the whole request fitting in one database transaction. A call to Stripe, Twilio or another company's API can't be part of that transaction, and you shouldn't hold a transaction open across one anyway. If the process dies after Stripe has charged the card but before your commit, the database says nothing happened, and a retry will charge again.
 
-If your server charges Stripe and then crashes before committing to PostgreSQL, the customer was billed, but your database says the order failed. If the client retries, a naive worker will charge them again.
+Two things fix it.
 
-To fix this:
+**Derive the provider's idempotency key from yours.** Most payment APIs accept one. Never generate a fresh UUID per attempt. Build it from the client's key, so every retry of the same request sends the same key:
 
-1. **Derive Downstream Keys Deterministically:** Never generate a random `crypto.randomUUID()` when calling Stripe. Instead, derive the third-party idempotency key directly from your incoming request key:
-   ```typescript
-   const stripeKey = `charge_${incomingIdempotencyKey}`;
-   
-   const charge = await stripe.charges.create(
-     { amount: 5000, currency: "usd", customer: customerId },
-     { idempotencyKey: stripeKey }
-   );
-   ```
-2. **Intent Before Execution:** Save a pending payment record in PostgreSQL *before* calling Stripe. If the external network call drops or times out, the retry uses the same deterministic `stripeKey`. Stripe's API will recognize the duplicate key and safely return the existing charge object instead of billing twice.
+```typescript
+const paymentIntent = await stripe.paymentIntents.create(
+  { amount: 5000, currency: "usd", customer: customerId },
+  { idempotencyKey: `pay_${incomingIdempotencyKey}` },
+);
+```
 
-This is the one place a visible `IN_PROGRESS` row is real. You can't hold a database transaction open across a call to Stripe, so the claim has to be committed on its own first, and then other requests can see it. A duplicate that finds it should get a `409` with `Retry-After`. You also need a way out for a claim whose process died mid-call: a `claimed_at` column and a sweeper that, after some timeout, retries with the same `stripeKey` instead of assuming the charge failed.
+Stripe answers a repeated key with the result of the first call instead of creating a second payment. The older Charges API takes the same option.
 
----
+**Split the work into steps, with a committed claim in front.** This is the one place a visible `IN_PROGRESS` row is real:
 
-## Production Gotchas You Only Learn at 2 AM
+1. In one transaction, claim the key and save a pending payment. Commit.
+2. Call the provider with the derived key.
+3. In a second transaction, record the outcome, and mark the claim `COMPLETED` with the response to replay.
 
-### 1. The Accidental Key Reuse Bug
-Clients have bugs. Frontends occasionally hardcode a test UUID or generate a key on page load instead of on form submission. A user buys item A, navigates back, and buys item B under the same key.
+A duplicate that arrives during step 2 now sees the committed `IN_PROGRESS` row and gets a `409` with `Retry-After`. The case left to handle is a process that dies during step 2 and leaves the claim in progress forever. Give the claim a lease, so a stale claim can be taken over:
 
-If you only check that the key exists and return the cached response, the user gets charged for item B, gets item A's receipt, and your database ends up in an inconsistent mess.
+```sql
+INSERT INTO idempotency_records (idempotency_key, request_path, request_hash, status, updated_at)
+VALUES ($1, $2, $3, 'IN_PROGRESS', now())
+ON CONFLICT (idempotency_key) DO UPDATE SET updated_at = now()
+  WHERE idempotency_records.status = 'IN_PROGRESS'
+    AND idempotency_records.updated_at < now() - interval '5 minutes'
+RETURNING idempotency_key;
+```
 
-**The rule:** Always verify the SHA-256 hash of the payload against the stored record. If the key matches but the hash doesn't, immediately reject the call with `422 Unprocessable Entity`.
+A row back means you own the request, either because it's new or because the previous owner went quiet for five minutes. Whoever takes over repeats step 2 with the same derived key, so Stripe returns the payment that already exists instead of making another. The same statement shape is tested in the [outbox post](/blog/transactional-outbox-pattern-production-realities#5-the-outbox-only-covers-the-publishing-side), against a table of processed events.
 
-### 2. Never Cache 500 Internal Server Errors
-If your database connection pool gets exhausted or an internal service times out, your server throws a 500.
+The derived key is only as good as the provider's memory of it. Stripe keeps idempotency keys for at least 24 hours and may remove them after that, at which point a repeated key is treated as a new request. That's far longer than any sensible retry window, but it's a limit with a date on it, and it differs from provider to provider. Check it before you rely on it.
 
-If your idempotency layer catches that 500 and records it as `COMPLETED`, you have just permanently locked that user out. Every automated retry with exponential backoff will faithfully return the cached 500 error.
+## Mistakes worth checking for
 
-Only cache successful mutations (`2xx`) and deterministic client validation errors (`4xx`). In the single-transaction version above, the `ROLLBACK` takes care of this: the claim disappears with everything else. In the two-phase version below, the claim is already committed, so you have to delete or expire it yourself.
+**The client reuses a key for a different request.** A frontend generates the key when the page loads instead of when the form is submitted, so a user who buys item A, goes back and buys item B sends both under one key. If you only look the key up, they get charged for B and receive A's receipt. Hash the body and compare: same key, different hash is a `422`. Note that `JSON.stringify` of a parsed body depends on key order, so a client that sends the same fields in a different order gets a false `422`. Hash a canonical form if your clients can do that.
 
-### 3. The 200ms Mobile Retry Stampede
-Mobile apps on flaky connections often fire duplicate retries aggressively. If your timeout is 250ms and your database takes 300ms under load, the second request will hit your server while the first request is still writing.
+**Caching a `500`.** If the idempotency layer stores a server error as the final answer, every retry gets the same error back, forever. Only store successes and deterministic client errors (`4xx`). In Pattern 2 the rollback takes care of this, because the claim disappears with everything else. In Pattern 3 the claim is already committed, so on a failure you have to delete it or let the lease expire.
 
-Without a database-level unique constraint or an atomic lock, both requests will run in parallel, both will pass the "no record found" check, and both will execute.
+**Retries arriving faster than you finish.** Mobile clients on bad connections retry aggressively. If a request takes 300 ms and the client gives up after 250, the retry lands while the first attempt is still running. The primary key and `ON CONFLICT` handle that safely: the runner-up waits for the winner instead of running alongside it. What they don't handle is the cost of waiting, which is why the handler sets a `lock_timeout`.
 
-Rely on `ON CONFLICT DO NOTHING` on the primary key and let the database serialize them. The runner-up doesn't get an immediate error. It waits on the winner's uncommitted row, then replays the stored response. Put a `lock_timeout` on that wait so one slow request can't pin a stack of pooled connections, and return `409` with `Retry-After` when it fires.
+**The table grows forever.** Delete or partition away records older than your retry window. After 30 days, a "retry" is a new request.
 
----
+[TODO: if any of these happened on your project, one sentence on which one and how it showed up.]
 
-## What Actually Matters in Production
+## Summary
 
-Building reliable distributed systems comes down to three operational rules:
+- Keep idempotency state in the same database as the data it protects, and write it in the same transaction when you can.
+- Expect duplicates to arrive while the first attempt is still running, and decide how long they may wait.
+- Store a hash of the request with the key, and reject a reused key with a different body.
+- For external calls, derive the provider's idempotency key from yours, commit the claim first, and give it a lease.
 
-1. **Keep state together:** Never store idempotency tokens in an in-memory cache while your business data lives in PostgreSQL. When the process crashes between them, your data corrupts.
-2. **Hash the payload:** An idempotency key without a payload hash check is an invitation for silent data corruption.
-3. **Plan for table growth:** Idempotency tables collect massive volume quickly. Partition by month or run a scheduled cleanup job deleting records older than 30 days. After a month, an in-flight retry is no longer a retry; it's a completely new business event.
+## Further reading
 
-One more that is specific to the key-derivation step in Pattern 3: if you derive
-the upstream call's idempotency key from the incoming one
-(`charge_${incomingKey}`), you are depending on that provider's key-retention
-window. Stripe retains idempotency keys for **24 hours**; after that, a replayed
-request with the same key is treated as a brand-new charge. That is longer than
-most retry windows and comfortably longer than gateway timeouts, so it is
-usually safe — but it is a dependency with an expiry date, and it is different
-for every provider. Check the retention window before you rely on it, and do not
-assume it is unbounded because nothing has failed yet.
-
----
-
-## Series Navigation
-
-This is **Part 3** of a three-part series on reliable event-driven systems:
-
-1. **[Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained)** — transport primitives and what each delivery guarantee actually means.
-2. **[The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)** — getting events into the broker without a dual-write gap.
-3. **Idempotency in Distributed Systems** (you are here) — surviving the duplicates that at-least-once guarantees will hand you.
+- PostgreSQL docs: [`INSERT … ON CONFLICT`](https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT)
+- PostgreSQL docs: [`lock_timeout`](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-LOCK-TIMEOUT)
+- Stripe API reference: [idempotent requests](https://docs.stripe.com/api/idempotent_requests)
+- Redis docs: [`SET`, including `NX` and `EX`](https://redis.io/docs/latest/commands/set/)
+- Earlier in the series: [Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained) and [The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)

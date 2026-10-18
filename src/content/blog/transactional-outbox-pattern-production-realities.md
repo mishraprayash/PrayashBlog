@@ -1,10 +1,10 @@
 ---
 title: "The Transactional Outbox Pattern: Why Your 100-Line Node.js Script Will Break in Production"
 slug: "transactional-outbox-pattern-production-realities"
-description: "The outbox pattern looks trivial on a whiteboard. Here is what actually happens when you roll your own in PostgreSQL: ghost rows, MVCC vacuum storms, and WAL disk crashes."
+description: "A home-made Postgres outbox skips events under concurrency, bloats when vacuum is held back, stalls when you drop old partitions, and a CDC relay can fill the disk and take the primary down. Each failure reproduced on Postgres 16, with the fix."
 publishDate: "2026-09-09T23:15:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
-updateSummary: "Fixed the worker-sharding query in the ordering section. `hashtext(...) % 4` produces negative buckets for about a third of keys, and those events were never published. It now uses `& 3`. Also made clear that the Kafka message key works alongside the bucketing, not instead of it."
+updateSummary: "Rewritten. Every failure in the post is now reproduced on Postgres 16 with the output shown. New sections on what actually stops vacuum from cleaning the table and why dropping a partition can stall the poller. Fixed the worker-sharding query (`% 4` skipped about a third of events) and the consumer example, which could lose or double-process an event if the process died mid-way."
 author: "Prayash Mishra"
 pillar: "messaging"
 tags: ["postgresql", "kafka", "microservices"]
@@ -14,106 +14,104 @@ startHere: 1
 draft: false
 ---
 
-Every team that moves to microservices eventually reinvents the same bug.
+This code has a bug that won't show up in review or in staging:
 
-You save a record to PostgreSQL, and right below it, you fire an event to Kafka or SQS:
-
-```typescript
+```ts
 await db.orders.create({ data: order });
-await kafka.send({ topic: 'orders', message: order });
+await kafka.send({ topic: "orders", messages: [{ value: JSON.stringify(order) }] });
 ```
 
-It passes code review. It runs fine in staging. Then, on a random Tuesday, a network blip hits the message broker. The database committed, but the event was never sent. Downstream billing never charged the customer, inventory was never reserved, and your database and broker are now out of sync.
+If the Kafka call fails after the insert has committed, the order exists and nothing downstream hears about it. Billing never charges and inventory never reserves. There's no error anywhere either, because from the point of view of the code that made it, the database write succeeded. Swapping the two lines just moves the problem: now you can publish an event for an order that was never saved.
 
-The whiteboard answer is the **Transactional Outbox pattern**: instead of talking to the broker directly, you write the event into an `outbox` table inside the same database transaction. An asynchronous worker polls the table and forwards the events.
+The usual answer is the transactional outbox. You write the event into an `outbox` table in the same transaction as the order, and a separate relay reads that table and publishes to the broker. The database transaction becomes the single commit point, and the relay can retry until the broker takes the message.
 
-It looks so simple that almost every engineer writes a 100-line cron or `setInterval` loop and calls it a day.
+On a whiteboard that's a table and a loop. [TODO: one sentence on where you built this, e.g. "On the order service I was working on, the first version was a `setInterval` and about a hundred lines of TypeScript."] What follows is how that version fails, roughly in the order you'll meet the failures. Every one of them is reproduced below on PostgreSQL 16.
 
-Here is why that home-rolled script breaks the moment you put real traffic through it, and what building this reliably in PostgreSQL actually looks like.
+This assumes you already know what the outbox pattern is and you're about to build one on Postgres, or you're running one and something about it worries you.
 
----
+## 1. The poller that skips rows
 
-## 1. The Ghost Row Problem (Why ID Pagination Silently Drops Events)
-
-The most intuitive way to build a poller is cursor pagination:
+The obvious relay remembers the highest id it has published and asks for anything newer:
 
 ```sql
--- The Poller Query
-SELECT * FROM outbox 
-WHERE id > :last_seen_id 
-ORDER BY id ASC 
-LIMIT 100;
+SELECT * FROM outbox WHERE id > :last_seen_id ORDER BY id LIMIT 100;
 ```
 
-It looks completely sound. It is also guaranteed to lose data under concurrency.
+It loses events whenever two transactions commit in a different order from the one they got their ids in. A sequence hands out ids when a row is inserted, not when the transaction commits:
 
-Here is the race condition:
-1. **Transaction A** begins at `10:00:00.000` and inserts an order. PostgreSQL assigns it sequence `id = 101`. Transaction A does some heavy operations (e.g., hash password, run validations) and hasn't committed yet.
-2. **Transaction B** begins at `10:00:00.002`, inserts an outbox event, gets `id = 102`, and **commits immediately** at `10:00:00.004`.
-3. Your poller runs at `10:00:00.005`. Under PostgreSQL's default `READ COMMITTED` isolation, Transaction A is invisible because it hasn't committed. The poller only sees `id = 102`.
-4. The poller processes event `102` and records `last_seen_id = 102`.
-5. Transaction A finally commits at `10:00:00.010` with `id = 101`.
-6. On the next run, the poller queries `WHERE id > 102`.
+1. Transaction A inserts an outbox row and gets `id = 1`, then carries on with other work.
+2. Transaction B inserts a row, gets `id = 2`, and commits straight away.
+3. The relay runs. Under `READ COMMITTED` it can only see committed rows, so it sees `2`, publishes it, and records `last_seen_id = 2`.
+4. A commits. Its row, `id = 1`, is now visible.
+5. The next poll asks for `id > 2`. Row 1 is never published.
 
-**Row 101 is now permanently skipped.** It sits in your database forever, and downstream systems never receive it.
+Here it is with two `psql` sessions, A holding its transaction open for two seconds:
 
-### The Fix
-Never use auto-incrementing ID cursors to poll uncommitted transactional tables. 
+```console
+poller sees: 2:B: fast txn
+next poll (id > 2): []
+rows in table: 1:A: slow txn, 2:B: fast txn
+```
 
-Use status flags with explicit row locking:
+Nothing errors and nothing is logged. You find out when someone asks why an order never shipped.
+
+### The fix: poll by state, not by position
+
+Ask for what hasn't been published yet, instead of what comes after the last thing you saw:
 
 ```sql
-SELECT id, aggregate_id, payload 
+SELECT id, aggregate_id, payload
 FROM outbox
 WHERE status = 'PENDING'
-ORDER BY created_at ASC
+ORDER BY id
 LIMIT 100
 FOR UPDATE SKIP LOCKED;
 ```
 
-`FOR UPDATE SKIP LOCKED` tells Postgres: *"Lock these 100 rows so no other worker touches them. If another transaction is currently writing or locking a row, don't wait for it—just skip past it."* This completely avoids the ghost row trap and allows you to run multiple polling worker pods concurrently.
+Two separate things are going on in that query, and they're easy to confuse. `status = 'PENDING'` fixes the skipped row: A's row is still pending when it becomes visible, so the next poll picks it up. `FOR UPDATE SKIP LOCKED` is what lets you run more than one relay. Each relay locks the rows it took, and the others step over them instead of waiting. With six pending rows and two relays polling at the same moment:
 
----
-
-## 2. The Postgres MVCC Trap: Autovacuum Storms & Table Bloat
-
-If your service processes 100 events per second, your outbox table handles **8.6 million writes a day**.
-
-Here is what happens when you "clean up" processed messages:
-
-```sql
--- Option A: Updating state
-UPDATE outbox SET status = 'PROCESSED' WHERE id = ANY(:ids);
-
--- Option B: Deleting processed records
-DELETE FROM outbox WHERE id = ANY(:ids);
+```console
+relay 1 got: 1,2,3,4
+relay 2 got: 5,6
 ```
 
-In PostgreSQL, an `UPDATE` or `DELETE` does **not** overwrite bytes on disk. Due to Multi-Version Concurrency Control (MVCC), Postgres writes a brand new row version and marks the old one as a "dead tuple."
-
-At 100 writes/sec, you create **8.6 million dead tuples every 24 hours**.
-
-Within a week:
-* The outbox table file on disk grows from 50MB to 30GB, even though there are only 50 pending events at any given moment.
-* The B-tree indexes bloat to gigabytes.
-* PostgreSQL's `autovacuum` daemon kicks in aggressively, consuming 100% of your disk I/O and spiking query latency across your entire application.
-* Your poller's `SELECT ... WHERE status = 'PENDING'` starts taking 800ms instead of 2ms because it has to scan through millions of dead disk pages.
-
-### The Fix: Don't UPDATE in-place; Partition and Drop
-
-If you have high write volume, do not keep an append-and-update log in a single table. 
-
-**Option 1: Hourly Partition Drops**  
-Partition the outbox table by hour using `pg_partman`. Once an hour's partition is fully processed, run:
+Give the query a partial index so it doesn't have to wade through published rows:
 
 ```sql
-DROP TABLE outbox_2026_09_09_14;
+CREATE INDEX outbox_pending ON outbox (id) WHERE status = 'PENDING';
 ```
 
-Dropping a partition takes 2 milliseconds, generates zero dead tuples, and instantly frees disk space back to the OS without touching `autovacuum`.
+`ORDER BY id` here is a rough order, not commit order, for the same reason the cursor broke. That matters once you care about ordering per order or per customer, which is section 3.
 
-**Option 2: Micro-Batch Purging with Aggressive Vacuuming**  
-If table partitioning is too complex for your current scale, tune autovacuum specifically for the outbox table so it sweeps dead tuples before they accumulate:
+## 2. Bloat, and what actually stops vacuum
+
+Marking a row as published is an `UPDATE`, and deleting it is a `DELETE`. Either way Postgres doesn't change the row in place. MVCC keeps the old version around as a dead tuple until vacuum decides nobody can still see it. At 100 events a second that's 8.6 million dead tuples a day in one small table.
+
+Autovacuum usually keeps up with that, as long as it's allowed to remove what it finds. It isn't allowed to remove a dead tuple that some open transaction might still need to read. A single long transaction anywhere in the database holds back what vacuum can clean in every table. Here the outbox has 10,000 freshly deleted rows, and one session has a `REPEATABLE READ` transaction open:
+
+```console
+tuples: 0 removed, 10002 remain, 10000 are dead but not yet removable
+```
+
+Vacuum ran, found everything, and removed nothing. Once that one transaction ended:
+
+```console
+tuples: 10000 removed, 2 remain, 0 are dead but not yet removable
+```
+
+So when an outbox table keeps growing, look for what's holding the horizon back before you start tuning autovacuum. The usual suspects are a long-running report, a session left `idle in transaction` by an application that forgot to commit, and a replica with `hot_standby_feedback = on` running a long query. This shows the oldest snapshots still open:
+
+```sql
+SELECT pid, state, now() - xact_start AS xact_age, backend_xmin, left(query, 60) AS query
+FROM pg_stat_activity
+WHERE backend_xmin IS NOT NULL
+ORDER BY age(backend_xmin) DESC
+LIMIT 5;
+```
+
+Setting `idle_in_transaction_session_timeout` stops the forgotten-commit case from lasting more than a few minutes.
+
+Once nothing is holding vacuum back, tune it for this table so it runs more often than the defaults allow:
 
 ```sql
 ALTER TABLE outbox SET (
@@ -122,158 +120,144 @@ ALTER TABLE outbox SET (
 );
 ```
 
----
+### Partition by time and drop old partitions, carefully
 
-## 3. The Concurrency Ordering Trap
+At higher volume, stop deleting rows at all. Partition the outbox by `created_at` (`pg_partman` will create the partitions for you), and get rid of an old partition once everything in it is published. Dropping a table creates no dead tuples and returns the space immediately.
 
-Suppose an order service scales its poller to 4 concurrent pods to keep up with queue volume.
+The catch is in how you drop it. `DROP TABLE` on a partition takes an `ACCESS EXCLUSIVE` lock on the parent table as well, and it has to wait for anyone currently reading the parent. While it waits, every new query on the parent queues behind it. With one long-running reader on the parent, a `DROP` of an old partition, and then an ordinary poller query, `pg_locks` on the parent looked like this (trimmed, with notes on the right):
 
-A customer places an order and immediately cancels it:
-1. `OrderCreated` is written at `12:00:00.000` (Row 1).
-2. `OrderCancelled` is written at `12:00:00.050` (Row 2).
+```console
+ob     | AccessShareLock     | granted     ← the long-running reader
+ob     | AccessExclusiveLock | waiting     ← DROP TABLE ob_old
+ob     | AccessShareLock     | waiting     ← the poller, stuck behind the DROP
+new poller query on parent finished after 3.04s
+```
 
-Worker Pod A grabs Row 1 using `SKIP LOCKED`.  
-Worker Pod B grabs Row 2 using `SKIP LOCKED`.
+The poller was stuck for as long as the reader ran. Detach the partition first with `CONCURRENTLY` (Postgres 14 and later), then drop the detached table, which no longer has anything to do with the parent:
 
-Worker Pod A encounters a 200ms Node.js event-loop stall or Kafka socket reconnection. Meanwhile, Worker Pod B publishes `OrderCancelled` to Kafka instantly.
+```sql
+ALTER TABLE outbox DETACH PARTITION outbox_2026_09_09 CONCURRENTLY;
+DROP TABLE outbox_2026_09_09;
+```
 
-Downstream consumers receive `OrderCancelled` **before** `OrderCreated`. They throw an unhandled `OrderNotFoundException` and crash into a dead-letter loop.
+Same setup, same long reader:
 
-### The Fix
-If events for the same entity must be processed in order, you cannot let arbitrary workers grab arbitrary rows.
+```console
+new poller query on parent finished after .036s
+```
 
-**Pin each aggregate to one worker.** Hash the entity ID and give each worker one bucket:
+`DETACH … CONCURRENTLY` still waits for the reader to finish, but it waits without blocking anyone else. It can't run inside a transaction block, so run it from a maintenance job, not from inside your migration framework's transaction.
+
+## 3. Out-of-order events
+
+Run four relays to keep up, and a customer places an order and cancels it a moment later:
+
+1. `OrderCreated` is written (row 1).
+2. `OrderCancelled` is written 50 ms later (row 2).
+
+Relay A takes row 1 and relay B takes row 2. A hits a slow Kafka reconnect or a pause in the event loop, and B publishes straight away. Consumers see `OrderCancelled` before `OrderCreated`, look up an order that doesn't exist yet, and the event goes round the retry loop into the dead-letter queue.
+
+If events for the same entity must arrive in order, one relay has to own that entity. Hash the aggregate id and give each relay one bucket:
 
 ```sql
 WHERE status = 'PENDING'
-  AND (hashtext(aggregate_id) & 3) = :worker_index   -- 4 workers, buckets 0..3
+  AND (hashtext(aggregate_id) & 3) = :worker_index   -- 4 relays, buckets 0..3
 ```
 
-Use `& 3`, not `% 4`. `hashtext()` returns a signed 32-bit integer, and Postgres's `%` keeps the sign of the left side, so `hashtext(x) % 4` lands anywhere from -3 to 3. No worker asks for bucket -2, so those rows are never published, and nothing errors. Over 10,000 sample keys on Postgres 16, `% 4` left 3,721 rows (37%) with no owner. `& 3` split the same keys 2,550 / 2,411 / 2,531 / 2,508. The mask only works when the worker count is a power of two, so keep it one.
+Use `& 3`, not `% 4`. `hashtext()` returns a signed 32-bit integer, and Postgres's `%` keeps the sign of the left side, so `hashtext(x) % 4` lands anywhere from -3 to 3. No relay ever asks for bucket -2, so those rows are never published, and nothing errors. Over 10,000 sample keys, `% 4` left 3,721 rows (37%) with no owner. `& 3` split the same keys 2,550 / 2,411 / 2,531 / 2,508. The mask only works when the number of relays is a power of two, so keep it one.
 
-Changing the worker count moves almost every aggregate to a different bucket. During a rollout from 4 to 8 workers, an old and a new worker can both own the same order. Drain the pending rows, or stop the old workers, before the new ones start.
+Changing the number of relays moves almost every aggregate to a different bucket. During a rollout from 4 to 8, an old and a new relay can both own the same order. Drain the pending rows, or stop the old relays, before the new ones start.
 
-**Then key by aggregate in Kafka as well.** Use `aggregate_id` (e.g. `order_id`) as the message key, so every event for an order lands in one partition and consumers read them in the order they were published. This doesn't replace the bucketing above. If two relay workers publish one order's events out of sequence, Kafka will store them out of sequence, faithfully.
+Then use `aggregate_id` as the Kafka message key, so every event for an order lands in the same partition and consumers read them in the order they were published. The key doesn't replace the bucketing. If two relays publish one order's events out of sequence, Kafka will store them out of sequence, faithfully.
 
----
+## 4. Change data capture and the full disk
 
-## 4. The CDC Trap: How Debezium Can Take Down Your Primary Database
+When the polling gets annoying, someone suggests Debezium: read the write-ahead log directly, no polling queries at all. It works well. It also creates a logical replication slot, and a replication slot is a promise. Postgres keeps every WAL segment the slot hasn't confirmed, however long that takes.
 
-When teams get tired of managing polling workers and table bloat, someone inevitably suggests: *"Let's use Change Data Capture (CDC) with Debezium. It reads the Postgres Write-Ahead Log (WAL) directly with zero polling query overhead!"*
+So the failure goes like this. The connector stops, because of a schema change it can't parse, a Kafka outage, or a deploy that didn't come back. The slot stops advancing. The application keeps writing, Postgres keeps every WAL file, and eventually the WAL volume fills. Reproduced on a small volume, with a slot that nobody reads from:
 
-CDC is great. It is also a loaded gun if you don't understand how PostgreSQL replication slots work.
-
-When you configure Debezium, it creates a **logical replication slot** in Postgres:
-
-```
-[ App Service ] ──► [ Local DB Transaction ]
-                             │
-                      (Appends to WAL)
-                             │
-                             ▼
-                 PostgreSQL WAL on Disk
-                             │
-                  (Logical Replication Slot)
-                             │
-                             ▼
-                   [ Debezium Connector ] ──► [ Kafka ]
+```console
+ERROR:  could not write to file "pg_wal/xlogtemp.4523": No space left on device
+PANIC:  could not write to file "pg_wal/xlogtemp.4550": No space left on device
+LOG:  server process (PID 4550) was terminated by signal 6: Aborted
+LOG:  all server processes terminated; reinitializing
+FATAL:  the database system is in recovery mode
 ```
 
-A replication slot has one ironclad rule: **PostgreSQL will never delete a WAL segment file from disk until the consumer acknowledges it has processed it.**
+After that it doesn't come back on its own, because crash recovery needs to write WAL too. Your whole API is down because of a connector that was meant to be a side channel.
 
-Now imagine this real production scenario:
-1. Your Kafka cluster has an outage, or Debezium crashes with an unhandled schema parsing error at 2:00 AM on Sunday.
-2. The replication slot stops advancing.
-3. Your application keeps processing orders normally, writing hundreds of megabytes of WAL files per hour.
-4. Postgres dutifully holds onto every single WAL file on disk, waiting for Debezium to return.
-5. At 6:00 AM, the database disk volume hits 100% capacity.
-6. **PostgreSQL panics and crashes into read-only recovery mode.** Your entire production API goes down.
+### The fix: a ceiling on what a slot can hold
 
-### The Fix: Set a Hard Ceiling on WAL Accumulation
-
-In PostgreSQL 13+, you must configure `max_slot_wal_keep_size` in `postgresql.conf`:
+Since Postgres 13, `max_slot_wal_keep_size` caps how much WAL a slot can keep:
 
 ```ini
-# Cap WAL retention for replication slots at 20GB
-max_slot_wal_keep_size = 20480MB
+max_slot_wal_keep_size = 20GB
 ```
 
-If Debezium goes down and WAL accumulates past 20GB, PostgreSQL will invalidate the replication slot and delete old WAL files to protect itself. Debezium will need to re-snapshot when it recovers, but **your primary database will not crash**.
+Past the cap, Postgres gives up on the slot instead of on the database. With a 64 MB cap and the same stalled slot, the slot's `wal_status` went from `reserved` to `lost`, and the server logged:
 
----
-
-## 5. The Golden Rule: The Outbox Only Solves the Publisher Half
-
-The final trap is psychological: thinking the Transactional Outbox pattern gives you "exactly-once" delivery across microservices.
-
-**It does not.**
-
-The outbox pattern guarantees **at-least-once delivery**.
-
-Consider what happens in your relay:
-1. Relay reads an outbox event.
-2. Relay pushes the event to Kafka. Kafka writes it to disk and sends an ACK.
-3. Before the relay can run `UPDATE outbox SET status = 'PROCESSED'`, the worker process runs out of memory or its database connection drops.
-
-When the worker restarts, it sees the outbox event as still `PENDING`. It sends it to Kafka a second time.
-
-If your downstream billing consumer assumes every event is unique, you will double-charge the customer. **The Transactional Outbox is useless without idempotent consumers on the other side.**
-
-Deduplicate on the consumer with a unique constraint, and claim the event
-**before** performing the side effect:
-
-```typescript
-// Downstream Consumer: Idempotent Handling
-async function handleOrderCreated(event: { eventId: string; orderId: string; amount: number }) {
-  // 1. Claim the event. The unique constraint on event_id is the lock:
-  //    exactly one concurrent redelivery can win this insert.
-  const claim = await db.processedEvents.create({
-    data: { eventId: event.eventId, status: 'IN_PROGRESS', claimedAt: new Date() },
-  }).catch((err) => {
-    if (err.code === 'P2002') return null; // already claimed -> safe no-op
-    throw err;
-  });
-
-  if (!claim) return; // Duplicate delivery, already being handled
-
-  try {
-    // 2. Side effect (external — cannot join our transaction)
-    await processPayment(event.orderId, event.amount);
-    await db.processedEvents.update({
-      where: { eventId: event.eventId },
-      data: { status: 'COMPLETED', processedAt: new Date() },
-    });
-  } catch (err) {
-    // 3. Release the claim so a redelivery can retry.
-    await db.processedEvents.delete({ where: { eventId: event.eventId } });
-    throw err;
-  }
-}
+```console
+LOG:  invalidating obsolete replication slot "debezium"
+DETAIL:  This slot has been invalidated because it exceeded the maximum reserved size.
+HINT:  You might need to increase max_slot_wal_keep_size.
 ```
 
-Step 3 is the part that gets omitted, and omitting it converts at-least-once
-into at-most-once. If `processPayment` throws — a Stripe timeout, a deadlock —
-and you leave the claim row in place, every future redelivery of that event
-no-ops on the unique constraint. The payment never happens, nothing retries,
-and your consumer reports healthy while silently dropping money.
+The connector will need a fresh snapshot when it comes back, which is slow and annoying, but the primary stays up. Pick the cap from your disk size and how long you'd want to give someone to fix the connector at your write rate. Then alert well before you reach it:
 
-This is the same failure mode, in mirror image, as the publisher-side dual-write
-problem: there, you write to two systems and one can fail; here, you record one
-piece of state and the *other* thing can fail. Both are fixed by being explicit
-about which write is the commit point, and by making every other write
-reversible.
+```sql
+SELECT slot_name,
+       wal_status,
+       pg_size_pretty(safe_wal_size) AS headroom,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained
+FROM pg_replication_slots;
+```
 
-The full treatment — including why the idempotency record belongs in the same
-database and the same transaction as the business state, and why Redis is the
-wrong place for it — is in
-[Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems).
-For the transport primitives this all sits on top of, start with
-[Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained).
+`wal_status` moves from `reserved` to `extended` to `unreserved` as a slot falls behind. Page someone at `extended`.
 
----
+## 5. The outbox only covers the publishing side
 
-## Practical Takeaway: How to Start
+The outbox gives you at-least-once delivery, not exactly-once. The relay publishes, Kafka acknowledges, and then the relay's process dies before it marks the row as published. On restart the row is still pending, and it goes out again.
 
-1. **Under 100 events/sec**: Don't deploy Debezium. A simple polling worker with `SELECT ... FOR UPDATE SKIP LOCKED` and an index on `status` will run reliably for years. Just make sure you clean up dead tuples or partition the table.
-2. **Above 500 events/sec**: Polling query load and table bloat will start degrading your database. Move to CDC (Debezium), but set `max_slot_wal_keep_size` and monitor replication slot lag alerts before you sleep.
-3. **Always build idempotent consumers**: No outbox implementation will save you if downstream services can't handle receiving the same message twice. And make them release the claim on failure — a consumer that never retries is worse than one that double-processes, because it fails silently.
+So every consumer has to cope with seeing an event twice. The usual way is to record each event id you've handled, with a unique constraint, and claim the id before doing the work. A plain insert isn't quite enough on its own. If the consumer claims an event and then crashes before finishing, the claim stays forever and every redelivery skips the event. Give the claim a lease, so a claim that's been in progress for too long can be taken over:
+
+```sql
+INSERT INTO processed_events (event_id, status, claimed_at)
+VALUES ($1, 'IN_PROGRESS', now())
+ON CONFLICT (event_id) DO UPDATE SET claimed_at = now()
+  WHERE processed_events.status = 'IN_PROGRESS'
+    AND processed_events.claimed_at < now() - interval '5 minutes'
+RETURNING event_id;
+```
+
+A row back means you own the event. No row means someone else has it, or it's done. Run against Postgres 16:
+
+```console
+first delivery              -> [evt-1]
+redelivery, claim is fresh  -> []
+redelivery, claim is stale  -> [evt-1]   the consumer that claimed it is presumed dead
+redelivery, already done    -> []
+```
+
+The lease has one consequence you have to deal with: a takeover means the side effect may already have happened. If it's a database write, put it in the same transaction as the claim and the problem goes away. If it's an external call, such as a payment or an email, pass the event id to the provider as its idempotency key, so a second attempt returns the first result instead of charging twice. When the work finishes, set `status = 'COMPLETED'`.
+
+The consumer side gets a full post of its own: [Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems), including why that state belongs in Postgres next to your data rather than in Redis.
+
+## Where to start
+
+- **Start with polling.** Use `status = 'PENDING'` and `FOR UPDATE SKIP LOCKED`, with the partial index. It's easy to reason about and easy to fix at 2 a.m.
+- **Watch the xmin horizon before you tune vacuum.** Set `idle_in_transaction_session_timeout`.
+- **Partition once the delete rate shows up in your vacuum stats**, and drop old partitions with `DETACH … CONCURRENTLY` first.
+- **Bucket by aggregate** only if consumers need per-entity order, and use `&`, not `%`.
+- **Move to CDC** when the polling queries show up near the top of `pg_stat_statements`, or when you need lower latency than your poll interval. Set `max_slot_wal_keep_size` before the first slot exists, not after the first outage.
+- **Make every consumer idempotent**, whichever relay you pick.
+
+[TODO: if you hit any of these in production, one or two sentences on which one and how you noticed. That's worth more to a reader than anything above.]
+
+## Further reading
+
+- PostgreSQL docs: [the locking clause, including `SKIP LOCKED`](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE)
+- PostgreSQL docs: [routine vacuuming](https://www.postgresql.org/docs/current/routine-vacuuming.html)
+- PostgreSQL docs: [`ALTER TABLE … DETACH PARTITION … CONCURRENTLY`](https://www.postgresql.org/docs/current/sql-altertable.html)
+- PostgreSQL docs: [`max_slot_wal_keep_size`](https://www.postgresql.org/docs/current/runtime-config-replication.html#GUC-MAX-SLOT-WAL-KEEP-SIZE)
+- [Debezium PostgreSQL connector](https://debezium.io/documentation/reference/stable/connectors/postgresql.html)
+- The transport underneath all of this: [Message Queues, Topics, and Event Streams](/blog/message-queues-topics-event-streams-explained)
