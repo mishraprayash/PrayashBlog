@@ -264,3 +264,13 @@
     border-right: 0;
   }
 }
+
+/* Placeholders the author still has to fill in. */
+mark.todo {
+  background: var(--selection);
+  color: var(--ink);
+  padding: 0.05em 0.25em;
+  border-radius: 2px;
+  font-family: var(--font-ui);
+  font-size: 0.85em;
+}

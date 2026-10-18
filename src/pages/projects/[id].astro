@@ -1,0 +1,68 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostList from "../../components/PostList.astro";
+import TodoText from "../../components/TodoText.astro";
+import { getPosts } from "../../lib/posts";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects", ({ data }) => import.meta.env.DEV || !data.draft);
+  return projects.map((project) => ({ params: { id: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props as { project: CollectionEntry<"projects"> };
+const { data } = project;
+const { Content } = await render(project);
+const posts = await getPosts();
+const missing = data.posts.filter((slug) => !posts.some((p) => p.id === slug));
+if (missing.length) throw new Error(`Project "${project.id}" lists posts that don't exist: ${missing.join(", ")}`);
+const written = data.posts.map((slug) => posts.find((p) => p.id === slug)!);
+const plainTitle = data.title.replace(/\[TODO:[^\]]*\]/g, "Project").trim();
+---
+
+<BaseLayout title={plainTitle} description={data.summary.replace(/\s*\[TODO:[^\]]*\]/g, "")}>
+  <div class="page">
+    <div class="page__col">
+      <header>
+        <p class="inline-nav"><a href="/projects">Projects</a></p>
+        <h1 class="page-title"><TodoText text={data.title} /></h1>
+        <p class="page-lede"><TodoText text={data.summary} /></p>
+        <dl class="facts">
+          <div><dt>Role</dt><dd><TodoText text={data.role} /></dd></div>
+          {data.period && <div><dt>When</dt><dd><TodoText text={data.period} /></dd></div>}
+          <div><dt>Status</dt><dd><TodoText text={data.status} /></dd></div>
+          <div><dt>Stack</dt><dd>{data.stack.join(", ")}</dd></div>
+          {data.links.length > 0 && (
+            <div><dt>Links</dt><dd>{data.links.map((l, i) => <>{i > 0 && " · "}<a href={l.href}>{l.label}</a></>)}</dd></div>
+          )}
+        </dl>
+      </header>
+
+      <div class="post-body">
+        <Content />
+      </div>
+
+      {written.length > 0 && (
+        <section aria-labelledby="writing">
+          <h2 class="section-title" id="writing">Writing from this project</h2>
+          <PostList posts={written} />
+        </section>
+      )}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .facts {
+    display: grid;
+    gap: var(--space-2);
+    margin: var(--space-5) 0 0;
+    padding: var(--space-4) 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font: 400 var(--text-ui) / 1.5 var(--font-ui);
+  }
+  .facts div { display: grid; grid-template-columns: 5rem 1fr; gap: var(--space-3); }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; color: var(--ink); }
+</style>

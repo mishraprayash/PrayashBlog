@@ -1,0 +1,9 @@
+---
+/** Renders a frontmatter string, highlighting any [TODO: ...] placeholders. */
+export interface Props {
+  text: string;
+}
+const parts = Astro.props.text.split(/(\[TODO:[^\]]*\])/g).filter(Boolean);
+---
+
+{parts.map((part) => (part.startsWith("[TODO") ? <mark class="todo">{part}</mark> : part))}

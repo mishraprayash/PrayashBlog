@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TodoText from "../../components/TodoText.astro";
+
+const projects = (await getCollection("projects", ({ data }) => import.meta.env.DEV || !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+---
+
+<BaseLayout title="Projects" description="The systems behind the writing: what each was for, how it was built, and what part was mine.">
+  <div class="page">
+    <div class="page__col">
+      <header>
+        <h1 class="page-title">Projects</h1>
+        <p class="page-lede">Backend work is mostly invisible, so each of these says what the system was for, how it fits together, what I did, and which posts came out of it.</p>
+      </header>
+
+      <ul class="def-list">
+        {projects.map((p) => (
+          <li>
+            <a class="def-list__name" href={`/projects/${p.id}`}><TodoText text={p.data.title} /></a>
+            <p class="def-list__desc"><TodoText text={p.data.summary} /></p>
+            <p class="def-list__meta">
+              <TodoText text={p.data.role} /> · {p.data.stack.slice(0, 4).join(", ")}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

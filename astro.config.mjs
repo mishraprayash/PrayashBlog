@@ -8,6 +8,7 @@ import {
   rehypeCallouts,
   rehypeHeadingAnchors,
   rehypeTables,
+  rehypeTodos,
   transformerCodeBlock,
 } from "./src/lib/markdown/rehype-plugins";
 
@@ -28,6 +29,6 @@ export default defineConfig({
     },
     // Custom plugins need the unified pipeline (@astrojs/markdown-remark);
     // rehypeHeadingIds runs first so the heading anchors have ids to link to.
-    rehypePlugins: [rehypeHeadingIds, rehypeCallouts, rehypeTables, rehypeHeadingAnchors],
+    rehypePlugins: [rehypeHeadingIds, rehypeCallouts, rehypeTables, rehypeHeadingAnchors, rehypeTodos],
   },
 });

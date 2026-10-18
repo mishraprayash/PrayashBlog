@@ -196,11 +196,26 @@
   max-width: var(--shell);
   margin: 0 auto;
   padding: 0 var(--gutter);
-  height: var(--header-h);
-  display: flex;
+  min-height: var(--header-h);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas: "name nav actions";
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  column-gap: var(--space-2);
+}
+.site-name { grid-area: name; }
+.site-nav { grid-area: nav; }
+.site-actions { grid-area: actions; display: flex; align-items: center; }
+
+/* Too narrow for everything on one line: links move to a second row, and
+   the header stops being sticky so it doesn't eat reading space. */
+@media (max-width: 559px) {
+  .site-header { position: static; }
+  .site-header__inner {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "name actions" "nav nav";
+  }
+  .site-nav { margin-left: calc(-1 * var(--space-2)); padding-bottom: var(--space-1); }
 }
 .site-name {
   font: 600 1.0625rem / 1 var(--font-serif);
@@ -217,6 +232,7 @@
 }
 .site-nav a {
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   min-height: 44px;
   padding: 0 var(--space-2);

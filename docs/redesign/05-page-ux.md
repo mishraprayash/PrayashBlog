@@ -126,7 +126,7 @@ FOOTER
 | ToC | Sticky left column | `<details>` above prose | `<details>` above prose |
 | Side notes | Right column | Right column | End of section |
 | Code / tables / figures | Can widen to 48rem | Prose width | Full width (bleed to the gutters), internal scroll |
-| Header | Full | Full | Name + 3 links + 2 icons, fits at 360 px |
+| Header | Full, sticky | Full, sticky | Below 560 px: two rows (name + icons, then links) and not sticky. One row needs ~460 px, measured. |
 | Post meta | One line | One line | Wraps; "Revised" goes on its own line |
 
 ### 1.7 Edge states

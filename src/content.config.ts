@@ -36,6 +36,36 @@ const blogCollection = defineCollection({
     }),
 });
 
+// Projects: the work behind the posts. Facts only the author has are left as
+// [TODO: ...] markers in the markdown, which render highlighted.
+const projectsCollection = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/projects" }),
+  schema: z.object({
+    title: z.string(),
+    summary: z.string(),
+    role: z.string(),
+    period: z.string().optional(),
+    status: z.string(),
+    stack: z.array(z.string()),
+    order: z.number().int(),
+    links: z.array(z.object({ label: z.string(), href: z.string() })).default([]),
+    // Posts written from this project, by slug.
+    posts: z.array(z.string()).default([]),
+    draft: z.boolean().default(false),
+  }),
+});
+
+// Standalone prose pages (About).
+const pagesCollection = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/pages" }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string(),
+  }),
+});
+
 export const collections = {
   blog: blogCollection,
+  projects: projectsCollection,
+  pages: pagesCollection,
 };

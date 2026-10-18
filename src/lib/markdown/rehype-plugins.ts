@@ -117,3 +117,22 @@ export function rehypeHeadingAnchors() {
     });
   };
 }
+
+/**
+ * Highlights `[TODO: ...]` placeholders so unfinished facts are impossible to
+ * miss on a preview. `npm run todos` lists them all.
+ */
+export function rehypeTodos() {
+  return (tree: Root) => {
+    visit(tree, "text", (node, index, parent) => {
+      if (!parent || index === undefined || !node.value.includes("[TODO")) return;
+      const parts = node.value.split(/(\[TODO:[^\]]*\])/g).filter(Boolean);
+      parent.children.splice(
+        index,
+        1,
+        ...parts.map((part) => (part.startsWith("[TODO") ? el("mark", { className: ["todo"] }, [text(part)]) : text(part))),
+      );
+      return index + parts.length;
+    });
+  };
+}

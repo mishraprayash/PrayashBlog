@@ -31,8 +31,11 @@ const canonical = canonicalURL ?? canonicalFor(Astro.url.pathname, site);
 const socialCard = socialImage(ogImage, site);
 
 const path = Astro.url.pathname.replace(/\/$/, "") || "/";
-// Projects and About join this list when those pages exist (milestone M5).
-const nav = [{ href: "/blog", label: "Writing" }];
+const nav = [
+  { href: "/blog", label: "Writing" },
+  { href: "/projects", label: "Projects" },
+  { href: "/about", label: "About" },
+];
 const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 ---
 
@@ -133,6 +136,8 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
           {nav.map((item) => (
             <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
           ))}
+        </nav>
+        <div class="site-actions">
           <a class="icon-btn" href="/rss.xml" aria-label="RSS feed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
           </a>
@@ -141,7 +146,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
             <svg data-icon="light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
             <svg data-icon="dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
-        </nav>
+        </div>
       </div>
     </header>
 
