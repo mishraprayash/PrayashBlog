@@ -6,6 +6,8 @@ import sitemap from "@astrojs/sitemap";
 // https://astro.build/config
 export default defineConfig({
   site: "https://prayashmishra.com",
+  // One URL per page: no trailing slash. vercel.json redirects /x/ to /x.
+  trailingSlash: "never",
   integrations: [sitemap()],
   vite: {
     plugins: [tailwindcss()],

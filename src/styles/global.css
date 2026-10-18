@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./tokens.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -81,90 +82,6 @@
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-}
-
-@layer base {
-  html {
-    scroll-behavior: smooth;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    scrollbar-gutter: stable;
-  }
-
-  body {
-    @apply bg-paper-100 text-paper-950 dark:bg-zinc-1000 dark:text-zinc-100;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-brand-600 dark:outline-brand-400 rounded-md;
-  }
-
-  ::selection {
-    @apply bg-brand-500/25 text-brand-900 dark:bg-brand-400/25 dark:text-brand-100;
-  }
-
-  /* Headings get tighter tracking the larger they get. */
-  h1, h2, h3, h4 {
-    @apply text-balance;
-  }
-
-  p {
-    @apply text-pretty;
-  }
-}
-
-/* ------------------------------------------------------------------ *
- *  IMMERSIVE BACKGROUND                                               *
- *  Replaces the flat 40px grid. Layered radial washes + a fine dot    *
- *  field + fractal noise: the noise is what stops large flat areas    *
- *  from looking like dead plastic, and it costs one data URI.         *
- * ------------------------------------------------------------------ */
-
-/* Fractal noise, inlined as an SVG data URI so there is no extra request. */
-.bg-noise {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.dark .bg-noise {
-  opacity: 0.05;
-}
-
-/* Two offset radial washes read as depth; one centred wash reads as a gradient. */
-.bg-aurora {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(58rem 32rem at 12% -8%, rgb(22 165 150 / 0.13), transparent 62%),
-    radial-gradient(48rem 30rem at 92% 2%, rgb(224 155 26 / 0.09), transparent 60%),
-    radial-gradient(70rem 40rem at 50% -18%, rgb(16 185 168 / 0.07), transparent 70%);
-}
-.dark .bg-aurora {
-  background:
-    radial-gradient(58rem 32rem at 12% -8%, rgb(22 165 150 / 0.16), transparent 62%),
-    radial-gradient(48rem 30rem at 92% 2%, rgb(224 155 26 / 0.08), transparent 60%),
-    radial-gradient(70rem 40rem at 50% -18%, rgb(16 185 168 / 0.1), transparent 70%);
-}
-
-/* Fine dot field — much quieter than a 40px grid, reads as texture not decoration. */
-.bg-dots {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle at 1px 1px, rgb(26 25 23 / 0.07) 1px, transparent 0);
-  background-size: 26px 26px;
-  /* Fade the field out before it reaches the content, so it never competes with text. */
-  mask-image: linear-gradient(to bottom, black 0%, rgb(0 0 0 / 0.35) 45%, transparent 78%);
-}
-.dark .bg-dots {
-  background-image: radial-gradient(circle at 1px 1px, rgb(233 237 242 / 0.06) 1px, transparent 0);
 }
 
 /* ------------------------------------------------------------------ *
@@ -343,11 +260,4 @@ html:not(.dark) .prose pre.astro-code {
  *  MOTION                                                             *
  *  Honour the OS setting once, globally, rather than per component.   *
  * ------------------------------------------------------------------ */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+

@@ -1,4 +1,8 @@
 ---
+import "@fontsource-variable/source-serif-4/wght.css";
+import "@fontsource-variable/source-serif-4/wght-italic.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+import serifLatin from "@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2?url";
 import "../styles/global.css";
 import { SITE, socialImage, canonicalFor } from "../lib/seo";
 
@@ -25,40 +29,51 @@ const site = Astro.site ?? new URL(SITE.url);
 const fullTitle = titleOverride ?? (title === SITE.name ? SITE.name : `${title} | ${SITE.name}`);
 const canonical = canonicalURL ?? canonicalFor(Astro.url.pathname, site);
 const socialCard = socialImage(ogImage, site);
+
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+// Projects and About join this list when those pages exist (milestone M5).
+const nav = [{ href: "/blog", label: "Writing" }];
+const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light" data-theme-pref="system">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#fbf9f5" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0c0d0e" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#faf8f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#171513" media="(prefers-color-scheme: dark)" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400..700;1,14..32,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Set the theme before first paint. "theme" in localStorage is "light",
+         "dark", or absent (follow the system). -->
+    <script is:inline>
+      (function () {
+        var pref = "system";
+        try {
+          var stored = localStorage.getItem("theme");
+          if (stored === "light" || stored === "dark") pref = stored;
+        } catch (e) {}
+        var dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        var root = document.documentElement;
+        root.dataset.themePref = pref;
+        root.dataset.theme = dark ? "dark" : "light";
+        // Pages not yet rebuilt still style dark mode through Tailwind's .dark class.
+        root.classList.toggle("dark", dark);
+      })();
+    </script>
 
-    <!-- Favicon -->
+    <link rel="preload" href={serifLatin} as="font" type="font/woff2" crossorigin />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
-    <!-- Primary Meta -->
     <title>{fullTitle}</title>
-    <meta name="title" content={fullTitle} />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
-
-    <!-- Canonical -->
     <link rel="canonical" href={canonical} />
 
-    <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={fullTitle} />
@@ -66,38 +81,17 @@ const socialCard = socialImage(ogImage, site);
     <meta property="og:image" content={socialCard.href} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={description} />
+    <meta property="og:image:alt" content={title} />
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:locale" content={SITE.locale} />
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content={canonical} />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialCard.href} />
-    <meta name="twitter:image:alt" content={description} />
+    <meta name="twitter:image:alt" content={title} />
 
-    <!-- RSS -->
-    <link
-      rel="alternate"
-      type="application/rss+xml"
-      title="Prayash Mishra Blog"
-      href="/rss.xml"
-    />
-
-    <!-- Dark mode script (inline to prevent flash) -->
-    <script is:inline>
-      (function () {
-        const stored = localStorage.getItem("theme");
-        if (
-          stored === "dark" ||
-          (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)
-        ) {
-          document.documentElement.classList.add("dark");
-        }
-      })();
-    </script>
+    <link rel="alternate" type="application/rss+xml" title={`${SITE.name}`} href="/rss.xml" />
 
     <slot name="head" />
 
@@ -107,7 +101,7 @@ const socialCard = socialImage(ogImage, site);
         {
           "@type": "WebSite",
           "@id": `${SITE.url}/#website`,
-          url: `${SITE.url}/`,
+          url: SITE.url,
           name: SITE.name,
           description: SITE.description,
           inLanguage: "en-US",
@@ -116,7 +110,7 @@ const socialCard = socialImage(ogImage, site);
           "@type": "Person",
           "@id": `${SITE.url}/#person`,
           name: SITE.name,
-          url: `${SITE.url}/`,
+          url: SITE.url,
           jobTitle: SITE.tagline,
           description: SITE.description,
           sameAs: [
@@ -128,179 +122,78 @@ const socialCard = socialImage(ogImage, site);
     })} />
   </head>
 
-  <body class="min-h-screen flex flex-col font-sans bg-paper-100 dark:bg-zinc-1000 text-paper-950 dark:text-zinc-100 relative">
-    <!-- Layered background: aurora washes, dot field, then noise on top.
-         Fixed rather than absolute so the texture does not scroll away. -->
-    <div class="bg-aurora" aria-hidden="true"></div>
-    <div class="bg-dots" aria-hidden="true"></div>
-    <div class="bg-noise" aria-hidden="true"></div>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
 
-    <a
-      href="#main-content"
-      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-brand-700 focus:text-white focus:text-sm focus:font-semibold"
-    >
-      Skip to content
-    </a>
-
-    <header
-      class="relative sticky top-0 z-50 bg-paper-100/80 dark:bg-zinc-1000/75 backdrop-blur-xl border-b border-paper-400/70 dark:border-zinc-800/80"
-    >
-      <div
-        class="mx-auto max-w-shell px-5 sm:px-8 flex items-center justify-between h-16"
-      >
-        <a
-          href="/"
-          class="flex items-center gap-2 group focus:outline-none"
-        >
-          <span class="h-7 w-7 rounded-lg bg-brand-700 dark:bg-brand-600 flex items-center justify-center text-white font-mono font-bold text-xs shadow-sm">
-            PM
-          </span>
-          <span class="text-sm sm:text-base font-bold tracking-tight text-paper-950 dark:text-zinc-100 group-hover:text-brand-800 dark:group-hover:text-brand-400 transition-colors">
-            Prayash Mishra
-          </span>
-        </a>
-
-        <nav class="flex items-center gap-3 sm:gap-4" aria-label="Main navigation">
-          <a
-            href="/"
-            class="text-sm font-medium text-paper-900 dark:text-zinc-400 hover:text-paper-950 dark:hover:text-zinc-100 transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-brand-600 after:transition-all"
-          >
-            Home
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="site-name" href="/">Prayash Mishra</a>
+        <nav class="site-nav" aria-label="Main">
+          {nav.map((item) => (
+            <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
+          ))}
+          <a class="icon-btn" href="/rss.xml" aria-label="RSS feed">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
           </a>
-          <a
-            href="/blog"
-            class="text-sm font-medium text-paper-900 dark:text-zinc-400 hover:text-paper-950 dark:hover:text-zinc-100 transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-brand-600 after:transition-all"
-          >
-            Publications
-          </a>
-
-          <div class="h-4 w-[1px] bg-paper-500 dark:bg-zinc-800 mx-1"></div>
-
-          <!-- GitHub Link -->
-          <a
-            href="https://github.com/mishraprayash"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="GitHub Profile"
-            class="p-1.5 rounded-xl text-paper-900 dark:text-zinc-400 hover:text-paper-950 dark:hover:text-zinc-100 hover:bg-paper-200 dark:hover:bg-zinc-800/60 transition-all cursor-pointer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path>
-              <path d="M9 18c-4.51 2-5-2-7-2"></path>
-            </svg>
-          </a>
-
-          <!-- LinkedIn Link -->
-          <a
-            href="https://www.linkedin.com/in/prayash-mishra-5a409422b/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="LinkedIn Profile"
-            class="p-1.5 rounded-xl text-paper-900 dark:text-zinc-400 hover:text-[#0077b5] dark:hover:text-[#38bdf8] /* LinkedIn brand blue, both ramps */ hover:bg-paper-200 dark:hover:bg-zinc-800/60 transition-all cursor-pointer"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
-              <rect x="2" y="9" width="4" height="12"></rect>
-              <circle cx="4" cy="4" r="2"></circle>
-            </svg>
-          </a>
-
-          <button
-            id="theme-toggle"
-            type="button"
-            aria-label="Toggle dark mode"
-            class="p-1.5 rounded-xl text-paper-900 dark:text-zinc-400 hover:bg-paper-200 dark:hover:bg-zinc-800/60 transition-all cursor-pointer"
-          >
-            <span class="sr-only">Toggle dark mode</span>
-            <!-- Sun icon -->
-            <svg
-              id="sun-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="hidden dark:block"
-            >
-              <circle cx="12" cy="12" r="5"></circle>
-              <line x1="12" y1="1" x2="12" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="23"></line>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-              <line x1="1" y1="12" x2="3" y2="12"></line>
-              <line x1="21" y1="12" x2="23" y2="12"></line>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-            </svg>
-            <!-- Moon icon -->
-            <svg
-              id="moon-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="block dark:hidden"
-            >
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-            </svg>
+          <button class="icon-btn theme-toggle" type="button" id="theme-toggle" aria-label="Theme: follow system">
+            <svg data-icon="system" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+            <svg data-icon="light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            <svg data-icon="dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           </button>
         </nav>
       </div>
-
-      <!-- Reading progress, hosted on the header edge. Inactive (width 0)
-           everywhere except article pages, which drive it from their own script. -->
-      <div class="absolute inset-x-0 bottom-0 h-[2px] bg-transparent overflow-hidden" aria-hidden="true">
-        <div
-          id="reading-progress"
-          class="h-full w-0 bg-gradient-to-r from-brand-600 to-brand-400 dark:from-brand-500 dark:to-brand-300 transition-[width] duration-100"
-        ></div>
-      </div>
     </header>
 
-    <main id="main-content" tabindex="-1" class="flex-1 relative z-10 outline-none">
+    <main id="main-content" class="site-main" tabindex="-1">
       <slot />
     </main>
 
-    <footer
-      class="border-t border-paper-400/80 dark:border-zinc-800/80 bg-paper-200/60 dark:bg-zinc-1000/60 relative z-10"
-    >
-      <div
-        class="mx-auto max-w-5xl px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-paper-800 dark:text-zinc-500"
-      >
-        <p>&copy; {new Date().getFullYear()} Prayash Mishra.</p>
-        <div class="flex items-center gap-4">
-          <a href="/rss.xml" class="hover:text-paper-950 dark:hover:text-zinc-300 transition-colors">RSS</a>
-          <a href="/blog" class="hover:text-paper-950 dark:hover:text-zinc-300 transition-colors">Publications</a>
-          <a href="https://github.com/mishraprayash" target="_blank" rel="noopener noreferrer" class="hover:text-paper-950 dark:hover:text-zinc-300 transition-colors">GitHub</a>
-          <a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/" target="_blank" rel="noopener noreferrer" class="hover:text-paper-950 dark:hover:text-zinc-300 transition-colors">LinkedIn</a>
-        </div>
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <span>&copy; {new Date().getFullYear()} Prayash Mishra</span>
+        <ul class="site-footer__links">
+          <li><a href="/rss.xml">RSS</a></li>
+          <li><a href="https://github.com/mishraprayash">GitHub</a></li>
+          <li><a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a></li>
+          <li><a href="https://github.com/mishraprayash/PrayashBlog">Source</a></li>
+        </ul>
       </div>
     </footer>
 
-    <!-- Theme toggle script -->
     <script>
+      const ORDER = ["system", "light", "dark"] as const;
+      type Pref = (typeof ORDER)[number];
+      const LABEL: Record<Pref, string> = {
+        system: "Theme: follow system",
+        light: "Theme: light",
+        dark: "Theme: dark",
+      };
+      const root = document.documentElement;
+      const scheme = matchMedia("(prefers-color-scheme: dark)");
       const toggle = document.getElementById("theme-toggle");
-      if (toggle) {
-        toggle.addEventListener("click", () => {
-          const isDark = document.documentElement.classList.toggle("dark");
-          localStorage.setItem("theme", isDark ? "dark" : "light");
-        });
+
+      function apply(pref: Pref) {
+        const dark = pref === "dark" || (pref === "system" && scheme.matches);
+        root.dataset.themePref = pref;
+        root.dataset.theme = dark ? "dark" : "light";
+        root.classList.toggle("dark", dark);
+        toggle?.setAttribute("aria-label", LABEL[pref]);
       }
 
-      // Follow the OS theme until the reader makes an explicit choice.
-      const scheme = window.matchMedia("(prefers-color-scheme: dark)");
-      scheme.addEventListener("change", (e) => {
-        if (localStorage.getItem("theme")) return;
-        document.documentElement.classList.toggle("dark", e.matches);
+      apply((root.dataset.themePref as Pref) ?? "system");
+
+      toggle?.addEventListener("click", () => {
+        const current = (root.dataset.themePref as Pref) ?? "system";
+        const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
+        try {
+          if (next === "system") localStorage.removeItem("theme");
+          else localStorage.setItem("theme", next);
+        } catch {}
+        apply(next);
+      });
+
+      scheme.addEventListener("change", () => {
+        if (root.dataset.themePref === "system") apply("system");
       });
     </script>
   </body>

@@ -51,10 +51,15 @@ export function absoluteUrl(path: string, site: URL | undefined = new URL(SITE.u
   return new URL(path, site).href;
 }
 
-/** Canonical URL for a pathname, e.g. `/blog/foo`. */
+/**
+ * Canonical URL for a pathname, e.g. `/blog/foo`. The site uses no trailing
+ * slash (astro.config.mjs `trailingSlash: "never"`), so one is stripped here
+ * too; otherwise canonicals and the sitemap disagree.
+ */
 export function canonicalFor(
   pathname: string,
   site: URL | undefined = new URL(SITE.url),
 ): string {
-  return absoluteUrl(pathname, site);
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return absoluteUrl(path, site);
 }

@@ -1,0 +1,278 @@
+/* Design tokens and base styles. Values and contrast ratios are documented
+   in docs/redesign/04-design-system.md; change them there first. */
+
+/* Metric-matched local fallbacks (generated once with @capsizecss/core), so
+   the swap to the webfont doesn't shift the layout. */
+@font-face {
+  font-family: "Source Serif 4 Fallback";
+  src: local("Georgia");
+  ascent-override: 96.4195%;
+  descent-override: 31.1781%;
+  size-adjust: 107.4471%;
+}
+@font-face {
+  font-family: "JetBrains Mono Fallback";
+  src: local("Courier New"), local("CourierNewPSMT");
+  ascent-override: 102.0166%;
+  descent-override: 30.0049%;
+  size-adjust: 99.9837%;
+}
+
+:root {
+  --font-serif: "Source Serif 4 Variable", "Source Serif 4 Fallback", Georgia, "Times New Roman", serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-code: "JetBrains Mono Variable", "JetBrains Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-display: clamp(2rem, 1.35rem + 2.6vw, 2.75rem);
+  --text-h2: 1.5rem;
+  --text-h3: 1.25rem;
+  --text-h4: 1.125rem;
+  --text-dek: 1.1875rem;
+  --text-body: 1.125rem;
+  --text-code: 0.875rem;
+  --text-ui: 0.9375rem;
+  --text-small: 0.875rem;
+  --text-tiny: 0.8125rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  --shell: 72rem;
+  --measure: 34em;
+  --gutter: 16px;
+  --header-h: 56px;
+
+  color-scheme: light;
+  --paper: #faf8f4;
+  --raised: #f3efe7;
+  --rule: #e2dcd0;
+  --rule-strong: #8f8678;
+  --ink: #1d1b18;
+  --ink-2: #45403a;
+  --muted: #6a6359;
+  --accent: #a3261b;
+  --accent-hover: #7e1c13;
+  --note: #2f5b8a;
+  --tip: #2e6a3a;
+  --caution: #855600;
+  --selection: #f1d6d0;
+  --line-hl: #eae2d3;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #171513;
+  --raised: #211e1b;
+  --rule: #302c27;
+  --rule-strong: #7a7268;
+  --ink: #ece7de;
+  --ink-2: #cfc8bc;
+  --muted: #a69e91;
+  --accent: #f08a73;
+  --accent-hover: #f6ab98;
+  --note: #8db6e3;
+  --tip: #8cc79a;
+  --caution: #e2b65e;
+  --selection: #5a2a22;
+  --line-hl: #2b2723;
+}
+
+@media (min-width: 640px) {
+  :root { --gutter: 24px; }
+}
+@media (min-width: 768px) {
+  :root {
+    --text-h2: 1.75rem;
+    --text-h3: 1.375rem;
+    --text-h4: 1.1875rem;
+    --text-dek: 1.3125rem;
+    --text-body: 1.1875rem;
+    --text-code: 0.9375rem;
+  }
+}
+@media (min-width: 1024px) {
+  :root { --gutter: 32px; }
+}
+
+/* ------------------------------------------------------------------ */
+
+/* Element defaults live in the base layer so Tailwind utilities on pages
+   not yet rebuilt still win over them. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: var(--text-body);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+
+  /* Plain links (prose, footers) get the accent and an underline. Links with a
+     class style themselves, so block-level links such as list rows or cards
+     aren't underlined from edge to edge. */
+  a:not([class]) {
+    color: var(--accent);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    transition: color 120ms ease-out, text-decoration-thickness 120ms ease-out;
+  }
+  a:not([class]):hover {
+    color: var(--accent-hover);
+    text-decoration-thickness: 2px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  code, kbd, pre, samp { font-family: var(--font-code); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
+
+/* ---------- Skip link ---------- */
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -100px;
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+  font: 600 var(--text-ui) / 1.4 var(--font-ui);
+}
+.skip-link:focus { top: var(--space-2); }
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+.site-header__inner {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.site-name {
+  font: 600 1.0625rem / 1 var(--font-serif);
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.site-name:hover { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; }
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 400 var(--text-ui) / 1 var(--font-ui);
+}
+.site-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.site-nav a:hover { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; }
+.site-nav a[aria-current="page"] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.site-nav a.icon-btn { padding: 0; }
+.icon-btn:hover { color: var(--ink); }
+.icon-btn svg { width: 18px; height: 18px; }
+/* Only the icon for the current theme mode is shown. */
+.theme-toggle [data-icon] { display: none; }
+:root[data-theme-pref="system"] .theme-toggle [data-icon="system"],
+:root[data-theme-pref="light"] .theme-toggle [data-icon="light"],
+:root[data-theme-pref="dark"] .theme-toggle [data-icon="dark"] { display: block; }
+
+/* ---------- Main ---------- */
+.site-main { flex: 1; }
+.site-main:focus { outline: none; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  border-top: 1px solid var(--rule);
+  margin-top: var(--space-8);
+}
+.site-footer__inner {
+  max-width: var(--shell);
+  margin: 0 auto;
+  padding: var(--space-7) var(--gutter);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  font: 400 var(--text-small) / 1.5 var(--font-ui);
+  color: var(--muted);
+}
+.site-footer a { color: var(--muted); }
+.site-footer a:hover { color: var(--ink); }
+.site-footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
