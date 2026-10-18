@@ -267,10 +267,15 @@
   .post-body > :is(.code-block, .table-wrap) { margin-left: calc(-1 * var(--gutter)); border-left: 0; border-right: 0; box-shadow: none; }
 }
 
-/* With the contents rail on the left, wide blocks grow to the right only. */
+/* With the contents rail on the left (posts with 4+ sections, from 1280px),
+   wide blocks grow to the right only, so they never cover the rail. Space
+   to the right of the column is (100vw - 100%) / 2, less the gutter and 20px
+   of scrollbar slack. */
 @media (min-width: 1280px) {
-  .article .post-body > :is(.code-block, .table-wrap) {
+  .article:has(.toc--rail) .post-body > :is(.code-block, .table-wrap, .lab, .story) {
+    --room: calc(100% + (100vw - 100%) / 2 - var(--gutter) - 20px);
     margin-left: 0;
-    width: min(52rem, calc(100% + (100vw - 100%) / 2 - var(--gutter) - 20px));
   }
+  .article:has(.toc--rail) .post-body > :is(.code-block, .table-wrap, .lab) { width: min(52rem, var(--room)); }
+  .article:has(.toc--rail) .post-body > .story { width: min(70rem, var(--room)); }
 }

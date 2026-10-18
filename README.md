@@ -19,7 +19,7 @@ Source for [prayashmishra.com](https://prayashmishra.com): writing on how backen
 | `npm run build` | Production build into `dist/`, including content checks |
 | `npm run preview` | Serve the build locally |
 | `npm run check` | Astro and TypeScript checks |
-| `npm run test:pages` | Every built page at 360px and 1440px, light and dark: sideways scroll, JS errors, one `<h1>`, axe. Needs Chromium (set `CHROMIUM_PATH` if Playwright doesn't manage one). |
+| `npm run test:pages` | Every built page at 360, 1280, 1440 and 1920px, light and dark: sideways scroll, nothing covering the contents rail, JS errors, one `<h1>`, axe. Needs Chromium (set `CHROMIUM_PATH` if Playwright doesn't manage one). |
 | `npm run todos` | Lists `[TODO: …]` placeholders still in the content |
 | `node scripts/preview-diagram.mjs src/lib/diagrams/<id>.ts out/` | Renders one scroll diagram at every step, without a build |
 

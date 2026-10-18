@@ -1,5 +1,6 @@
-// Checks every built page: no horizontal scroll at 360px and 1440px, no JS
-// errors, exactly one <h1>, and no axe violations in light or dark mode.
+// Checks every built page at 360, 1280, 1440 and 1920px: no horizontal
+// scroll, nothing covering the contents rail, no JS errors, exactly one <h1>,
+// and no axe violations in light or dark mode.
 // Run after `npm run build`:  npm run test:pages
 import http from "node:http";
 import fs from "node:fs";
@@ -36,7 +37,8 @@ const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePa
 const axeSource = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 const failures = [];
 
-for (const [width, height, scheme] of [[360, 740, "light"], [1440, 900, "dark"]]) {
+const VIEWPORTS = [[360, 740, "light"], [1280, 800, "light"], [1440, 900, "dark"], [1920, 1080, "light"]];
+for (const [width, height, scheme] of VIEWPORTS) {
   const page = await (await browser.newContext({ viewport: { width, height }, colorScheme: scheme })).newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -50,6 +52,15 @@ for (const [width, height, scheme] of [[360, 740, "light"], [1440, 900, "dark"]]
     const r = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       h1: document.querySelectorAll("h1").length,
+      // Nothing in the post body may reach into the contents rail.
+      overlap: (() => {
+        const rail = document.querySelector(".toc--rail");
+        if (!rail || getComputedStyle(rail).display === "none") return [];
+        const edge = rail.getBoundingClientRect().right;
+        return [...document.querySelectorAll(".post-body > *")]
+          .filter((el) => el.getBoundingClientRect().left < edge)
+          .map((el) => el.className || el.tagName.toLowerCase());
+      })(),
     }));
     await page.addScriptTag({ content: axeSource });
     const violations = await page.evaluate(async () =>
@@ -58,6 +69,7 @@ for (const [width, height, scheme] of [[360, 740, "light"], [1440, 900, "dark"]]
     );
     const where = `${width}px ${scheme} ${url}`;
     if (r.overflow > 0) failures.push(`${where}: page scrolls sideways by ${r.overflow}px`);
+    for (const o of r.overlap) failures.push(`${where}: "${o}" covers the contents rail`);
     if (r.h1 !== 1) failures.push(`${where}: ${r.h1} <h1> elements`);
     for (const e of errors) failures.push(`${where}: JS error: ${e}`);
     for (const v of violations) failures.push(`${where}: axe ${v}`);
@@ -66,5 +78,5 @@ for (const [width, height, scheme] of [[360, 740, "light"], [1440, 900, "dark"]]
 
 await browser.close();
 server.close();
-console.log(failures.length ? failures.join("\n") : `OK: ${pages.length} pages, 2 viewports, light and dark.`);
+console.log(failures.length ? failures.join("\n") : `OK: ${pages.length} pages at ${VIEWPORTS.map(([w, , s]) => `${w}px ${s}`).join(", ")}.`);
 process.exit(failures.length ? 1 : 0);
