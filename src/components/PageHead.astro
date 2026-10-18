@@ -1,0 +1,31 @@
+---
+import Rise from "./Rise.astro";
+import type { PillarId } from "../data/taxonomy";
+
+export interface Props {
+  title: string;
+  /** Fills the header with this pillar's colour. */
+  pillar?: PillarId;
+  /** Smaller title, for long ones. */
+  size?: "lg" | "md";
+  /** Chips above the title. */
+  kicker?: { href?: string; label: string; current?: boolean }[];
+}
+const { title, pillar, size = "lg", kicker = [] } = Astro.props;
+---
+
+<header class:list={["phead", pillar && ["phead--color", `pillar-${pillar}`]]}>
+  {kicker.length > 0 && (
+    <p class="phead__kicker">
+      {kicker.map((k) =>
+        k.href ? (
+          <a class="chip" href={k.href} aria-current={k.current ? "page" : undefined}>{k.label}</a>
+        ) : (
+          <span class="chip">{k.label}</span>
+        ),
+      )}
+    </p>
+  )}
+  <Rise text={title} class:list={["phead__title", size === "md" && "phead__title--md"]} />
+  <slot />
+</header>

@@ -1,0 +1,31 @@
+---
+import Cover from "./Cover.astro";
+import { PILLARS } from "../data/taxonomy";
+import { headline, postUrl, readingTime, type Post } from "../lib/posts";
+
+export interface Props {
+  post: Post;
+  /** Total parts, to show "Part n / m" for series posts. */
+  seriesTotal?: number;
+  /** A line under the title; defaults to the post description. */
+  note?: string;
+  heading?: "h2" | "h3";
+}
+const { post, seriesTotal, note, heading: H = "h3" } = Astro.props;
+const { data } = post;
+---
+
+<article class:list={["card", `pillar-${data.pillar}`]}>
+  <div class="card__art"><Cover cover={data.cover} pillar={data.pillar} /></div>
+  <div class="card__body">
+    <H class="card__title"><a href={postUrl(post)}>{headline(post)}</a></H>
+    <p class="card__note">{note ?? data.description}</p>
+    <p class="card__meta">
+      <span class="pill">{PILLARS[data.pillar].short}</span>
+      {seriesTotal && <span>Part {data.seriesPart} / {seriesTotal}</span>}
+      <span>{readingTime(post.body)} min</span>
+      {data.updatedDate && <span>revised</span>}
+      {data.draft && <span>draft</span>}
+    </p>
+  </div>
+</article>

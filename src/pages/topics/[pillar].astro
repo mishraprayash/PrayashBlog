@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import PostList from "../../components/PostList.astro";
+import PageHead from "../../components/PageHead.astro";
+import CardGrid from "../../components/CardGrid.astro";
 import { PILLARS, PILLAR_IDS, TAGS, type PillarId } from "../../data/taxonomy";
 import { getPosts, getSeries, postsByPillar, postsByTag } from "../../lib/posts";
 
@@ -21,54 +22,54 @@ const tags = TAGS.filter((t) => inPillar.some((p) => p.data.tags.includes(t)));
 const leaning = inPillar.length === 0 && (TAGS as readonly string[]).includes(id) ? postsByTag(posts, id as never) : [];
 ---
 
-<BaseLayout title={pillar.title} description={`${pillar.title}: ${pillar.description}`}>
-  <div class="page">
-    <div class="page__col">
-      <header>
-        <p class="inline-nav"><a href="/blog">Writing</a></p>
-        <h1 class="page-title">{pillar.title}</h1>
-        <p class="page-lede">{pillar.description}</p>
-      </header>
+<BaseLayout title={pillar.title} description={`${pillar.title}: ${pillar.description}`} pillar={id}>
+  <PageHead
+    title={pillar.title}
+    pillar={id}
+    size="md"
+    kicker={[{ href: "/blog", label: "← Writing" }, ...PILLAR_IDS.map((p) => ({ href: `/topics/${p}`, label: PILLARS[p].short, current: p === id }))]}
+  >
+    <p class="phead__lede">{pillar.description}</p>
+    <p class="phead__meta">
+      {inPillar.length > 0 ? `${inPillar.length} posts` : "No posts yet"}
+      {series.length > 0 && <> · {series.length} series</>}
+    </p>
+  </PageHead>
 
-      {series.length > 0 && (
-        <section aria-labelledby="series">
-          <h2 class="section-title" id="series">Series</h2>
-          <ul class="def-list">
-            {series.map((s) => (
-              <li>
-                <a class="def-list__name" href={`/series/${s.id}`}>{s.title}</a>
-                <p class="def-list__meta">{s.parts.length} parts</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+  {inPillar.length > 0 ? (
+    <CardGrid posts={inPillar} seriesTotals={seriesTotals} heading="h2" label="Posts" />
+  ) : (
+    <section aria-labelledby="leaning">
+      <div class="sect-h"><h2 id="leaning">Nothing here yet</h2></div>
+      {leaning.length > 0 && (
+        <>
+          <p class="page-col">Posts dedicated to this are coming. These are the ones that lean on it most.</p>
+          <CardGrid posts={leaning} seriesTotals={seriesTotals} />
+        </>
       )}
+    </section>
+  )}
 
-      {inPillar.length > 0 ? (
-        <section aria-labelledby="posts">
-          <h2 class="section-title" id="posts">Posts</h2>
-          <PostList posts={inPillar} showPillar={false} seriesTotals={seriesTotals} />
-        </section>
-      ) : (
-        <section aria-labelledby="posts">
-          <h2 class="section-title" id="posts">Nothing here yet</h2>
-          {leaning.length > 0 && (
-            <>
-              <p class="page-text">Posts dedicated to this are coming. These are the ones that lean on it most:</p>
-              <div style="margin-top: var(--space-4)">
-                <PostList posts={leaning} seriesTotals={seriesTotals} />
-              </div>
-            </>
-          )}
-        </section>
-      )}
+  {series.length > 0 && (
+    <section aria-labelledby="series">
+      <div class="sect-h"><h2 id="series">Series</h2></div>
+      <ol class="rows">
+        {series.map((s, i) => (
+          <li>
+            <a class="row" href={`/series/${s.id}`}>
+              <span class="row__n">{String(i + 1).padStart(2, "0")}</span>
+              <span><span class="row__t">{s.title}</span><span class="row__d">{s.description}</span></span>
+              <span class="row__m">{s.parts.length} parts</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
 
-      {tags.length > 0 && (
-        <p class="inline-nav">
-          <strong>Tags</strong>
-          {tags.map((t) => <a href={`/tags/${t}`}>#{t}</a>)}
-        </p>
-      )}
-    </div>
-  </div>
+  {tags.length > 0 && (
+    <nav class="phead" aria-label="Tags in this topic">
+      <p class="phead__kicker" style="margin:0">{tags.map((t) => <a class="chip" href={`/tags/${t}`}>#{t}</a>)}</p>
+    </nav>
+  )}
 </BaseLayout>

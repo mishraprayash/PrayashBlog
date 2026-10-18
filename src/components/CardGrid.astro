@@ -1,0 +1,31 @@
+---
+import PostCard from "./PostCard.astro";
+import type { Post } from "../lib/posts";
+
+export interface Props {
+  posts: Post[];
+  seriesTotals?: Map<string, number>;
+  notes?: Record<string, string>;
+  /** "issue" mixes wide, tall and third-width cards; "even" keeps them equal. */
+  layout?: "issue" | "even";
+  heading?: "h2" | "h3";
+  label?: string;
+}
+const { posts, seriesTotals, notes, layout = "even", heading, label } = Astro.props;
+// The magazine rhythm: 7+5, 4+4+4, 5+7, then thirds.
+const ISSUE = ["s-wide", "s-tall", "", "", "", "s-tall", "s-wide"];
+const size = (i: number) => (layout === "issue" ? ISSUE[i] ?? "" : posts.length === 2 ? "s-half" : "");
+---
+
+<ul class="cards" aria-label={label}>
+  {posts.map((post, i) => (
+    <li class:list={["rv", size(i)]}>
+      <PostCard
+        post={post}
+        heading={heading}
+        note={notes?.[post.id]}
+        seriesTotal={post.data.series ? seriesTotals?.get(post.data.series) : undefined}
+      />
+    </li>
+  ))}
+</ul>

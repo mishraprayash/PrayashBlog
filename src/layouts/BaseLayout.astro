@@ -1,10 +1,16 @@
 ---
-import "@fontsource-variable/source-serif-4/wght.css";
-import "@fontsource-variable/source-serif-4/wght-italic.css";
-import "@fontsource-variable/jetbrains-mono/wght.css";
-import serifLatin from "@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2?url";
+import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/newsreader/wght.css";
+import "@fontsource-variable/newsreader/wght-italic.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
+import displayLatin from "@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url";
+import serifLatin from "@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url";
 import "../styles/global.css";
 import { SITE, socialImage, canonicalFor } from "../lib/seo";
+import { getPosts } from "../lib/posts";
+import type { PillarId } from "../data/taxonomy";
 
 export interface Props {
   title: string;
@@ -14,6 +20,10 @@ export interface Props {
   ogImage?: string;
   canonicalURL?: string;
   ogType?: string;
+  /** Colours the page (reading progress, accents) in this pillar's colour. */
+  pillar?: PillarId;
+  /** Show the reading-progress line under the header (posts). */
+  progress?: boolean;
 }
 
 const {
@@ -23,7 +33,15 @@ const {
   ogImage,
   canonicalURL,
   ogType = "website",
+  pillar,
+  progress = false,
 } = Astro.props;
+
+// The "issue line" in the header: month of the newest post and the post count.
+const posts = await getPosts();
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const newest = posts[0]?.data.publishDate;
+const issue = newest ? `${MONTHS[newest.getUTCMonth()]} ${newest.getUTCFullYear()} · ${posts.length} posts` : "";
 
 const site = Astro.site ?? new URL(SITE.url);
 const fullTitle = titleOverride ?? (title === SITE.name ? SITE.name : `${title} | ${SITE.name}`);
@@ -40,33 +58,36 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
 ---
 
 <!doctype html>
-<html lang="en" class="no-js" data-theme="light" data-theme-pref="system">
+<html lang="en" class="no-js" data-theme="light" data-theme-pref="system" data-motion="on">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#faf8f4" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#171513" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#111111" />
 
-    <!-- Set the theme before first paint. "theme" in localStorage is "light",
-         "dark", or absent (follow the system). -->
+    <!-- Theme and motion, set before first paint. "theme" in localStorage is
+         "light", "dark", or absent (follow the system); "motion" is "on",
+         "off", or absent (follow prefers-reduced-motion). -->
     <script is:inline>
       (function () {
-        var pref = "system";
+        var root = document.documentElement;
+        var pref = "system", motion = null;
         try {
           var stored = localStorage.getItem("theme");
           if (stored === "light" || stored === "dark") pref = stored;
+          motion = localStorage.getItem("motion");
         } catch (e) {}
         var dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-        var root = document.documentElement;
+        if (motion !== "on" && motion !== "off") motion = matchMedia("(prefers-reduced-motion: reduce)").matches ? "off" : "on";
         root.classList.remove("no-js");
+        root.classList.add("js");
         root.dataset.themePref = pref;
         root.dataset.theme = dark ? "dark" : "light";
-        // Pages not yet rebuilt still style dark mode through Tailwind's .dark class.
-        root.classList.toggle("dark", dark);
+        root.dataset.motion = motion;
       })();
     </script>
 
+    <link rel="preload" href={displayLatin} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={serifLatin} as="font" type="font/woff2" crossorigin />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -126,21 +147,26 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     })} />
   </head>
 
-  <body>
+  <body class:list={[pillar && `pillar-${pillar}`]}>
     <a class="skip-link" href="#main-content">Skip to content</a>
 
-    <header class="site-header">
-      <div class="site-header__inner">
-        <a class="site-name" href="/">Prayash Mishra</a>
-        <nav class="site-nav" aria-label="Main">
+    <header class="bar">
+      <div class="bar__in">
+        <a class="bar__logo" href="/">PRAYASH<span>/</span>MISHRA</a>
+        <span class="bar__issue">Backend notes · how systems fail at the seams · {issue}</span>
+        <nav aria-label="Main">
           {nav.map((item) => (
             <a href={item.href} aria-current={isCurrent(item.href) ? "page" : undefined}>{item.label}</a>
           ))}
         </nav>
-        <div class="site-actions">
+        <div class="bar__tools">
           <a class="icon-btn" href="/rss.xml" aria-label="RSS feed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
           </a>
+          <button class="icon-btn motion-toggle" type="button" id="motion-toggle" aria-pressed="true" aria-label="Animations">
+            <svg data-icon="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+            <svg data-icon="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l12 8-12 8z"/></svg>
+          </button>
           <button class="icon-btn theme-toggle" type="button" id="theme-toggle" aria-label="Theme: follow system">
             <svg data-icon="system" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
             <svg data-icon="light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
@@ -148,16 +174,20 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
           </button>
         </div>
       </div>
+      {progress && <div class="bar__progress" id="progress" aria-hidden="true"></div>}
     </header>
+
+    <slot name="above" />
 
     <main id="main-content" class="site-main" tabindex="-1">
       <slot />
     </main>
 
-    <footer class="site-footer">
-      <div class="site-footer__inner">
+    <footer class="foot">
+      <p class="foot__big">Read the <span>failure</span>, keep the fix.</p>
+      <div class="foot__row">
         <span>&copy; {new Date().getFullYear()} Prayash Mishra</span>
-        <ul class="site-footer__links">
+        <ul>
           <li><a href="/rss.xml">RSS</a></li>
           <li><a href="https://github.com/mishraprayash">GitHub</a></li>
           <li><a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a></li>
@@ -176,31 +206,96 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
       };
       const root = document.documentElement;
       const scheme = matchMedia("(prefers-color-scheme: dark)");
-      const toggle = document.getElementById("theme-toggle");
+      const themeBtn = document.getElementById("theme-toggle");
+      const motionBtn = document.getElementById("motion-toggle");
 
-      function apply(pref: Pref) {
+      function applyTheme(pref: Pref) {
         const dark = pref === "dark" || (pref === "system" && scheme.matches);
         root.dataset.themePref = pref;
         root.dataset.theme = dark ? "dark" : "light";
-        root.classList.toggle("dark", dark);
-        toggle?.setAttribute("aria-label", LABEL[pref]);
+        themeBtn?.setAttribute("aria-label", LABEL[pref]);
       }
-
-      apply((root.dataset.themePref as Pref) ?? "system");
-
-      toggle?.addEventListener("click", () => {
+      applyTheme((root.dataset.themePref as Pref) ?? "system");
+      themeBtn?.addEventListener("click", () => {
         const current = (root.dataset.themePref as Pref) ?? "system";
         const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
         try {
           if (next === "system") localStorage.removeItem("theme");
           else localStorage.setItem("theme", next);
         } catch {}
-        apply(next);
+        applyTheme(next);
+      });
+      scheme.addEventListener("change", () => {
+        if (root.dataset.themePref === "system") applyTheme("system");
       });
 
-      scheme.addEventListener("change", () => {
-        if (root.dataset.themePref === "system") apply("system");
+      // Animated SVGs (covers, diagrams) run only while on screen and while
+      // motion is on. CSS animation is paused by [data-motion="off"].
+      const motionOn = () => root.dataset.motion === "on";
+      const visible = new Set<SVGSVGElement>();
+      const syncSvg = (svg: SVGSVGElement) => {
+        if (motionOn() && visible.has(svg)) svg.unpauseAnimations();
+        else svg.pauseAnimations();
+      };
+      const svgIO = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          const svg = e.target as SVGSVGElement;
+          if (e.isIntersecting) visible.add(svg);
+          else visible.delete(svg);
+          syncSvg(svg);
+        }
       });
+      for (const svg of document.querySelectorAll<SVGSVGElement>("svg[data-anim]")) {
+        svg.pauseAnimations();
+        svgIO.observe(svg);
+      }
+      function applyMotion(on: boolean) {
+        root.dataset.motion = on ? "on" : "off";
+        motionBtn?.setAttribute("aria-pressed", String(on));
+        motionBtn?.setAttribute("aria-label", on ? "Animations on" : "Animations off");
+        document.querySelectorAll<SVGSVGElement>("svg[data-anim]").forEach(syncSvg);
+      }
+      applyMotion(motionOn());
+      motionBtn?.addEventListener("click", () => {
+        const next = !motionOn();
+        try {
+          localStorage.setItem("motion", next ? "on" : "off");
+        } catch {}
+        applyMotion(next);
+      });
+
+      // Reveal blocks as they scroll in.
+      const revealIO = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            e.target.classList.add("in");
+            revealIO.unobserve(e.target);
+          }
+        },
+        { rootMargin: "0px 0px -8% 0px" },
+      );
+      document.querySelectorAll(".rv").forEach((el) => revealIO.observe(el));
+
+      // Reading progress (posts only).
+      const bar = document.getElementById("progress");
+      const body = document.getElementById("post-body");
+      if (bar && body) {
+        let queued = false;
+        const update = () => {
+          queued = false;
+          const r = body.getBoundingClientRect();
+          const done = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
+          bar.style.transform = `scaleX(${done})`;
+        };
+        addEventListener("scroll", () => {
+          if (!queued) {
+            queued = true;
+            requestAnimationFrame(update);
+          }
+        }, { passive: true });
+        update();
+      }
     </script>
   </body>
 </html>

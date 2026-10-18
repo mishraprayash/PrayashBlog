@@ -1,10 +1,12 @@
 ---
 title: "Building an AI-Powered WAF on Nginx: Architecture and Implementation"
+headline: "An ML filter in front of Nginx"
 slug: "nginx-lua-ai-waf-gatekeeper"
 description: "Putting a PyTorch classifier on the Nginx request path with OpenResty: the access phase, non-blocking cosockets, and a Python inference sidecar."
 publishDate: "2026-06-22T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "network-edge"
+cover: "waf-gatekeeper"
 tags: ["nginx", "security", "tls"]
 series: "nginx-ml-waf"
 seriesPart: 1

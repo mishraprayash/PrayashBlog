@@ -1,0 +1,13 @@
+---
+import { coverSvg, type CoverId } from "../lib/covers";
+import type { PillarId } from "../data/taxonomy";
+
+export interface Props {
+  cover?: CoverId;
+  pillar: PillarId;
+  class?: string;
+}
+const { cover, pillar, class: cls } = Astro.props;
+---
+
+<div class:list={["cover", cls]} set:html={coverSvg(cover, pillar)} />

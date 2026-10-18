@@ -1,10 +1,12 @@
 ---
 title: "Scaling Multi-Channel Event Dispatching in NestJS: Strategy Pattern, Polymorphic DTOs, and OCP"
+headline: "One switch, too many channels"
 slug: "scaling-event-dispatching-nestjs-strategy-pattern"
 description: "Replacing a growing switch statement in a NestJS notification service with per-channel strategies, validated payloads and separate queues."
 publishDate: "2026-07-16T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "messaging"
+cover: "dispatch"
 tags: ["nestjs", "typescript", "queues"]
 related: ["idempotency-in-distributed-systems"]
 draft: false

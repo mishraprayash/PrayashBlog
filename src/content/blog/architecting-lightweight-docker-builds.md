@@ -1,10 +1,12 @@
 ---
 title: "Docker Fundamentals: Container Mechanics and Single-Stage Builds"
+headline: "Docker images, layer by layer"
 slug: "architecting-lightweight-docker-builds"
 description: "How images, layers and the build cache work, what belongs in .dockerignore, and a non-root single-stage Dockerfile for a Node service."
 publishDate: "2026-05-28T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
+cover: "docker-layers"
 tags: ["docker", "node"]
 series: "docker-node"
 seriesPart: 1

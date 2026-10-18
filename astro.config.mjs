@@ -3,7 +3,7 @@ import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 import { rehypeHeadingIds } from "@astrojs/markdown-remark";
 import { transformerMetaHighlight, transformerNotationDiff } from "@shikijs/transformers";
-import { notebookDark, notebookLight } from "./src/lib/markdown/shiki-themes";
+import { pressTheme } from "./src/lib/markdown/shiki-themes";
 import {
   rehypeCallouts,
   rehypeHeadingAnchors,
@@ -12,6 +12,7 @@ import {
   rehypeTodos,
   transformerCodeBlock,
 } from "./src/lib/markdown/rehype-plugins";
+import { rehypeStories } from "./src/lib/markdown/rehype-story";
 
 // https://astro.build/config
 export default defineConfig({
@@ -21,15 +22,14 @@ export default defineConfig({
   integrations: [sitemap()],
   markdown: {
     shikiConfig: {
-      // Custom theme pair built from the page palette; colours are switched by
-      // [data-theme] in src/styles/prose.css.
-      themes: { light: notebookLight, dark: notebookDark },
-      defaultColor: false,
+      // Code always sits on a dark panel, in both site themes.
+      theme: pressTheme,
       wrap: false,
       transformers: [transformerMetaHighlight(), transformerNotationDiff(), transformerCodeBlock()],
     },
     // Custom plugins need the unified pipeline (@astrojs/markdown-remark);
     // rehypeHeadingIds runs first so the heading anchors have ids to link to.
-    rehypePlugins: [rehypeHeadingIds, rehypeCallouts, rehypeTables, rehypeHeadingAnchors, rehypeTodos, rehypeTaskLists],
+    // rehypeStories builds the scroll diagrams from src/lib/diagrams.
+    rehypePlugins: [rehypeHeadingIds, rehypeStories, rehypeCallouts, rehypeTables, rehypeHeadingAnchors, rehypeTodos, rehypeTaskLists],
   },
 });

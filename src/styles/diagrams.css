@@ -1,0 +1,172 @@
+/* Scroll-driven diagrams (.story), the diagram SVGs (.dg), interactive labs
+   (.lab) and pull quotes. The story and lab are dark in both themes. */
+
+/* ---------- Story: steps on the left, sticky diagram on the right ---------- */
+.post-body > .story {
+  position: relative;
+  z-index: 2;
+  width: var(--wide);
+  margin: 2.6em 0 2.6em calc((100% - var(--wide)) / 2);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  background: var(--night);
+  color: var(--night-ink);
+  border: var(--rule-w) solid #111111;
+}
+:root[data-theme="dark"] .post-body > .story { border-color: #2c2c31; }
+.story :focus-visible { outline-color: #f1eee6; }
+.story__steps {
+  margin: 0;
+  padding: 0 32px;
+  list-style: none;
+}
+.step {
+  padding: 48px 0;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: #c8c5bd;
+}
+.step + .step { border-top: 1px solid var(--night-line); }
+.step > * { margin: 0; }
+.step > * + * { margin-top: 0.8em; }
+.step__label {
+  font: 600 0.75rem / 1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c);
+}
+.step__t {
+  font: 800 1.75rem / 1.05 var(--display);
+  font-stretch: 106%;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+.step a { color: #ffffff; text-decoration-color: var(--c); }
+.step :not(pre) > code { background: #26262b; color: #ffffff; }
+.story__fig {
+  border-left: 1px solid var(--night-line);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.story__frame { width: 100%; max-width: 640px; }
+.story__frame svg { display: block; width: 100%; height: auto; }
+
+/* With JS, steps fill the screen one at a time and the diagram stays put. */
+.story--live .step {
+  min-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-top: 0;
+  opacity: 0.3;
+  transition: opacity 0.4s;
+}
+.story--live .step[data-current] { opacity: 1; }
+.story--live .story__fig {
+  position: sticky;
+  top: var(--bar-h);
+  height: calc(100vh - var(--bar-h));
+}
+.story--live .story__frame svg { max-height: calc(100vh - var(--bar-h) - 48px); }
+
+@media (max-width: 900px) {
+  .post-body > .story { grid-template-columns: minmax(0, 1fr); }
+  .story__fig { order: -1; border-left: 0; border-bottom: 1px solid var(--night-line); padding: 12px; }
+  .story__steps { padding: 0 var(--gutter); }
+  .story--live .story__fig { z-index: 1; height: 52vh; background: var(--night); }
+  .story--live .story__frame svg { max-height: calc(52vh - 24px); }
+  .story--live .step { min-height: 64vh; justify-content: flex-start; padding-top: 32px; }
+  .step__t { font-size: 1.5rem; }
+}
+@media (max-width: 559px) {
+  .story--live .story__fig { top: 0; }
+}
+
+/* ---------- Diagram SVG base ---------- */
+.dg text { font-family: var(--mono); font-size: 14px; fill: #c8c5bd; }
+.dg .title { font-family: var(--display); font-weight: 800; font-size: 16px; fill: #ffffff; }
+.dg .tag { font-size: 11px; }
+.dg .small { font-size: 11px; fill: #a6a39b; }
+.dg .box { fill: #1c1c20; stroke: #3a3a40; stroke-width: 1.5; transition: stroke 0.4s, fill 0.4s; }
+.dg .wire { stroke: #3a3a40; stroke-width: 2; fill: none; stroke-dasharray: 6 6; }
+.dg .pkt { fill: var(--c); }
+.dg .row-r { fill: #26262b; stroke: transparent; stroke-width: 1.5; transition: fill 0.4s, stroke 0.4s; }
+.dg [data-show] { opacity: 0; transition: opacity 0.4s; }
+.dg [data-show][data-on] { opacity: 1; }
+.dg .box[data-hl-on] { stroke: var(--c); }
+
+/* ---------- Labs ---------- */
+.post-body > .lab {
+  width: var(--code-w);
+  margin: 2em 0 2.4em min(0px, calc((100% - var(--code-w)) / 2));
+}
+.lab { border: var(--rule-w) solid var(--line); background: var(--paper); box-shadow: 8px 8px 0 var(--c); font-size: 1rem; }
+.lab:not(.lab--ready) .lab__b, .lab:not(.lab--ready) .lab__btns, .lab:not(.lab--ready) .lab__tabs { display: none; }
+.lab__h {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #111111;
+  color: #f1eee6;
+  font: 600 0.75rem / 1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lab__h :focus-visible { outline-color: #f1eee6; }
+.lab__tabs { display: flex; }
+.lab__tabs button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid #f1eee6;
+  background: none;
+  color: #f1eee6;
+  font: 600 0.6875rem / 1 var(--mono);
+  text-transform: uppercase;
+}
+.lab__tabs button + button { border-left: 0; }
+.lab__tabs button[aria-pressed="true"] { background: var(--c); color: var(--on); border-color: var(--c); }
+.lab__b { display: grid; grid-template-columns: 1fr 1fr; }
+.lab__col { padding: 16px; min-width: 0; }
+.lab__col + .lab__col { border-left: 1.5px solid var(--line); }
+@media (max-width: 720px) {
+  .lab__b { grid-template-columns: 1fr; }
+  .lab__col + .lab__col { border-left: 0; border-top: 1.5px solid var(--line); }
+}
+.lab__col-h { margin: 0 0 10px; font: 600 0.6875rem / 1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.trow {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1.5px solid var(--line);
+  font: 500 0.8125rem / 1.2 var(--mono);
+  transition: background 0.3s, color 0.3s;
+}
+.trow__st { font-size: 0.6875rem; text-transform: uppercase; }
+.trow--unc { border-style: dashed; color: var(--muted); }
+.trow--pub { background: var(--run); color: #111111; border-color: #111111; }
+.trow--lost { background: var(--msg); color: #111111; border-color: #111111; animation: shake 0.4s; }
+@keyframes shake { 30% { transform: translateX(-4px); } 70% { transform: translateX(4px); } }
+.lab__log { list-style: none; margin: 0; padding: 0; font: 400 0.8125rem / 1.55 var(--mono); }
+.lab__log li { padding: 6px 0; border-bottom: 1px dashed var(--soft-line); color: var(--muted); }
+.lab__log li:last-child { color: var(--ink); }
+.lab__log b { color: var(--c-text); font-weight: 600; }
+.lab__f {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: var(--rule-w) solid var(--line);
+}
+.lab__f p { margin: 0; flex: 1 1 260px; font-size: 1.0625rem; line-height: 1.4; }
+
+@media (max-width: 639px) {
+  .post-body > .lab { margin-left: calc(-1 * var(--gutter)); border-left: 0; border-right: 0; box-shadow: none; }
+}

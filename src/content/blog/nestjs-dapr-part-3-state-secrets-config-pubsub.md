@@ -1,10 +1,12 @@
 ---
 title: "NestJS and Dapr: State, Secrets, Configuration and Pub/Sub"
+headline: "Dapr state, secrets, config and pub/sub"
 slug: "nestjs-dapr-state-secrets-config-pubsub"
 description: "Dapr state with ETag concurrency (and why the Node SDK loses the ETag), secrets, live configuration and pub/sub, from NestJS."
 publishDate: "2026-08-14T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
+cover: "dapr-state"
 tags: ["nestjs", "dapr", "microservices", "kafka"]
 series: "nestjs-dapr"
 seriesPart: 3

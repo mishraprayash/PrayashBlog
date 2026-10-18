@@ -6,7 +6,7 @@ const { url } = Astro.props;
 ---
 
 <p class="copy-link">
-  <button type="button" class="copy-link__btn" data-copy-link={url}>Copy link to this post</button>
+  <button type="button" class="btn copy-link__btn" data-copy-link={url}>Copy link</button>
   <span class="copy-link__status" role="status" aria-live="polite"></span>
 </p>
 
@@ -33,22 +33,9 @@ const { url } = Astro.props;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-3);
+    gap: 12px;
     margin: 0;
-    font: 400 var(--text-ui) / 1.4 var(--font-ui);
   }
-  .copy-link__btn {
-    min-height: 40px;
-    padding: 0 var(--space-4);
-    border: 1px solid var(--rule-strong);
-    border-radius: 4px;
-    background: var(--paper);
-    color: var(--ink);
-    font: inherit;
-    font-weight: 500;
-    cursor: pointer;
-  }
-  .copy-link__btn:hover { border-color: var(--ink); }
-  .copy-link__status { color: var(--muted); overflow-wrap: anywhere; }
+  .copy-link__status { font: 500 0.8125rem / 1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
   .no-js .copy-link { display: none; }
 </style>

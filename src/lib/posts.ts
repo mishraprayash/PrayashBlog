@@ -13,6 +13,8 @@ export async function getPosts(): Promise<Post[]> {
 }
 
 export const postUrl = (post: Post) => `/blog/${post.id}`;
+/** The short headline where there is one, else the full title. */
+export const headline = (post: Post) => post.data.headline ?? post.data.title;
 
 // ---------------------------------------------------------------- series
 

@@ -1,5 +1,6 @@
 ---
 title: "The Transactional Outbox Pattern: Why Your 100-Line Node.js Script Will Break in Production"
+headline: "The outbox, and five ways it breaks"
 slug: "transactional-outbox-pattern-production-realities"
 description: "A home-made Postgres outbox skips events, bloats, stalls when you drop partitions, and its CDC slot can fill the disk. Each failure reproduced, with the fix."
 publishDate: "2026-09-09T23:15:00Z"
@@ -7,6 +8,7 @@ updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Rewritten. Every failure in the post is now reproduced on Postgres 16 with the output shown. New sections on what actually stops vacuum from cleaning the table and why dropping a partition can stall the poller. Fixed the worker-sharding query (`% 4` skipped about a third of events) and the consumer example, which could lose or double-process an event if the process died mid-way."
 author: "Prayash Mishra"
 pillar: "messaging"
+cover: "outbox"
 tags: ["postgresql", "kafka", "microservices"]
 series: "reliable-messaging"
 seriesPart: 2
@@ -28,6 +30,17 @@ The usual answer is the transactional outbox. You write the event into an `outbo
 On a whiteboard that's a table and a loop. [TODO: one sentence on where you built this, e.g. "On the order service I was working on, the first version was a `setInterval` and about a hundred lines of TypeScript."] What follows is how that version fails, roughly in the order you'll meet the failures. Every one of them is reproduced below on PostgreSQL 16.
 
 This assumes you already know what the outbox pattern is and you're about to build one on Postgres, or you're running one and something about it worries you.
+
+Here's the whole post in four steps; scroll through them and the diagram follows.
+
+<div class="story" data-diagram="outbox">
+
+1. **Two systems, no shared commit.** The order commits to Postgres, and the publish to Kafka is a separate call. If that call fails after the commit, the event is gone and nothing reports an error.
+2. **One transaction, then a relay.** The order and its outbox row are written in the same transaction, so both commit or neither does. A relay reads the `outbox` table and publishes, retrying until the broker takes the message.
+3. **The ghost row.** Ids are handed out on insert, not on commit. If row 2 commits before row 1, a relay that remembers the last id it saw moves past row 1 and never publishes it. That's section 1.
+4. **The full disk.** Swap the relay for change data capture, and a stopped connector makes Postgres keep every WAL file its replication slot hasn't confirmed. When the disk fills, Postgres stops with `PANIC: No space left on device`. That's section 4.
+
+</div>
 
 ## 1. The poller that skips rows
 
@@ -52,6 +65,10 @@ poller sees: 2:B: fast txn
 next poll (id > 2): []
 rows in table: 1:A: slow txn, 2:B: fast txn
 ```
+
+You can step through the same sequence here, then switch the relay's query and run it again:
+
+<div class="lab" data-lab="ghost-row"></div>
 
 Nothing errors and nothing is logged. You find out when someone asks why an order never shipped.
 

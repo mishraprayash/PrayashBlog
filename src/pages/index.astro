@@ -1,18 +1,22 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
-import PostList from "../components/PostList.astro";
+import CardGrid from "../components/CardGrid.astro";
+import Cover from "../components/Cover.astro";
 import TodoText from "../components/TodoText.astro";
 import { PILLARS, PILLAR_IDS } from "../data/taxonomy";
 import { SITE } from "../lib/seo";
-import { getPosts, getSeries, postsByPillar } from "../lib/posts";
+import { getPosts, getSeries, headline, postUrl, postsByPillar, readingTime } from "../lib/posts";
 
 const posts = await getPosts();
-const seriesTotals = new Map(getSeries(posts).map((s) => [s.id, s.parts.length]));
+const series = getSeries(posts);
+const seriesTotals = new Map(series.map((s) => [s.id, s.parts.length]));
 const startHere = posts
   .filter((p) => p.data.startHere)
   .sort((a, b) => a.data.startHere! - b.data.startHere!);
-const recent = posts.slice(0, 5);
+const lead = startHere[0] ?? posts[0];
+// The issue: the other "Start here" posts first, then the newest, seven cards.
+const issue = [...startHere.slice(1), ...posts.filter((p) => p !== lead && !startHere.includes(p))].slice(0, 7);
 const projects = (await getCollection("projects", ({ data }) => import.meta.env.DEV || !data.draft)).sort(
   (a, b) => a.data.order - b.data.order,
 );
@@ -27,69 +31,111 @@ const startNotes: Record<string, string> = {
   "nginx-lua-ai-waf-traps-bypasses":
     "The ways an ML filter on the request path fails open or gets bypassed, and what holds up.",
 };
+
+// Real output quoted in the posts, scrolling under the header.
+const LOG_LINES: [string, boolean?][] = [
+  ['PANIC: could not write to file "pg_wal/xlogtemp.4550": No space left on device'],
+  ["tuples: 0 removed, 10002 remain, 10000 are dead but not yet removable"],
+  ["< Connection: close", true],
+  ["relay: SELECT … WHERE id > 2 → 0 rows"],
+  ['LOG: invalidating obsolete replication slot "debezium"', true],
+  ["Verify return code: 21 (unable to verify the first certificate)"],
+  ["concurrent insert waited 2.54s, then replayed 201", true],
+];
+const leadSeries = lead.data.series ? series.find((s) => s.id === lead.data.series) : undefined;
 ---
 
 <BaseLayout title={SITE.name} titleOverride={`${SITE.name}: ${SITE.tagline}`} description={SITE.description}>
-  <div class="page">
-    <div class="page__col">
-      <section>
-        <h1 class="page-title">Prayash Mishra</h1>
-        <p class="page-lede">
-          I'm a backend engineer. I write about how distributed systems fail where they meet databases,
-          message brokers, sidecars and the network, and what it takes to make them hold. Most of these posts
-          come out of problems I worked through on a recent project.
+  <div class="ticker" aria-hidden="true">
+    <ul class="ticker__track">
+      {[...LOG_LINES, ...LOG_LINES].map(([line, ok]) => <li class:list={[ok && "ok"]}>{line}</li>)}
+    </ul>
+  </div>
+
+  <section class="mast" aria-labelledby="mast-title">
+    <p class="mast__top"><span>Prayash Mishra · backend engineer</span><span>{PILLAR_IDS.map((id) => PILLARS[id].short).join(" · ")}</span></p>
+    <h1 class="mast__title" id="mast-title">
+      <span class="visually-hidden">Prayash Mishra: systems, broken down</span>
+      <span class="mrow" aria-hidden="true"><span>Systems,</span></span>
+      <span class="mrow" aria-hidden="true"><span>broken down.</span></span>
+    </h1>
+    <div class="mast__sub">
+      <p>
+        I'm a backend engineer. I write about how systems fail where they meet databases, message brokers,
+        sidecars and the network, and what it takes to make them hold. More <a href="/about">about me</a>, or
+        the <a href="/projects">projects</a> these came from.
+      </p>
+      <ul class="mast__stats">
+        <li><b>{posts.length}</b>posts</li>
+        <li><b>{series.length}</b>series</li>
+        <li><b>{PILLAR_IDS.length}</b>topics</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class:list={["lead", "rv", `pillar-${lead.data.pillar}`]} aria-labelledby="lead-title">
+    <div class="lead__text">
+      <div>
+        <p class="label">
+          Start here · {PILLARS[lead.data.pillar].short}
+          {leadSeries && <> · Part {lead.data.seriesPart} of {leadSeries.parts.length}</>}
         </p>
-        <ul class="page-links">
-          <li><a href="/about">About me</a></li>
-          <li><a href="/projects">Projects</a></li>
-          <li><a href="https://github.com/mishraprayash">GitHub</a></li>
-          <li><a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a></li>
-          <li><a href="/rss.xml">RSS</a></li>
-        </ul>
-      </section>
+        <h2 class="lead__title" id="lead-title"><a href={postUrl(lead)}>{headline(lead)}</a></h2>
+      </div>
+      <p>{startNotes[lead.id] ?? lead.data.description}</p>
+      <span class="cta" aria-hidden="true">Read it · {readingTime(lead.body)} min →</span>
+    </div>
+    <div class="lead__art"><Cover cover={lead.data.cover} pillar={lead.data.pillar} /></div>
+  </section>
 
-      {startHere.length > 0 && (
-        <section aria-labelledby="start-here">
-          <h2 class="section-title" id="start-here">Start here</h2>
-          <PostList posts={startHere} notes={startNotes} seriesTotals={seriesTotals} />
-        </section>
-      )}
+  <div class="sect-h"><h2>In this issue</h2><a href="/blog">All {posts.length} posts →</a></div>
+  <CardGrid posts={issue} seriesTotals={seriesTotals} notes={startNotes} layout="issue" label="Selected posts" />
 
-      {projects.length > 0 && (
-        <section aria-labelledby="projects">
-          <h2 class="section-title" id="projects">Projects</h2>
-          <ul class="def-list">
-            {projects.map((p) => (
+  {projects.length > 0 && (
+    <section class="strip" aria-labelledby="projects">
+      <div class="sect-h"><h2 id="projects">The work behind it</h2><a href="/projects">Projects →</a></div>
+      <ul class="tiles">
+        {projects.map((p) => (
+          <li>
+            <div class="tile">
+              <span class="label">Project</span>
+              <h3><a href={`/projects/${p.id}`}><TodoText text={p.data.title} /></a></h3>
+              <p><TodoText text={p.data.summary} /></p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <div class="sect-h"><h2>Departments</h2><span>{PILLAR_IDS.length} topics</span></div>
+  {PILLAR_IDS.map((id) => {
+    const inPillar = postsByPillar(posts, id);
+    return (
+      <section class:list={["band", "rv", `pillar-${id}`]} aria-labelledby={`band-${id}`}>
+        <div class="band__name">
+          <h3 id={`band-${id}`}>{PILLARS[id].title}</h3>
+          <div>
+            <p>{PILLARS[id].description}</p>
+            <a href={`/topics/${id}`}>{inPillar.length > 0 ? `All ${inPillar.length} →` : "Topic page →"}</a>
+          </div>
+        </div>
+        {inPillar.length > 0 ? (
+          <ol class="rows">
+            {inPillar.map((p, i) => (
               <li>
-                <a class="def-list__name" href={`/projects/${p.id}`}><TodoText text={p.data.title} /></a>
-                <p class="def-list__desc"><TodoText text={p.data.summary} /></p>
+                <a class="row" href={postUrl(p)}>
+                  <span class="row__n">{String(i + 1).padStart(2, "0")}</span>
+                  <span class="row__t">{headline(p)}</span>
+                  <span class="row__m">{readingTime(p.body)} min</span>
+                </a>
               </li>
             ))}
-          </ul>
-        </section>
-      )}
-
-      <section aria-labelledby="recent">
-        <h2 class="section-title" id="recent">Recent</h2>
-        <PostList posts={recent} seriesTotals={seriesTotals} />
-        <p class="section-more"><a href="/blog">All {posts.length} posts →</a></p>
+          </ol>
+        ) : (
+          <p class="row row--empty"><span class="row__n">—</span><span>No posts of its own yet. The first ones are being written.</span></p>
+        )}
       </section>
-
-      <section aria-labelledby="topics">
-        <h2 class="section-title" id="topics">Topics</h2>
-        <ul class="def-list">
-          {PILLAR_IDS.map((id) => {
-            const count = postsByPillar(posts, id).length;
-            return (
-              <li>
-                <a class="def-list__name" href={`/topics/${id}`}>{PILLARS[id].title}</a>
-                <p class="def-list__desc">{PILLARS[id].description}</p>
-                <p class="def-list__meta">{count > 0 ? `${count} ${count === 1 ? "post" : "posts"}` : "Posts coming"}</p>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    </div>
-  </div>
+    );
+  })}
 </BaseLayout>

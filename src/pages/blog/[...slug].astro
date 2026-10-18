@@ -1,14 +1,16 @@
 ---
 import { render } from "astro:content";
-import monoLatin from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url";
+import monoLatin from "@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import TableOfContents from "../../components/post/TableOfContents.astro";
 import SeriesNav from "../../components/post/SeriesNav.astro";
 import CopyLink from "../../components/post/CopyLink.astro";
-import PostList from "../../components/PostList.astro";
+import CardGrid from "../../components/CardGrid.astro";
+import Cover from "../../components/Cover.astro";
+import Rise from "../../components/Rise.astro";
 import { PILLARS } from "../../data/taxonomy";
 import { SITE, canonicalFor, socialImage } from "../../lib/seo";
-import { formatDate, getPosts, readingTime, relatedPosts, seriesFor, type Post } from "../../lib/posts";
+import { formatDate, getPosts, headline, postUrl, readingTime, relatedPosts, seriesFor, type Post } from "../../lib/posts";
 
 export async function getStaticPaths() {
   const posts = await getPosts();
@@ -34,9 +36,17 @@ const minutes = readingTime(post.body);
 // A raster featuredImage wins; otherwise the card generated for this post.
 const ogImage = data.featuredImage ?? `/og/${post.id}.png`;
 const socialCard = socialImage(ogImage, site);
+const seriesTotals = new Map((series ? [[series.id as string, series.parts.length]] : []) as [string, number][]);
+// Long titles get a smaller hero size so they still fit the first screen.
+const display = headline(post);
+const titleSize = display.length <= 34 ? "xl" : display.length <= 64 ? "lg" : "md";
+// Previous/next: within the series when there is one, otherwise by date.
+const chrono = posts.indexOf(post);
+const prev = series ? series.parts[partIndex - 1] : posts[chrono + 1];
+const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
 ---
 
-<BaseLayout title={data.title} description={data.description} ogImage={ogImage} canonicalURL={url} ogType="article">
+<BaseLayout title={data.title} description={data.description} ogImage={ogImage} canonicalURL={url} ogType="article" pillar={data.pillar} progress>
   <Fragment slot="head">
     {post.body?.includes("```") && <link rel="preload" href={monoLatin} as="font" type="font/woff2" crossorigin />}
     <meta property="article:published_time" content={data.publishDate.toISOString()} />
@@ -72,34 +82,33 @@ const socialCard = socialImage(ogImage, site);
     })} />
   </Fragment>
 
-  <div class="post">
-    <header class="post-header">
-      <p class="post-kicker">
-        <a href={`/topics/${data.pillar}`}>{pillar.title}</a>
-        {series && (
-          <span>
-            Part {partIndex + 1} of {series.parts.length} in <a href={`/series/${series.id}`}>{series.title}</a>
-          </span>
-        )}
+  <section class="p-hero" aria-labelledby="post-title">
+    <div class="p-hero__text">
+      <p class="phead__kicker">
+        <a class="chip" href={`/topics/${data.pillar}`}>{pillar.short}</a>
+        {series && <a class="chip" href={`/series/${series.id}`}>Series · Part {partIndex + 1} / {series.parts.length}</a>}
+        {data.tags.map((tag) => <a class="chip" href={`/tags/${tag}`}>#{tag}</a>)}
       </p>
-      <h1 class="post-title">{data.title}</h1>
-      <p class="post-dek">{data.description}</p>
-      <div class="post-meta">
-        <time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time>
-        <span>{minutes} min read</span>
+      <Rise text={display} id="post-title" class:list={["p-hero__title", `p-hero__title--${titleSize}`]} />
+      <p class="p-hero__dek">{data.description}</p>
+      <div class="p-meta">
+        <span><b>Published</b><time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time></span>
         {data.updatedDate && (
-          <details class="post-revised">
-            <summary>
-              Revised <time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate)}</time>
-            </summary>
+          <details class="p-meta__revised">
+            <summary><b>Revised</b><time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate)}</time></summary>
             {data.updateSummary && <p>{data.updateSummary}</p>}
           </details>
         )}
-        {data.draft && <span class="post-draft">Draft</span>}
+        <span><b>Reading</b>{minutes} min</span>
+        <span><b>By</b>{data.author}</span>
+        {data.draft && <span><b>Status</b>Draft</span>}
       </div>
-    </header>
+    </div>
+    <div class="p-hero__art"><Cover cover={data.cover} pillar={data.pillar} /></div>
+  </section>
 
-    <aside class="post-toc">
+  <div class="article">
+    <aside class="article__toc">
       <TableOfContents headings={headings} />
     </aside>
 
@@ -107,34 +116,38 @@ const socialCard = socialImage(ogImage, site);
       <Content />
     </article>
 
-    <footer class="post-footer">
+    <footer class="article__end">
       {series && <SeriesNav series={series} current={post} />}
-
-      {data.tags.length > 0 && (
-        <p class="post-tags">
-          <span>Tags:</span>
-          {data.tags.map((tag) => <a href={`/tags/${tag}`}>#{tag}</a>)}
-        </p>
-      )}
-
-      <CopyLink url={url} />
-
-      {related.length > 0 && (
-        <section class="post-related" aria-labelledby="related-heading">
-          <h2 id="related-heading">Related</h2>
-          <PostList posts={related} />
-          <p class="post-more"><a href={`/topics/${data.pillar}`}>More on {pillar.title.toLowerCase()} →</a></p>
-        </section>
-      )}
-
-      <p class="post-follow">
-        New posts go out by <a href="/rss.xml">RSS</a>. Written by {data.author}. <a href="https://github.com/mishraprayash">GitHub</a> · <a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a>
-      </p>
+      <div class="article__share">
+        <CopyLink url={url} />
+        <p>New posts go out by <a href="/rss.xml">RSS</a>. <a href="https://github.com/mishraprayash">GitHub</a> · <a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a></p>
+      </div>
     </footer>
   </div>
+
+  {(prev || next) && (
+    <nav class="next" aria-label={series ? "Series navigation" : "More posts"}>
+      {prev ? (
+        <a href={postUrl(prev)}><span class="label">← {series ? `Previous · Part ${partIndex}` : "Older"}</span><span class="t">{headline(prev)}</span></a>
+      ) : <span></span>}
+      {next && (
+        <a href={postUrl(next)} class="next--go"><span class="label">{series ? `Next · Part ${partIndex + 2}` : "Newer"} →</span><span class="t">{headline(next)}</span></a>
+      )}
+    </nav>
+  )}
+
+  {related.length > 0 && (
+    <section aria-labelledby="related-heading">
+      <div class="sect-h"><h2 id="related-heading">Related</h2><a href={`/topics/${data.pillar}`}>More on {pillar.short.toLowerCase()} →</a></div>
+      <CardGrid posts={related} seriesTotals={seriesTotals} />
+    </section>
+  )}
 </BaseLayout>
 
 <script>
+  import "../../scripts/story";
+  import "../../scripts/labs";
+
   // Copy buttons on code blocks (the markup comes from rehypeCodeBlocks).
   for (const btn of document.querySelectorAll<HTMLButtonElement>(".code-block__copy")) {
     btn.addEventListener("click", async () => {
@@ -162,138 +175,84 @@ const socialCard = socialImage(ogImage, site);
 </script>
 
 <style>
-  .post {
-    --toc-w: 12rem;
-    --notes-w: 12rem;
-    --col-gap: 2.5rem;
-    max-width: var(--shell);
-    margin: 0 auto;
-    padding: var(--space-5) var(--gutter) 0;
+  /* ---------- hero ---------- */
+  .p-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "header" "toc" "body" "footer";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: min(calc(100vh - var(--bar-h)), 820px);
+    background: var(--c);
+    color: var(--on);
+    border-bottom: var(--rule-w) solid #111111;
   }
-  .post-header { grid-area: header; }
-  .post-toc { grid-area: toc; }
-  .post-body { grid-area: body; }
-  .post-footer { grid-area: footer; }
-  .post-header,
-  .post-body,
-  .post-footer { max-width: var(--measure); min-width: 0; }
+  .p-hero :focus-visible { outline-color: var(--on); }
+  .p-hero a.chip:hover { background: var(--on); color: var(--c); border-color: var(--on); }
+  .p-hero__text {
+    padding: 36px var(--gutter) 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 28px;
+    min-width: 0;
+  }
+  .p-hero__text .phead__kicker { margin: 0; }
+  :global(.p-hero__title) {
+    margin: 0;
+    font: 900 clamp(2.25rem, 6.6vw, 7rem) / 0.88 var(--display);
+    font-stretch: 112%;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  :global(.p-hero__title--xl) { font-size: clamp(2.75rem, 7.4vw, 7.75rem); font-stretch: 118%; }
+  :global(.p-hero__title--md) { font-size: clamp(1.875rem, 3.8vw, 4rem); line-height: 0.92; font-stretch: 105%; }
+  .p-hero__dek { margin: 0; max-width: 36ch; font-size: 1.375rem; line-height: 1.4; }
+  .p-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 24px;
+    padding-top: 14px;
+    border-top: 1.5px solid currentColor;
+    font: 500 0.75rem / 1.4 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .p-meta b { display: block; font-weight: 600; opacity: 0.75; }
+  .p-meta__revised summary { list-style: none; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 0.25em; }
+  .p-meta__revised summary::-webkit-details-marker { display: none; }
+  .p-meta__revised p {
+    margin: 10px 0 0;
+    max-width: 52ch;
+    padding: 10px 12px;
+    background: #111111;
+    color: #f1eee6;
+    font: 400 0.9375rem / 1.5 var(--serif);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .p-hero__art { position: relative; background: #111111; border-left: var(--rule-w) solid #111111; overflow: hidden; }
+  .p-hero__art :global(.cover), .p-hero__art :global(svg) { position: absolute; inset: 0; width: 100%; height: 100%; }
+  @media (max-width: 900px) {
+    .p-hero { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+    .p-hero__art { border-left: 0; border-top: var(--rule-w) solid #111111; aspect-ratio: 16 / 10; }
+  }
 
-  @media (min-width: 1024px) {
-    .post {
-      grid-template-columns: minmax(0, var(--measure)) var(--notes-w);
-      column-gap: var(--col-gap);
-      grid-template-areas: "header ." "toc ." "body ." "footer .";
-      font-size: var(--text-body);
-      justify-content: start;
-      padding-top: var(--space-6);
-    }
+  /* ---------- body ---------- */
+  .article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 42rem) minmax(0, 1fr);
+    grid-template-areas: ". toc ." ". body ." ". end .";
+    column-gap: 40px;
+    padding: 56px var(--gutter) 64px;
   }
+  .article__toc { grid-area: toc; min-width: 0; }
+  .post-body { grid-area: body; min-width: 0; }
+  .article__end { grid-area: end; min-width: 0; display: grid; gap: 36px; margin-top: 64px; }
   @media (min-width: 1280px) {
-    .post {
-      grid-template-columns: var(--toc-w) minmax(0, var(--measure)) var(--notes-w);
-      grid-template-areas: ". header ." "toc body ." ". footer .";
-    }
-    .post-toc { align-self: stretch; }
-    .post-body { --wide-bleed: calc(var(--col-gap) + var(--notes-w)); }
+    .article { grid-template-areas: "toc body ." "toc end ."; }
+    .article__toc { justify-self: end; width: 100%; max-width: 15rem; }
   }
-
-  /* ---------- header ---------- */
-  .post-kicker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 var(--space-3);
-    margin: 0 0 var(--space-3);
-    font: 400 var(--text-ui) / 1.5 var(--font-ui);
-    color: var(--muted);
-  }
-  .post-kicker > span { flex-basis: 100%; }
-  @media (min-width: 640px) {
-    .post-kicker > span { flex-basis: auto; }
-    .post-kicker > span::before { content: "·"; margin-right: var(--space-3); }
-  }
-  .post-kicker a { color: var(--ink-2); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
-  .post-kicker a:hover { color: var(--ink); }
-  .post-title {
-    margin: 0;
-    font: 700 var(--text-display) / 1.12 var(--font-serif);
-    letter-spacing: -0.01em;
-    color: var(--ink);
-  }
-  .post-dek {
-    margin: var(--space-4) 0 0;
-    font: italic 400 var(--text-dek) / 1.45 var(--font-serif);
-    color: var(--ink-2);
-  }
-  .post-meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px var(--space-3);
-    margin-top: var(--space-4);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--rule);
-    font: 400 var(--text-ui) / 1.5 var(--font-ui);
-    color: var(--muted);
-  }
-  .post-meta > :is(span, time) + :is(span, time)::before,
-  .post-meta > * + .post-revised > summary::before { content: "·"; margin-right: var(--space-3); display: inline-block; text-decoration: none; }
-  .post-revised { display: contents; }
-  .post-revised summary { cursor: pointer; color: var(--ink-2); text-decoration: underline dotted; text-underline-offset: 0.2em; }
-  .post-revised summary::marker { content: ""; }
-  .post-revised summary::-webkit-details-marker { display: none; }
-  .post-revised > summary { display: inline; }
-  @media (max-width: 639px) {
-    .post-revised > summary { flex-basis: 100%; }
-    .post-meta > * + .post-revised > summary::before { content: none; }
-  }
-  .post-revised p {
-    flex-basis: 100%;
-    margin: var(--space-2) 0 0;
-    padding: var(--space-3) var(--space-4);
-    border-left: 3px solid var(--rule-strong);
-    background: var(--raised);
-    font-size: var(--text-small);
-    line-height: 1.55;
-    color: var(--ink-2);
-  }
-  .post-draft { color: var(--accent); font-weight: 600; }
-
-  .post-body { margin-top: var(--space-5); }
-  @media (min-width: 1024px) {
-    .post-body { margin-top: var(--space-6); }
-  }
-  .post-toc :global(.toc--rail) { margin-top: var(--space-6); }
-
-  /* ---------- footer ---------- */
-  .post-footer {
-    margin-top: var(--space-8);
-    display: grid;
-    gap: var(--space-6);
-  }
-  .post-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 var(--space-3);
-    margin: 0;
-    font: 400 var(--text-ui) / 2 var(--font-ui);
-    color: var(--muted);
-  }
-  .post-tags a { color: var(--ink-2); text-decoration: none; }
-  .post-tags a:hover { color: var(--ink); text-decoration: underline; }
-  .post-related h2 {
-    margin: 0 0 var(--space-3);
-    font: 600 var(--text-ui) / 1.4 var(--font-ui);
-    color: var(--ink);
-  }
-  .post-more { margin: var(--space-3) 0 0; font: 400 var(--text-ui) / 1.5 var(--font-ui); }
-  .post-follow {
-    margin: 0;
-    padding-top: var(--space-5);
-    border-top: 1px solid var(--rule);
-    font: 400 var(--text-ui) / 1.6 var(--font-ui);
-    color: var(--ink-2);
-  }
+  .article__share { display: grid; gap: 14px; padding-top: 20px; border-top: var(--rule-w) solid var(--line); }
+  .article__share p { margin: 0; font: 500 0.8125rem / 1.6 var(--mono); color: var(--muted); }
+  .article__share a { color: var(--ink); }
 </style>

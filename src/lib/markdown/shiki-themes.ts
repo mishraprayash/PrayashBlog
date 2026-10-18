@@ -1,7 +1,6 @@
 /**
- * Code themes built from the page's own palette. Every foreground was checked
- * for >= 4.5:1 against the code background (see docs/redesign/04-design-system.md);
- * none of the bundled Shiki light themes passed on this paper colour.
+ * Code theme built from the site palette. Every foreground was checked for
+ * >= 4.5:1 against the code background (see docs/redesign/04-design-system.md).
  */
 import type { ThemeRegistration } from "shiki";
 
@@ -46,26 +45,17 @@ function theme(name: string, type: "light" | "dark", c: Palette): ThemeRegistrat
   };
 }
 
-export const notebookLight = theme("notebook-light", "light", {
-  bg: "#f3efe7",
-  fg: "#1d1b18",
-  comment: "#6a6359",
-  keyword: "#a3261b",
-  string: "#2e6a3a",
-  number: "#855600",
-  func: "#2f5b8a",
-  type: "#6a3d8f",
-  punct: "#45403a",
-});
-
-export const notebookDark = theme("notebook-dark", "dark", {
-  bg: "#211e1b",
-  fg: "#ece7de",
-  comment: "#a69e91",
-  keyword: "#f08a73",
-  string: "#8cc79a",
-  number: "#e2b65e",
-  func: "#8db6e3",
+/** The only code theme: code always sits on a dark "press" panel, in both
+ * site themes. Line highlights use #26201c, which the comment colour also
+ * clears (4.79:1). */
+export const pressTheme = theme("press", "dark", {
+  bg: "#141416",
+  fg: "#e8e6df",
+  comment: "#8f8c85",
+  keyword: "#ff8a5c",
+  string: "#8ee0a8",
+  number: "#ffc66d",
+  func: "#8fb0ff",
   type: "#c9a7eb",
-  punct: "#cfc8bc",
+  punct: "#b9b6ae",
 });

@@ -132,19 +132,46 @@ export function rehypeHeadingAnchors() {
 
 /**
  * Highlights `[TODO: ...]` placeholders so unfinished facts are impossible to
- * miss on a preview. `npm run todos` lists them all.
+ * miss on a preview. `npm run todos` lists them all. A placeholder may contain
+ * inline markup (`code`, links), so it can span several sibling nodes.
  */
 export function rehypeTodos() {
   return (tree: Root) => {
-    visit(tree, "text", (node, index, parent) => {
-      if (!parent || index === undefined || !node.value.includes("[TODO")) return;
-      const parts = node.value.split(/(\[TODO:[^\]]*\])/g).filter(Boolean);
-      parent.children.splice(
-        index,
-        1,
-        ...parts.map((part) => (part.startsWith("[TODO") ? el("mark", { className: ["todo"] }, [text(part)]) : text(part))),
-      );
-      return index + parts.length;
+    visit(tree, "element", (parent) => {
+      if (parent.tagName === "mark" || parent.tagName === "code" || parent.tagName === "pre") return;
+      const kids = parent.children;
+      for (let i = 0; i < kids.length; i++) {
+        const node = kids[i];
+        if (node.type !== "text") continue;
+        const start = node.value.indexOf("[TODO");
+        if (start === -1) continue;
+
+        // Find the closing "]", in this node or a later text sibling.
+        let endIdx = i;
+        let endAt = node.value.indexOf("]", start);
+        while (endAt === -1 && ++endIdx < kids.length) {
+          const k = kids[endIdx];
+          endAt = k.type === "text" ? k.value.indexOf("]") : -1;
+        }
+        if (endAt === -1) return;
+
+        const before = node.value.slice(0, start);
+        const last = kids[endIdx] as Text;
+        const after = last.value.slice(endAt + 1);
+        let inner: ElementContent[];
+        if (endIdx === i) {
+          inner = [text(node.value.slice(start, endAt + 1))];
+        } else {
+          inner = [text(node.value.slice(start)), ...kids.slice(i + 1, endIdx), text(last.value.slice(0, endAt + 1))];
+        }
+        const replacement: ElementContent[] = [
+          ...(before ? [text(before)] : []),
+          el("mark", { className: ["todo"] }, inner),
+          ...(after ? [text(after)] : []),
+        ];
+        kids.splice(i, endIdx - i + 1, ...replacement);
+        i += before ? 1 : 0;
+      }
     });
   };
 }

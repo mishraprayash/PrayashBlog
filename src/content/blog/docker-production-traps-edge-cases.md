@@ -1,10 +1,12 @@
 ---
 title: "Docker Multi-Stage Builds: Layer Optimization and Image Size"
+headline: "Multi-stage builds for Node images"
 slug: "docker-production-traps-edge-cases"
 description: "Shrinking a Node.js image with multi-stage builds and BuildKit cache mounts, plus the layer, musl and PID 1 traps that catch people out."
 publishDate: "2026-06-04T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
+cover: "docker-multistage"
 tags: ["docker", "node"]
 series: "docker-node"
 seriesPart: 2

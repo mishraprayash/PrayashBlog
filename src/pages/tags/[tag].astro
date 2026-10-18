@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import PostList from "../../components/PostList.astro";
+import PageHead from "../../components/PageHead.astro";
+import CardGrid from "../../components/CardGrid.astro";
 import { PILLARS, TAGS, type Tag } from "../../data/taxonomy";
 import { getPosts, getSeries, postsByTag } from "../../lib/posts";
 
@@ -23,17 +24,8 @@ const pillars = [...new Set(tagged.map((p) => p.data.pillar))];
 ---
 
 <BaseLayout title={`#${tag}`} description={`Posts tagged ${tag}.`}>
-  <div class="page">
-    <div class="page__col">
-      <header>
-        <p class="inline-nav"><a href="/blog">Writing</a></p>
-        <h1 class="page-title">#{tag}</h1>
-        <p class="page-lede">
-          {tagged.length} posts.
-          {pillars.length === 1 && <> Part of <a href={`/topics/${pillars[0]}`}>{PILLARS[pillars[0]].title}</a>.</>}
-        </p>
-      </header>
-      <PostList posts={tagged} seriesTotals={seriesTotals} />
-    </div>
-  </div>
+  <PageHead title={`#${tag}`} kicker={[{ href: "/blog", label: "← Writing" }, ...pillars.map((p) => ({ href: `/topics/${p}`, label: PILLARS[p].short }))]}>
+    <p class="phead__lede">{tagged.length} posts tagged {tag}.</p>
+  </PageHead>
+  <CardGrid posts={tagged} seriesTotals={seriesTotals} heading="h2" label={`Posts tagged ${tag}`} />
 </BaseLayout>

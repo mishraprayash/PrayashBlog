@@ -1,5 +1,6 @@
 ---
 title: "Message Queues, Topics, and Event Streams Explained: How They Differ and When to Use Each"
+headline: "Queues, topics and streams, told apart"
 slug: "message-queues-topics-event-streams-explained"
 description: "What actually separates queues, pub/sub topics and event streams, where real tools blur the lines, and how to choose between them."
 publishDate: "2026-08-25T10:00:00Z"
@@ -7,6 +8,7 @@ updatedDate: "2026-09-09T22:50:00Z"
 updateSummary: "Refactored to be significantly more compact and experience-driven: removed textbook definitions, focused on practical trade-offs (consumer models, retention, ordering, and redeliveries), and streamlined the decision guide."
 author: "Prayash Mishra"
 pillar: "messaging"
+cover: "queues"
 tags: ["queues", "kafka", "microservices"]
 series: "reliable-messaging"
 seriesPart: 1

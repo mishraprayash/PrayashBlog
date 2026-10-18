@@ -1,46 +1,33 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import PostList from "../../components/PostList.astro";
+import PageHead from "../../components/PageHead.astro";
+import CardGrid from "../../components/CardGrid.astro";
 import { PILLARS, PILLAR_IDS } from "../../data/taxonomy";
 import { getPosts, getSeries } from "../../lib/posts";
 
 const posts = await getPosts();
 const series = getSeries(posts);
 const seriesTotals = new Map(series.map((s) => [s.id, s.parts.length]));
-
 const years = [...new Set(posts.map((p) => p.data.publishDate.getUTCFullYear()))];
-const multiYear = years.length > 1;
 ---
 
 <BaseLayout title="Writing" description="Everything I've written on backend engineering: messaging, PostgreSQL, running services, and the network edge.">
-  <div class="page">
-    <div class="page__col">
-      <header>
-        <h1 class="page-title">Writing</h1>
-        <p class="page-lede">{posts.length} posts on backend engineering, newest first. Also available as <a href="/rss.xml">RSS</a>.</p>
-      </header>
+  <PageHead
+    title="All writing"
+    kicker={[
+      { label: "Topics" },
+      ...PILLAR_IDS.map((id) => ({ href: `/topics/${id}`, label: PILLARS[id].short })),
+      { href: "/series", label: `${series.length} series` },
+      { href: "/rss.xml", label: "RSS" },
+    ]}
+  >
+    <p class="phead__lede">{posts.length} posts on backend engineering, newest first.</p>
+  </PageHead>
 
-      <nav aria-label="Browse" style="margin-top: var(--space-5)">
-        <p class="inline-nav">
-          <strong>Topics</strong>
-          {PILLAR_IDS.map((id) => <a href={`/topics/${id}`}>{PILLARS[id].short}</a>)}
-        </p>
-        <p class="inline-nav">
-          <strong>Series</strong>
-          {series.map((s) => <a href={`/series/${s.id}`}>{s.title}</a>)}
-        </p>
-      </nav>
-
-      <section aria-label="All posts" style="margin-top: var(--space-6)">
-        {multiYear
-          ? years.map((year) => (
-              <>
-                <h2 class="year-heading">{year}</h2>
-                <PostList posts={posts.filter((p) => p.data.publishDate.getUTCFullYear() === year)} showYear={false} seriesTotals={seriesTotals} />
-              </>
-            ))
-          : <PostList posts={posts} seriesTotals={seriesTotals} />}
-      </section>
-    </div>
-  </div>
+  {years.map((year) => (
+    <section aria-labelledby={`y-${year}`}>
+      <div class="sect-h"><h2 id={`y-${year}`}>{year}</h2><span>{posts.filter((p) => p.data.publishDate.getUTCFullYear() === year).length} posts</span></div>
+      <CardGrid posts={posts.filter((p) => p.data.publishDate.getUTCFullYear() === year)} seriesTotals={seriesTotals} />
+    </section>
+  ))}
 </BaseLayout>

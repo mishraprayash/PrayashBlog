@@ -1,10 +1,12 @@
 ---
 title: "NestJS and Dapr: A Dapr Module and Service Invocation"
+headline: "A Dapr module for NestJS"
 slug: "nestjs-dapr-nestjs-integration-service-invocation"
 description: "Wrapping the Dapr client in a NestJS dynamic module and calling one service from another through the sidecars, with retries and circuit breakers."
 publishDate: "2026-08-07T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
+cover: "dapr-invoke"
 tags: ["nestjs", "dapr", "microservices", "typescript"]
 series: "nestjs-dapr"
 seriesPart: 2

@@ -1,10 +1,12 @@
 ---
 title: "NestJS and Dapr: Core Fundamentals and Architecture"
+headline: "Dapr sidecars, and when to skip them"
 slug: "nestjs-dapr-core-fundamentals-architecture"
 description: "What Dapr's sidecar gives a NestJS service, how it compares to @nestjs/microservices, and when it isn't worth the extra moving part."
 publishDate: "2026-08-01T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
+cover: "dapr-sidecar"
 tags: ["nestjs", "dapr", "microservices"]
 series: "nestjs-dapr"
 seriesPart: 1

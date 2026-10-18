@@ -1,5 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import PageHead from "../../components/PageHead.astro";
+import CardGrid from "../../components/CardGrid.astro";
 import { getPosts, getSeries, postUrl, readingTime, type SeriesInfo } from "../../lib/posts";
 
 export async function getStaticPaths() {
@@ -8,29 +10,14 @@ export async function getStaticPaths() {
 
 const { series } = Astro.props as { series: SeriesInfo };
 const total = series.parts.reduce((n, p) => n + readingTime(p.body), 0);
+const pillar = series.parts[0].data.pillar;
+const totals = new Map([[series.id as string, series.parts.length]]);
 ---
 
-<BaseLayout title={series.title} description={series.description}>
-  <div class="page">
-    <div class="page__col">
-      <header>
-        <p class="inline-nav"><a href="/series">Series</a></p>
-        <h1 class="page-title">{series.title}</h1>
-        <p class="page-lede">{series.description}</p>
-        <p class="def-list__meta" style="margin-top: var(--space-3)">{series.parts.length} parts · {total} min in total</p>
-      </header>
-
-      <ol class="def-list series-parts">
-        {series.parts.map((p, i) => (
-          <li>
-            <p class="def-list__meta">Part {i + 1} · {readingTime(p.body)} min</p>
-            <a class="def-list__name" href={postUrl(p)}>{p.data.title}</a>
-            <p class="def-list__desc">{p.data.description}</p>
-          </li>
-        ))}
-      </ol>
-
-      <p class="section-more"><a href={postUrl(series.parts[0])}>Start with part 1 →</a></p>
-    </div>
-  </div>
+<BaseLayout title={series.title} description={series.description} pillar={pillar}>
+  <PageHead title={series.title} pillar={pillar} size="md" kicker={[{ href: "/series", label: "← All series" }]}>
+    <p class="phead__lede">{series.description}</p>
+    <p class="phead__meta">{series.parts.length} parts · {total} min in total · <a href={postUrl(series.parts[0])}>Start with part 1 →</a></p>
+  </PageHead>
+  <CardGrid posts={series.parts} seriesTotals={totals} heading="h2" label="Parts, in order" />
 </BaseLayout>

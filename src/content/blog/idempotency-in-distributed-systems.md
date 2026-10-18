@@ -1,5 +1,6 @@
 ---
 title: "Idempotency in Distributed Systems: The Production Realities"
+headline: "Idempotency, without the Redis lock"
 slug: "idempotency-in-distributed-systems"
 description: "Why a Redis lock doesn't make retries safe, and how to do it in one Postgres transaction, including what happens when a duplicate arrives mid-request."
 publishDate: "2026-09-09T23:50:00Z"
@@ -7,6 +8,7 @@ updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Rewritten. Corrected how concurrent duplicates behave: with the claim and the business writes in one transaction, a duplicate never sees IN_PROGRESS; Postgres makes it wait, then it replays the stored response. The handler now caps that wait with lock_timeout, and its behaviour is shown from a test run. The external-API section now covers what happens when the process dies mid-call. Also fixed the Redis command, which was SETNX with an EX argument that SETNX doesn't take."
 author: "Prayash Mishra"
 pillar: "messaging"
+cover: "idempotency"
 tags: ["postgresql", "microservices"]
 series: "reliable-messaging"
 seriesPart: 3

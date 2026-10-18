@@ -3,6 +3,7 @@ import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 import { PILLAR_IDS, TAGS } from "./data/taxonomy";
 import { SERIES_IDS } from "./data/series";
+import { COVER_IDS } from "./lib/covers";
 
 const blogCollection = defineCollection({
   loader: glob({ pattern: "**/*.md", base: "./src/content/blog" }),
@@ -11,6 +12,9 @@ const blogCollection = defineCollection({
       title: z.string(),
       // The glob loader derives `entry.id` from this field, which is what
       // [...slug].astro routes on. Changing it changes the post's URL.
+      // Short display title for the post hero, cards and lists. `title` is
+      // still the <title>, the social card and the search result.
+      headline: z.string().max(48).optional(),
       slug: z.string().regex(/^[a-z0-9-]+$/),
       // Shown under the title and used as the search snippet, which is cut
       // at about 160 characters.
@@ -28,6 +32,9 @@ const blogCollection = defineCollection({
       startHere: z.number().int().min(1).max(3).optional(),
       // Slugs shown first under "Related"; the rest are computed.
       related: z.array(z.string()).max(3).default([]),
+      // Animated cover art from src/lib/covers.ts; without one the post gets
+      // a plain cover in its pillar colour.
+      cover: z.enum(COVER_IDS).optional(),
       featuredImage: z.string().optional(),
       featuredImageAlt: z.string().optional(),
       draft: z.boolean().default(false),

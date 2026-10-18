@@ -1,0 +1,23 @@
+---
+/**
+ * Splits a title into words that rise into place one after another (see
+ * .rise in tokens.css). Screen readers get the plain text.
+ */
+export interface Props {
+  text: string;
+  as?: "h1" | "h2" | "p" | "span";
+  class?: string;
+  id?: string;
+}
+const { text, as: Tag = "h1", class: cls, id } = Astro.props;
+const words = text.split(/\s+/).filter(Boolean);
+---
+
+<Tag class:list={["rise", cls]} id={id}>
+  <span class="visually-hidden">{text}</span>
+  {words.map((w, i) => (
+    <>
+      <span aria-hidden="true"><span style={`--i:${i}`}>{w}</span></span>{i < words.length - 1 ? " " : ""}
+    </>
+  ))}
+</Tag>

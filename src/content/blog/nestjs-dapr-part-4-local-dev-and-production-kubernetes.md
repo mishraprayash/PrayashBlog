@@ -1,10 +1,12 @@
 ---
 title: "NestJS and Dapr: Local Development and Production Kubernetes"
+headline: "Dapr from Compose to Kubernetes"
 slug: "nestjs-dapr-local-dev-production-kubernetes"
 description: "Running NestJS services with Dapr sidecars in Docker Compose and on Kubernetes: ports, health checks, API tokens and trace sampling."
 publishDate: "2026-08-21T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
+cover: "dapr-k8s"
 tags: ["nestjs", "dapr", "kubernetes", "docker"]
 series: "nestjs-dapr"
 seriesPart: 4

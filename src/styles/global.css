@@ -1,5 +1,6 @@
 /* Entry point for site CSS. Order matters: tokens and base first. */
 @import "./tokens.css";
 @import "./prose.css";
+@import "./diagrams.css";
 @import "./pages.css";
 @import "./print.css";
