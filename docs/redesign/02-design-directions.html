@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --page:#e9e7e2; --label:#3a3833; }
+  :root[data-theme="dark"] { --page:#0b0b0a; --label:#bdb7ad; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--page); color:var(--label); font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .top { max-width:960px; margin:0 auto; padding:20px 16px 8px; display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; justify-content:space-between; }
+  .top h1 { font-size:16px; margin:0; font-weight:600; }
+  .top button { font:inherit; padding:6px 12px; border-radius:6px; border:1px solid currentColor; background:transparent; color:inherit; cursor:pointer; }
+  .grid { max-width:960px; margin:0 auto; padding:8px 16px 40px; display:grid; gap:28px; grid-template-columns:minmax(0,1fr); }
+  .tag { font-size:12px; letter-spacing:.04em; text-transform:uppercase; margin:0 0 6px 2px; font-weight:600; }
+  .panel { border-radius:6px; overflow:hidden; box-shadow:0 1px 3px rgb(0 0 0 / .12); }
+  pre { margin:0; overflow-x:auto; }
+
+  /* ---------- A: Engineering notebook ---------- */
+  .a { --bg:#FAF8F4; --ink:#1D1B18; --muted:#5E5850; --rule:#E4DED3; --accent:#A3261B; --code:#F2EEE6; --k:#8A2E1F; --s:#2F5D3A; --c:#857D70;
+       background:var(--bg); color:var(--ink); font-family:"Source Serif 4",Georgia,serif; padding:28px 28px 32px; }
+  [data-theme="dark"] .a { --bg:#171513; --ink:#ECE7DE; --muted:#A69E92; --rule:#2E2A25; --accent:#F08A73; --code:#201D1A; --k:#F0A08A; --s:#9CC9A3; --c:#8A8277; }
+  .a .nav { font:13px system-ui,sans-serif; color:var(--muted); display:flex; justify-content:space-between; border-bottom:1px solid var(--rule); padding-bottom:10px; margin-bottom:28px; }
+  .a .nav b { color:var(--ink); font-weight:600; }
+  .a .meta { font:13px system-ui,sans-serif; color:var(--muted); margin-bottom:6px; }
+  .a h2 { font-size:30px; line-height:1.15; font-weight:700; letter-spacing:-.01em; margin:0 0 18px; }
+  .a .body { display:grid; grid-template-columns:minmax(0,62ch) 180px; gap:32px; }
+  .a p { font-size:18px; line-height:1.65; margin:0 0 16px; }
+  .a a { color:var(--accent); text-decoration:underline; text-underline-offset:2px; text-decoration-thickness:1px; }
+  .a .side { font:13px/1.45 system-ui,sans-serif; color:var(--muted); border-left:2px solid var(--accent); padding-left:10px; align-self:start; margin-top:4px; }
+  .a pre { background:var(--code); border:1px solid var(--rule); border-radius:4px; padding:14px 16px; font:13.5px/1.6 "JetBrains Mono",monospace; margin:4px 0 6px; }
+  .a .cap { font:13px system-ui,sans-serif; color:var(--muted); margin:0 0 18px; }
+  .a h3 { font-size:22px; font-weight:600; margin:22px 0 10px; }
+  .a .note { border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:10px 0; font:14px/1.5 system-ui,sans-serif; color:var(--muted); }
+  .a .note strong { color:var(--accent); font-weight:600; }
+  @media (max-width:560px){ .a .body{ grid-template-columns:minmax(0,1fr); } .a .side{ order:2; } }
+
+  /* ---------- B: Plain text ---------- */
+  .b { --bg:#fff; --ink:#111; --muted:#555; --link:#0645AD; --rule:#ddd;
+       background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:24px 26px 30px; }
+  [data-theme="dark"] .b { --bg:#121212; --ink:#e4e4e4; --muted:#9a9a9a; --link:#8AB4F8; --rule:#333; }
+  .b .nav { font-size:15px; margin-bottom:24px; }
+  .b .nav a { color:var(--link); margin-right:12px; }
+  .b h2 { font-size:24px; line-height:1.25; margin:0 0 4px; font-weight:700; }
+  .b .meta { color:var(--muted); font-size:14px; margin-bottom:18px; }
+  .b p { font-size:17px; line-height:1.6; margin:0 0 14px; max-width:68ch; }
+  .b a { color:var(--link); }
+  .b pre { font:13.5px/1.5 ui-monospace,Menlo,Consolas,monospace; background:transparent; border:1px solid var(--rule); padding:12px; margin:0 0 14px; }
+  .b h3 { font-size:19px; margin:20px 0 8px; }
+  .b .note { font-size:15px; color:var(--muted); font-style:italic; }
+
+  /* ---------- C: Technical manual ---------- */
+  .c { --bg:#F3F4F5; --ink:#1F2328; --muted:#57606A; --rule:#D0D7DE; --sig:#B43B07; --code:#FFFFFF; --k:#0550AE; --s:#116329; --cm:#6E7781;
+       background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans",system-ui,sans-serif; padding:26px 28px 30px; }
+  [data-theme="dark"] .c { --bg:#0F1215; --ink:#E6EDF3; --muted:#8B949E; --rule:#30363D; --sig:#FB8C4A; --code:#161B22; --k:#79C0FF; --s:#7EE787; --cm:#8B949E; }
+  .c .nav { font:500 12px "IBM Plex Mono",monospace; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); display:flex; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:8px; margin-bottom:24px; }
+  .c .meta { font:12px "IBM Plex Mono",monospace; color:var(--muted); margin-bottom:8px; }
+  .c h2 { font-size:28px; line-height:1.2; font-weight:600; margin:0 0 18px; letter-spacing:-.01em; }
+  .c p { font-size:16.5px; line-height:1.65; margin:0 0 14px; }
+  .c a { color:var(--ink); text-decoration:underline; text-decoration-color:var(--sig); text-underline-offset:3px; }
+  .c .fig { border:1px solid var(--rule); background:var(--code); margin:4px 0 16px; }
+  .c .fig pre { padding:14px 16px; font:13px/1.6 "IBM Plex Mono",monospace; }
+  .c .fig .cap { border-top:1px solid var(--rule); font:12px "IBM Plex Mono",monospace; color:var(--muted); padding:6px 16px; }
+  .c h3 { font-size:19px; font-weight:600; margin:22px 0 10px; }
+  .c h3 span { font-family:"IBM Plex Mono",monospace; color:var(--muted); font-weight:500; margin-right:8px; }
+  .c .warn { border-left:4px solid var(--sig); background:color-mix(in srgb, var(--sig) 8%, transparent); padding:10px 14px; font-size:15px; }
+  .c .warn b { color:var(--sig); font-family:"IBM Plex Mono",monospace; font-size:12px; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:2px; }
+
+  .k{color:var(--k)} .s{color:var(--s)} .cm{color:var(--c, var(--cm))}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Three design directions, same text (from the Outbox post)</h1>
+  <button id="t" type="button" aria-pressed="false">Show dark mode</button>
+</div>
+
+<div class="grid">
+  <!-- A -->
+  <section>
+    <p class="tag">A · Engineering notebook (recommended)</p>
+    <div class="panel a">
+      <div class="nav"><b>Prayash Mishra</b><span>Writing · Projects · About</span></div>
+      <div class="meta">Messaging and delivery · 9 Sep 2026 · 10 min</div>
+      <h2>The Transactional Outbox Pattern: Why Your 100-Line Script Breaks in Production</h2>
+      <div class="body">
+        <div>
+          <p>This code has a bug that won't show up in review or in staging:</p>
+          <pre><span class="k">await</span> db.orders.create({ data: order });
+<span class="k">await</span> kafka.send({ topic: <span class="s">'orders'</span>, message: order });</pre>
+          <p class="cap">Fig. 1 — The dual write.</p>
+          <p>If the Kafka call fails after the insert commits, the order exists and nothing downstream hears about it. Billing never charges, and no error shows up anywhere, because the database call already returned successfully.</p>
+          <h3>The ghost row problem</h3>
+          <p>The obvious poller pages by <code style="font:15px 'JetBrains Mono',monospace">id</code>. Under <a href="#">READ COMMITTED</a>, a transaction that took its id earlier but commits later is skipped for good.</p>
+          <div class="note"><strong>Revised 18 Oct 2026.</strong> Fixed the worker-sharding query: <code>% 4</code> produced negative buckets for about a third of keys.</div>
+        </div>
+        <aside class="side">Tested on Postgres 16. The race needs two concurrent writers, so a single-connection test won't show it.</aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- B -->
+  <section>
+    <p class="tag">B · Plain text</p>
+    <div class="panel b">
+      <div class="nav"><a href="#">Prayash Mishra</a> <a href="#">writing</a> <a href="#">about</a></div>
+      <h2>The Transactional Outbox Pattern: Why Your 100-Line Script Breaks in Production</h2>
+      <div class="meta">2026-09-09</div>
+      <p>This code has a bug that won't show up in review or in staging:</p>
+      <pre>await db.orders.create({ data: order });
+await kafka.send({ topic: 'orders', message: order });</pre>
+      <p>If the Kafka call fails after the insert commits, the order exists and nothing downstream hears about it. Billing never charges, and no error shows up anywhere, because the database call already returned successfully.</p>
+      <h3>The ghost row problem</h3>
+      <p>The obvious poller pages by id. Under <a href="#">READ COMMITTED</a>, a transaction that took its id earlier but commits later is skipped for good.</p>
+      <p class="note">Updated 2026-10-18: fixed the worker-sharding query.</p>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section>
+    <p class="tag">C · Technical manual</p>
+    <div class="panel c">
+      <div class="nav"><span>P. Mishra / Notes</span><span>Index · Projects · About</span></div>
+      <div class="meta">MSG-07 · REV 2 · 2026-10-18</div>
+      <h2>The Transactional Outbox Pattern: Why Your 100-Line Script Breaks in Production</h2>
+      <p>This code has a bug that won't show up in review or in staging:</p>
+      <div class="fig">
+        <pre><span class="k">await</span> db.orders.create({ data: order });
+<span class="k">await</span> kafka.send({ topic: <span class="s">'orders'</span>, message: order });</pre>
+        <div class="cap">FIG. 1 — DUAL WRITE</div>
+      </div>
+      <p>If the Kafka call fails after the insert commits, the order exists and nothing downstream hears about it. Billing never charges, and no error shows up anywhere.</p>
+      <h3><span>§1</span>The ghost row problem</h3>
+      <p>The obvious poller pages by id. Under <a href="#">READ COMMITTED</a>, a transaction that took its id earlier but commits later is skipped for good.</p>
+      <div class="warn"><b>Failure mode</b>Rows committed out of id order are never published. No error is raised.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const btn = document.getElementById("t");
+  btn.addEventListener("click", () => {
+    const dark = document.documentElement.dataset.theme !== "dark";
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    btn.textContent = dark ? "Show light mode" : "Show dark mode";
+    btn.setAttribute("aria-pressed", String(dark));
+  });
+</script>
+</body>
+</html>
