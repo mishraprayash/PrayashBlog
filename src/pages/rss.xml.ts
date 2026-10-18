@@ -42,7 +42,7 @@ export async function GET(context: APIContext) {
 
   return rss({
     title: "Prayash Mishra Blog",
-    description: "In-depth analysis of backend systems, security, and AI/ML.",
+    description: "Backend engineering: distributed systems, reliability, and the network edge.",
     site,
     items,
     // `dc:date` is emitted per item when a post has been revised, so the `dc`

@@ -3,6 +3,8 @@ title: "Idempotency in Distributed Systems: The Production Realities"
 slug: "idempotency-in-distributed-systems"
 description: "Why distributed retries make duplicate operations inevitable, why Redis locks fall short, and how to build truly idempotent APIs using ACID state engines and two-phase writes."
 publishDate: "2026-09-09T23:50:00Z"
+updatedDate: "2026-10-18T10:00:00Z"
+updateSummary: "Corrected how concurrent duplicates behave. With the claim and the business writes in one transaction, a duplicate never sees IN_PROGRESS. Postgres makes it wait on the key, then it replays the stored response. The handler now caps that wait with lock_timeout and only returns 409 when it expires. I also replaced the diagram, which the site wasn't rendering, and added the test results."
 author: "Prayash Mishra"
 tags: ["distributed-systems", "architecture", "backend", "postgresql"]
 category: "engineering"
@@ -132,46 +134,34 @@ ON idempotency_records (created_at);
 
 ### The Request Lifecycle
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client
-    participant API as API Server
-    participant DB as Postgres (ACID)
+The claim row and the business writes go in **one transaction**. That has a consequence that's easy to get wrong: nobody outside that transaction ever sees the row as `IN_PROGRESS`. Until request A commits, its claim is invisible.
 
-    Client->>API: POST /api/transfers (Key: "abc", Body: {...})
-    
-    rect rgb(240, 245, 255)
-    Note over API,DB: Single DB Transaction
-    API->>DB: INSERT INTO idempotency_records (key, hash, 'IN_PROGRESS')<br/>ON CONFLICT DO NOTHING
-    
-    alt Insert Succeeded (First Time)
-        API->>DB: Run Business Logic (balances, ledger)
-        API->>DB: UPDATE idempotency_records<br/>SET status='COMPLETED', response_code=201, response_body=...
-        API->>DB: COMMIT
-        API->>Client: 201 Created
-    else Key Already Exists
-        API->>DB: SELECT status, request_hash, response_code, response_body<br/>FROM idempotency_records WHERE key = 'abc'
-        
-        alt Hash Mismatch
-            API->>Client: 422 Unprocessable Entity (Reused key with altered payload)
-        else Status == 'IN_PROGRESS'
-            API->>Client: 409 Conflict (Currently processing, retry shortly)
-        else Status == 'COMPLETED'
-            API->>Client: 201 Created (Cached response from previous run)
-        end
-    end
-    end
+So what does a duplicate actually hit? The primary key. When request B runs `INSERT ... ON CONFLICT DO NOTHING` for a key that A has inserted but not committed, Postgres can't tell yet whether A's row will exist, so B **waits** for A to finish. Then it reports the conflict, and B replays whatever A stored.
+
+```text
+Request A (key "abc")                       Request B (same key, 300 ms later)
+─────────────────────                       ──────────────────────────────────
+BEGIN                                       BEGIN
+INSERT claim ... ON CONFLICT DO NOTHING
+  → 1 row (visible only to A)
+run the transfer (balances, ledger)         INSERT claim ... ON CONFLICT DO NOTHING
+                                              → blocks on A's uncommitted row
+UPDATE claim SET status = 'COMPLETED',
+  response_code = 201, response_body = ...
+COMMIT ───────────────────────────────────►   → 0 rows (conflict)
+201 Created                                 SELECT stored response; COMMIT
+                                            request_hash differs → 422
+                                            request_hash matches → replay the 201
 ```
 
-### Production Implementation
+Two other endings are worth knowing. If A rolls back, B's insert succeeds and B runs the transfer itself, which is what you want after a failure. If A takes longer than B is willing to wait, B gives up with a lock timeout, and that's the only point where returning `409` makes sense.
 
-Here is how to structure this in Node.js and PostgreSQL without leaking locks or corrupting state:
+### Production Implementation
 
 ```typescript
 import { createHash } from "node:crypto";
 import type { Request, Response } from "express";
-import { pool } from "./db";
+import { pool, executeTransfer } from "./db";
 
 export async function handleTransfer(req: Request, res: Response) {
   const idempotencyKey = req.header("Idempotency-Key");
@@ -179,15 +169,16 @@ export async function handleTransfer(req: Request, res: Response) {
     return res.status(400).json({ error: "Missing Idempotency-Key header" });
   }
 
-  // 1. Hash the body so nobody can swap payloads under the same key
-  const requestPayload = JSON.stringify(req.body);
-  const requestHash = createHash("sha256").update(requestPayload).digest("hex");
+  const requestHash = createHash("sha256").update(JSON.stringify(req.body)).digest("hex");
 
   const client = await pool.connect();
   try {
-    await client.query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+    await client.query("BEGIN");
+    // A duplicate that arrives while the first attempt is still running will
+    // wait on the INSERT below. Cap that wait instead of parking a pooled
+    // connection behind someone else's transaction.
+    await client.query("SET LOCAL lock_timeout = '5s'");
 
-    // 2. Try to claim the key atomically
     const claim = await client.query(
       `INSERT INTO idempotency_records (idempotency_key, request_path, request_hash, status)
        VALUES ($1, $2, $3, 'IN_PROGRESS')
@@ -196,70 +187,60 @@ export async function handleTransfer(req: Request, res: Response) {
       [idempotencyKey, req.originalUrl, requestHash]
     );
 
-    // If rowCount is 0, another request already claimed or finished this key
     if (claim.rowCount === 0) {
-      const existing = await client.query(
-        `SELECT request_hash, status, response_code, response_body 
-         FROM idempotency_records 
-         WHERE idempotency_key = $1 FOR SHARE`,
+      // We only get here after the other transaction committed, so the row
+      // is COMPLETED. An IN_PROGRESS row is never visible from outside the
+      // transaction that wrote it.
+      const { rows: [record] } = await client.query(
+        `SELECT request_hash, response_code, response_body
+         FROM idempotency_records WHERE idempotency_key = $1`,
         [idempotencyKey]
       );
       await client.query("COMMIT");
 
-      const record = existing.rows[0];
-
-      // Trap 1: Client reused the key with different data
       if (record.request_hash !== requestHash) {
-        return res.status(422).json({
-          error: "Idempotency key reused with different request payload.",
-        });
+        return res.status(422).json({ error: "Idempotency key reused with a different payload." });
       }
-
-      // Trap 2: Previous attempt is still executing
-      if (record.status === "IN_PROGRESS") {
-        res.setHeader("Retry-After", "2");
-        return res.status(409).json({
-          error: "Request with this idempotency key is currently processing.",
-        });
-      }
-
-      // Return the cached result from the first successful execution
       return res.status(record.response_code).json(record.response_body);
     }
 
-    // 3. First execution: run domain logic
     const result = await executeTransfer(client, req.body);
-    const statusCode = 201;
 
-    // 4. Save response within the exact same transaction
     await client.query(
       `UPDATE idempotency_records
-       SET status = 'COMPLETED',
-           response_code = $1,
-           response_body = $2,
-           updated_at = NOW()
-       WHERE idempotency_key = $3`,
-      [statusCode, JSON.stringify(result), idempotencyKey]
+       SET status = 'COMPLETED', response_code = 201, response_body = $1, updated_at = NOW()
+       WHERE idempotency_key = $2`,
+      [JSON.stringify(result), idempotencyKey]
     );
-
     await client.query("COMMIT");
-    return res.status(statusCode).json(result);
-
-  } catch (err) {
+    return res.status(201).json(result);
+  } catch (err: any) {
+    // Rolling back also removes our claim row, so a retry starts clean.
     await client.query("ROLLBACK");
 
-    // Clear the in-progress row so the client is not locked out forever
-    await pool.query(
-      `DELETE FROM idempotency_records WHERE idempotency_key = $1 AND status = 'IN_PROGRESS'`,
-      [idempotencyKey]
-    ).catch(() => {});
-
+    if (err.code === "55P03") { // lock_not_available: first attempt still running
+      res.setHeader("Retry-After", "2");
+      return res.status(409).json({ error: "A request with this key is still being processed." });
+    }
     throw err;
   } finally {
     client.release();
   }
 }
 ```
+
+This exact handler was run against Postgres 16 with `pg` 8.13, using an `executeTransfer` that sleeps to simulate slow work:
+
+| Scenario | Result |
+| :--- | :--- |
+| Duplicate arrives 300 ms into a 3 s transfer | Waited, then `201` with the same `transferId`. One transfer row. |
+| Same key, different amount | `422` |
+| Duplicate arrives 300 ms into a 7 s transfer (`lock_timeout` is 5 s) | `409` with `Retry-After: 2` after ~5 s. First request still finished with `201`. |
+| First attempt throws; duplicate already waiting | First one errors, duplicate wins the claim and gets `201` |
+
+One detail from that run: the replayed body came back as `{"amount":100,"transferId":1}` while the original was `{"transferId":1,"amount":100}`. JSONB doesn't keep key order. That's fine for JSON clients, but if anything compares responses byte for byte (signature checks, snapshot tests), store `response_body` as `TEXT`.
+
+The cost of this design is that a duplicate holds a pooled connection while it waits. A burst of retries against one slow request can take several connections at once, which is why the `lock_timeout` is there.
 
 ---
 
@@ -284,6 +265,8 @@ To fix this:
    ```
 2. **Intent Before Execution:** Save a pending payment record in PostgreSQL *before* calling Stripe. If the external network call drops or times out, the retry uses the same deterministic `stripeKey`. Stripe's API will recognize the duplicate key and safely return the existing charge object instead of billing twice.
 
+This is the one place a visible `IN_PROGRESS` row is real. You can't hold a database transaction open across a call to Stripe, so the claim has to be committed on its own first, and then other requests can see it. A duplicate that finds it should get a `409` with `Retry-After`. You also need a way out for a claim whose process died mid-call: a `claimed_at` column and a sweeper that, after some timeout, retries with the same `stripeKey` instead of assuming the charge failed.
+
 ---
 
 ## Production Gotchas You Only Learn at 2 AM
@@ -300,14 +283,14 @@ If your database connection pool gets exhausted or an internal service times out
 
 If your idempotency layer catches that 500 and records it as `COMPLETED`, you have just permanently locked that user out. Every automated retry with exponential backoff will faithfully return the cached 500 error.
 
-Only cache successful mutations (`2xx`) and deterministic client validation errors (`4xx`). If your server blows up on an unhandled exception, wipe the `IN_PROGRESS` row so the next retry gets a clean slate.
+Only cache successful mutations (`2xx`) and deterministic client validation errors (`4xx`). In the single-transaction version above, the `ROLLBACK` takes care of this: the claim disappears with everything else. In the two-phase version below, the claim is already committed, so you have to delete or expire it yourself.
 
 ### 3. The 200ms Mobile Retry Stampede
 Mobile apps on flaky connections often fire duplicate retries aggressively. If your timeout is 250ms and your database takes 300ms under load, the second request will hit your server while the first request is still writing.
 
 Without a database-level unique constraint or an atomic lock, both requests will run in parallel, both will pass the "no record found" check, and both will execute.
 
-Rely on `ON CONFLICT DO NOTHING` on the primary key. Let the database handle serialization. The winner executes; the runner-up gets an immediate `409 Conflict` with a `Retry-After` header.
+Rely on `ON CONFLICT DO NOTHING` on the primary key and let the database serialize them. The runner-up doesn't get an immediate error. It waits on the winner's uncommitted row, then replays the stored response. Put a `lock_timeout` on that wait so one slow request can't pin a stack of pooled connections, and return `409` with `Retry-After` when it fires.
 
 ---
 

@@ -3,6 +3,8 @@ title: "TLS in Node.js: Handshake Mechanics, Event-Loop Stalls, and Cert Chain T
 slug: "demystifying-ssl-tls-node-https"
 description: "A practical deep dive into Node.js TLS termination: how handshakes impact the event loop, why AIA chasing hides missing intermediate certs, and handling live cert rotation without downtime."
 publishDate: "2026-05-10T10:00:00Z"
+updatedDate: "2026-10-18T10:00:00Z"
+updateSummary: "Corrected the intermediate-certificate section. I'd written that putting the intermediate in `ca` makes Node send only the leaf. Testing on Node 22 showed it sends the full chain. Keeping the chain in `cert` is still the right call, for the reasons now in the post."
 author: "Prayash Mishra"
 tags: ["node", "backend", "security", "tls"]
 category: "engineering"
@@ -18,7 +20,7 @@ const https = require("https");
 const server = https.createServer({ key, cert }, app);
 ```
 
-They call it a day and move on. But in production, this is where the real headaches begin: mobile clients failing with `ERR_CERT_AUTHORITY_INVALID` while desktop browsers work fine, Node processes silently serving expired certificates after 90 days, and sudden spikes in TLS handshakes causing event-loop latency.
+They call it a day and move on. But in production, this is where the real headaches begin: curl and every server-side client failing with `unable to verify the first certificate` while your browser works fine, Node processes silently serving expired certificates after 90 days, and sudden spikes in TLS handshakes causing event-loop latency.
 
 Here is what is actually happening beneath the Node.js TLS layer, why things break, and how to configure HTTPS reliably.
 
@@ -50,47 +52,54 @@ If hundreds of clients connect simultaneously (a "thundering herd"), the cryptog
 
 ---
 
-## 2. The Intermediate Chain Trap: Why Mobile Fails While Chrome Passes
+## 2. The Missing Intermediate: Why curl Fails While Chrome Passes
 
-This is the most common TLS mistake in Node.js, and it causes intermittent outages that are painful to debug:
+Your server has to send its own certificate (the leaf) and every intermediate between it and a root the client already trusts. Roots ship with the client. Intermediates don't. Send only the leaf and you get the most confusing kind of outage, the one that depends on who's asking:
 
-```js
-// ❌ WRONG: The intermediate bundle does NOT go in `ca` for servers!
-const credentials = {
-  key: privateKey,
-  cert: leafCert,          // Only the leaf certificate
-  ca: intermediateChain,   // ⚠️ Mistake!
-};
-```
+* **Chrome, Edge and Safari** will usually fetch the missing intermediate themselves, using the URL in the leaf's Authority Information Access (AIA) extension, and cache it. Firefox doesn't fetch, but ships a list of known intermediates and often passes anyway. So the site looks fine in your browser.
+* **curl, `openssl s_client`, and the HTTP clients in Node, Go and Python** do none of that. Node reports `unable to verify the first certificate` (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`).
 
-### Why this is a trap
-In Node’s `https.createServer`, the `ca` option specifies the Certificate Authorities the server trusts when **verifying incoming client certificates (mTLS)**. It is *not* what the server sends to clients.
+For an API, that second group is most of your traffic.
 
-When you configure it this way, Node only sends the **leaf certificate** to connecting browsers:
-* **Desktop Chrome/Edge** often succeeds because they perform **AIA Chasing** (Authority Information Access)—the browser silently fetches the missing intermediate certificate over HTTP in the background and caches it.
-* **Mobile Apps & curl** generally disable AIA chasing for performance and battery reasons. They fail immediately with `CERT_UNTRUSTED` or `certificate_unknown`.
-
-### The Proper Fix:
-Concatenate your leaf certificate and intermediate certificates into the **`cert`** parameter:
+With Let's Encrypt, the usual way to get here is loading `cert.pem` where you meant `fullchain.pem`:
 
 ```js
-// ✅ CORRECT: Full certificate chain served together
-const credentials = {
-  key: fs.readFileSync("/etc/certs/privkey.pem", "utf8"),
-  cert: [
-    fs.readFileSync("/etc/certs/cert.pem", "utf8"),        // Leaf
-    fs.readFileSync("/etc/certs/chain.pem", "utf8")        // Intermediate
-  ].join("\n"),
-};
+// ❌ Leaf only. Fine in Chrome, broken for curl and for Node/Go/Python clients.
+https.createServer({
+  key: fs.readFileSync("/etc/letsencrypt/live/example.com/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/example.com/cert.pem"),
+}, app);
+
+// ✅ Leaf followed by intermediates.
+https.createServer({
+  key: fs.readFileSync("/etc/letsencrypt/live/example.com/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/example.com/fullchain.pem"),
+}, app);
 ```
 
-### Verify What You’re Actually Serving
-Never test TLS with just your local desktop browser. Use `openssl s_client`:
+The [Node docs for `cert`](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions) say the same thing: the leaf, "followed by the PEM formatted intermediate certificates (if any), in order, and not including the root CA."
+
+### What about passing the intermediate in `ca`?
+
+`ca` is meant for the other direction. It's the set of CAs your server trusts when it verifies *client* certificates (mTLS). But Node gives that set to OpenSSL as a trust store, and OpenSSL will use it to complete the server's own chain when `cert` holds only the leaf. Here's what Node 22.22 does with a throwaway root → intermediate → leaf:
+
+| Server options | Certs sent | `openssl s_client -CAfile root.pem` |
+| :--- | :--- | :--- |
+| `cert: leaf` | 1 | `Verify return code: 21 (unable to verify the first certificate)` |
+| `cert: leaf`, `ca: intermediate` | 2 | `Verify return code: 0 (ok)` |
+| `cert: leaf + intermediate` | 2 | `Verify return code: 0 (ok)` |
+
+So it works. Don't rely on it anyway. It works as a side effect of how OpenSSL builds chains, not because the option is for that, and if you later set `requestCert: true` for mTLS, the same list quietly becomes your client trust store as well. Keep the chain in `cert`, where it's documented to go.
+
+### Check what you're actually serving
+
+Don't test this with your browser. It's the one client that hides the problem:
 
 ```bash
-echo | openssl s_client -connect localhost:443 -showcerts 2>/dev/null \
+echo | openssl s_client -connect example.com:443 -servername example.com -showcerts 2>/dev/null \
   | grep -c "BEGIN CERTIFICATE"
-# Output should be ≥ 2 (Leaf + Intermediates). If it's 1, mobile clients will fail!
+# 1 means leaf only: curl and server-side clients will fail.
+# 2 or more means the intermediates are going out.
 ```
 
 ---
@@ -164,7 +173,7 @@ setInterval(async () => {
 
 ## Summary
 
-* Put your **full chain (leaf + intermediates)** in `cert`, not `ca`.
-* Verify with `openssl s_client` to ensure you aren't silently relying on desktop browser AIA chasing.
+* Serve the **full chain (leaf + intermediates)** in `cert`. `ca` happens to fill the gap on current Node, but that's not what it's for.
+* Check with `openssl s_client`, not a browser. Browsers fetch missing intermediates for you and hide the bug.
 * Use **`server.setSecureContext()`** if your Node process needs to reload certificates without downtime.
 * Offloading TLS to an edge proxy remains the cleanest architecture for high-concurrency Node apps.

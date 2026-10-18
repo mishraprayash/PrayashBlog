@@ -3,6 +3,8 @@ title: "Part 2: Building an AI-Powered WAF on Nginx – Traps, Bypasses, and Har
 slug: "nginx-lua-ai-waf-traps-bypasses"
 description: "The hard lessons learned deploying an AI WAF: the silent get_body_data() disk-spill bypass, ephemeral socket exhaustion, zero-latency shared-memory circuit breakers, and adversarial evasion."
 publishDate: "2026-06-29T10:00:00Z"
+updatedDate: "2026-10-18T10:00:00Z"
+updateSummary: "Rewrote the socket-churn section. request_uri() already pools connections. The real cause was the Flask/Werkzeug sidecar sending Connection: close on every response. Also corrected the default body buffer size (8 KB on x86-64), and added the 512-token truncation gap that lets the padding trick work even after the body fix."
 author: "Prayash Mishra"
 tags: ["nginx", "lua", "waf", "security", "ml"]
 category: "engineering"
@@ -26,16 +28,16 @@ This was the most critical vulnerability I uncovered during penetration testing.
 In the Part 1 prototype, we extracted the request body in Lua like this:
 
 ```lua
--- ❌ VULNERABILITY: Bypassed when payloads exceed 16KB!
+-- ❌ VULNERABILITY: Bypassed when the body outgrows Nginx's in-memory buffer!
 local body = ngx.req.get_body_data() or ""
 ```
 
 ### The Mechanism
-Nginx allocates a small in-memory buffer (`client_body_buffer_size`, default 8KB or 16KB on 64-bit systems) to hold incoming request bodies. 
+Nginx allocates a small in-memory buffer (`client_body_buffer_size`) to hold incoming request bodies. The default is two memory pages: 8 KB on x86-64, 16 KB on some other 64-bit platforms. In the source it's literally `2 * ngx_pagesize`.
 
 When a request body is small, Nginx stores it entirely in RAM, and `ngx.req.get_body_data()` returns the string.
 
-However, if a request body exceeds 16KB, Nginx flushes the excess bytes into a temporary file on disk (under `/var/lib/nginx/body/...`). When this occurs, **`ngx.req.get_body_data()` returns `nil`!**
+However, if a request body is larger than that buffer, Nginx flushes the excess bytes into a temporary file on disk (under `/var/lib/nginx/body/...`). When this occurs, **`ngx.req.get_body_data()` returns `nil`!**
 
 ### The Exploit
 An attacker can bypass the entire AI firewall simply by padding their exploit with 20KB of junk comments or whitespace:
@@ -79,8 +81,9 @@ end
 ### ⚠️ Pitfall: `io.open` Is a Blocking Call in a Single-Threaded Event Loop
 
 OpenResty's Lua VM is single-threaded and cooperatively scheduled. Cosockets
-(`ngx.location.capture`, `httpc:*`, `ngx.timer`) yield, which is what lets one
-worker multiplex thousands of connections. The Lua standard library does not:
+(`ngx.socket.tcp` and libraries built on it, like `resty.http`) yield, as do
+subrequests through `ngx.location.capture`, which is what lets one worker
+multiplex thousands of connections. The Lua standard library does not:
 `io.open`, `fh:read`, and `fh:close` are ordinary blocking syscalls that hold
 the worker until the kernel returns.
 
@@ -120,51 +123,71 @@ The trap from §1 stops existing when `client_body_buffer_size` is at least
 `client_max_body_size`. That is a one-line fix to a bug that took an
 adversary one HTTP header to exploit.
 
+**It doesn't close the padding trick, though.** The sidecar from Part 1
+tokenizes with `truncation=True, max_length=512`. The body goes at the end of
+the text it builds, so anything past the 512th token is cut off before the
+model sees it. Pad the front of the body and the payload gets dropped by the
+tokenizer instead of by Nginx. To actually see the whole request, split the
+text into overlapping 512-token windows, score each one and block on the
+highest score, or reject bodies longer than the model can read.
+
 If you genuinely must inspect large bodies, read them asynchronously via
 `ngx.location.capture` to an `internal` location, or copy to shared memory with
 `ngx.on_abort`-aware coroutines — never `io.*` on the request path.
 
 ---
 
-## 2. Socket Exhaustion: Keepalive Pools under Load
+## 2. Socket Churn: The Sidecar Was Closing Every Connection
 
-In the initial implementation, we used `httpc:request_uri()` to make HTTP calls to `127.0.0.1:5000`.
+Under load, every inspection turned out to be a brand-new TCP connection to `127.0.0.1:5000`: a handshake per request, and closed sockets sitting in **`TIME_WAIT`** for a minute each. When the Nginx side is the one that closes first, those `TIME_WAIT` sockets hold ephemeral ports, and at a high enough rate `connect()` starts failing with `cannot assign requested address`.
 
-While `request_uri()` is non-blocking thanks to OpenResty cosockets, it opens and closes a new TCP connection on every request.
+The tempting explanation is that `httpc:request_uri()` opens a fresh connection for every call. It doesn't. After reading the body, `request_uri()` calls `set_keepalive()` itself and puts the socket back in the pool unless you pass `keepalive = false` (see `request_uri` in [`lib/resty/http.lua`](https://github.com/ledgetech/lua-resty-http/blob/master/lib/resty/http.lua)). Rewriting it as `connect` / `request` / `set_keepalive` by hand changes nothing.
 
-Under high traffic (500+ RPS), closing thousands of TCP connections per second floods the kernel with sockets stuck in the **`TIME_WAIT`** state. Eventually, the operating system runs out of ephemeral ports, throwing `cannot assign requested address` errors.
+The connections were being closed from the other end. lua-resty-http only pools a connection the server says it can reuse, and on HTTP/1.1 a `Connection: close` response header means it can't. The sidecar in Part 1 runs on Flask's built-in server, Werkzeug, and Werkzeug sends `Connection: close` on **every** response, `threaded=True` or not. Its source is blunt about why: keep-alive connections "aren't handled well by Python's http.server". gunicorn's default `sync` worker does the same thing.
 
-### The Fix: Explicit Connection Pooling
-Reuse TCP connections to the sidecar with `httpc:set_keepalive`:
+You can see it without Nginx in the way. Ask curl to send two requests and watch whether it reuses the connection:
+
+```bash
+curl -sv -X POST http://127.0.0.1:5000/analyze http://127.0.0.1:5000/analyze 2>&1 \
+  | grep -E '^< Connection|Re-using|Closing'
+```
+
+With Flask 3.1.0, Werkzeug 3.1.3 and gunicorn 23.0.0:
+
+```text
+# app.run(threaded=True)  — and the same for: gunicorn app:app  (sync worker)
+< Connection: close
+* Closing connection
+< Connection: close
+* Closing connection
+
+# gunicorn -k gthread --threads 4 --keep-alive 75 app:app
+< Connection: keep-alive
+* Re-using existing connection with host 127.0.0.1
+< Connection: keep-alive
+```
+
+### The Fix: A Server That Keeps Connections Open, Then a Big Enough Pool
+
+Run the model behind a server that supports keep-alive:
+
+```bash
+gunicorn -b 127.0.0.1:5000 -k gthread --threads 4 --keep-alive 75 model_service:app
+```
+
+Then size the pool. OpenResty keeps at most `lua_socket_pool_size` idle connections per upstream, **per worker**, and the default is 30. If one worker has more inspections in flight than that, the extra sockets get closed when they're returned, and you're back to churning. `request_uri()` takes the pool settings directly:
 
 ```lua
-local http = require "resty.http"
-local httpc = http.new()
-httpc:set_timeouts(50, 100, 100) -- connect, send, read (ms)
-
-local ok, err = httpc:connect("127.0.0.1", 5000)
-if not ok then
-    ngx.log(ngx.ERR, "Sidecar connect failed: ", err)
-    return -- Fail open
-end
-
-local res, err = httpc:request({
-    path = "/analyze",
+local res, err = httpc:request_uri("http://127.0.0.1:5000/analyze", {
     method = "POST",
-    headers = { ["Content-Type"] = "application/json" },
     body = cjson.encode(payload),
+    headers = { ["Content-Type"] = "application/json" },
+    keepalive_timeout = 60000, -- ms a pooled socket may sit idle
+    keepalive_pool = 64,       -- idle sockets kept per worker
 })
-
-if not res then
-    ngx.log(ngx.ERR, "Sidecar request error: ", err)
-    return -- Fail open
-end
-
-local response_body = res:read_body()
-
--- Keep socket alive: 60s idle timeout, pool size of 128 connections
-httpc:set_keepalive(60000, 128)
 ```
+
+Keep the Lua idle timeout shorter than the server's (60 s against gunicorn's 75 s here). Then Nginx drops an idle socket before the sidecar does, instead of picking one out of the pool that the other side has just closed.
 
 ---
 
@@ -309,7 +332,7 @@ def normalize_payload(text: str) -> str:
 
 1. **Set `client_body_buffer_size >= client_max_body_size`.** One line in `server {}` removes the disk-spill bypass entirely, because the body never leaves memory. Everything below is a mitigation for the case where you cannot bound the body size.
 2. **Never use `io.open` on the request path.** OpenResty's Lua VM is single-threaded; a blocking read stalls the worker. If you must read a spooled body, use `ngx.location.capture` against an `internal` location.
-3. **Pool sidecar connections** with `set_keepalive(timeout, size)` to avoid `TIME_WAIT` exhaustion. Return sockets to the pool on **every** exit path, including error paths — a socket dropped on an error is a socket that has to be reconnected next time, which is exactly the wrong behaviour under load.
+3. **Make sure the sidecar connection is actually reused.** `request_uri()` already pools, but only if the server answers with keep-alive. Werkzeug and gunicorn's `sync` worker always send `Connection: close`. Check with `curl -v`, run the model under something like gunicorn's `gthread` worker, and raise `keepalive_pool` above OpenResty's default of 30 if a worker has more inspections in flight than that.
 4. **Circuit-break the model, but never let the circuit be the only defence.** A `lua_shared_dict` breaker with a 5-failure threshold and a 30-second fail-open window is a 30-second WAF outage waiting for someone to induce it. Put OWASP CRS or an equivalent deterministic filter underneath, so "circuit open" degrades to "weaker inspection" rather than "no inspection".
 5. **Alert on breaker trips.** An unmonitored fail-open circuit is indistinguishable from a successful attack.
 6. **Validate the model offline.** The `> 0.85` threshold in Part 1 has no stated evaluation methodology. Before it gates production traffic, it needs a labelled set, a false-positive budget, and an ROC curve — otherwise you are trusting a number you cannot defend to an attacker who can measure it.

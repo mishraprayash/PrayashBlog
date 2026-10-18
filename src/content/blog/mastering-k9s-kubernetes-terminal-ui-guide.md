@@ -249,7 +249,7 @@ terminal that scrolled past an hour ago. It does not stop a `kubectl delete`.
 Pair it with §4.2 and treat the skin as a second signal, never the only one.
 
 ### 4.2 Hardening with Read-Only Mode
-In standard k8s, pressing `Ctrl+D` immediately sends a `DELETE` API call to terminate a pod, and `e` opens the live YAML manifest in `vim`.
+In k9s, pressing `Ctrl+D` immediately sends a `DELETE` API call to terminate a pod, and `e` opens the live YAML manifest in `vim`.
 
 To guarantee you never accidentally kill workloads during an audit or triage session, run k9s in **Read-Only Mode**:
 
@@ -415,7 +415,7 @@ hardened pod is its own outage.
 a file. It is the wrong tool for a human mid-incident, because it makes you
 retype what you already know and shows you one object at a time.
 
-k8s is faster once it is configured — and "configured" is doing real work in
+k9s is faster once it is configured — and "configured" is doing real work in
 this post. The parts that matter are not the hotkeys, they are:
 
 * **Per-cluster skins** so a production context cannot be mistaken for local.

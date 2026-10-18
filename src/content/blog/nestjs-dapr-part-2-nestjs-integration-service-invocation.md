@@ -61,7 +61,7 @@ nestjs-dapr-monorepo/
 │       │   ├── dto/
 │       │   │   └── payment.dto.ts   # Inter-service request/response DTOs
 │       │   ├── events/
-│       │   │   └── order-created.ts # W3C CloudEvent contracts
+│       │   │   └── order-created.ts # CloudEvents contracts
 │       │   └── index.ts
 │       └── tsconfig.lib.json
 │

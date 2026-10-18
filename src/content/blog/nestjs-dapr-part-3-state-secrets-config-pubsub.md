@@ -317,7 +317,7 @@ export class DaprDynamicConfigService implements OnModuleInit, OnModuleDestroy {
 
 ## 4. Pub/Sub: Asynchronous Event-Driven Architecture
 
-In event-driven microservices, services communicate asynchronously via topics. Dapr wraps messages in standard **W3C CloudEvents** format, ensuring distributed trace context flows across message boundaries automatically.
+In event-driven microservices, services communicate asynchronously via topics. Dapr wraps messages in a **CloudEvents** envelope (a CNCF spec) and carries the W3C trace context (`traceparent`) inside it, so traces follow a message across services without any code from you.
 
 ```
 ┌────────────────────────────────────────────────────────┐

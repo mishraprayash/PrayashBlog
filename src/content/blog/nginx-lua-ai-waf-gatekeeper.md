@@ -198,7 +198,8 @@ def analyze():
     })
 
 if __name__ == "__main__":
-    # Multi-threaded server to handle concurrent inference requests
+    # Flask's dev server: fine for trying this out. Part 2 explains why it
+    # can't stay in front of Nginx under load.
     app.run(host="127.0.0.1", port=5000, threaded=True)
 ```
 
@@ -227,7 +228,7 @@ The upstream application never receives the malicious request, keeping backend d
 Building the initial prototype was straightforward—making it reliable and secure under real-world production traffic was where the real challenge began.
 
 In **[Part 2](/blog/nginx-lua-ai-waf-traps-bypasses)**, we dive into:
-1. **The Silent WAF Bypass**: How payloads > 16 KB cause `ngx.req.get_body_data()` to return `nil`, allowing attackers to bypass the firewall completely.
-2. **Socket Exhaustion & Keepalives**: Avoiding `TIME_WAIT` port exhaustion under high RPS.
+1. **The Silent WAF Bypass**: How a body bigger than Nginx's in-memory buffer (8 KB by default on x86-64) makes `ngx.req.get_body_data()` return `nil`, letting attackers bypass the firewall completely.
+2. **Socket Churn**: Why every inspection opened a new connection to the sidecar, and why the cause wasn't in the Lua code.
 3. **Availability & Circuit Breakers**: Building in-memory `lua_shared_dict` circuit breakers to eliminate latency degradation when the model is slow.
 4. **Adversarial Token Evasion**: Defending against URL double-encoding and Unicode homoglyphs.

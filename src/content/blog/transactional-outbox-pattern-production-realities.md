@@ -3,6 +3,8 @@ title: "The Transactional Outbox Pattern: Why Your 100-Line Node.js Script Will 
 slug: "transactional-outbox-pattern-production-realities"
 description: "The outbox pattern looks trivial on a whiteboard. Here is what actually happens when you roll your own in PostgreSQL: ghost rows, MVCC vacuum storms, and WAL disk crashes."
 publishDate: "2026-09-09T23:15:00Z"
+updatedDate: "2026-10-18T10:00:00Z"
+updateSummary: "Fixed the worker-sharding query in the ordering section. `hashtext(...) % 4` produces negative buckets for about a third of keys, and those events were never published. It now uses `& 3`. Also made clear that the Kafka message key works alongside the bucketing, not instead of it."
 author: "Prayash Mishra"
 tags: ["architecture", "backend", "postgresql", "kafka", "distributed-systems", "microservices"]
 category: "engineering"
@@ -25,7 +27,7 @@ It passes code review. It runs fine in staging. Then, on a random Tuesday, a net
 
 The whiteboard answer is the **Transactional Outbox pattern**: instead of talking to the broker directly, you write the event into an `outbox` table inside the same database transaction. An asynchronous worker polls the table and forwards the events.
 
-It looks so simple that almost every engineer writes a 50-line cron or `setInterval` loop and calls it a day.
+It looks so simple that almost every engineer writes a 100-line cron or `setInterval` loop and calls it a day.
 
 Here is why that home-rolled script breaks the moment you put real traffic through it, and what building this reliably in PostgreSQL actually looks like.
 
@@ -138,12 +140,20 @@ Worker Pod A encounters a 200ms Node.js event-loop stall or Kafka socket reconne
 Downstream consumers receive `OrderCancelled` **before** `OrderCreated`. They throw an unhandled `OrderNotFoundException` and crash into a dead-letter loop.
 
 ### The Fix
-If events for the same entity must be processed in order, you cannot let arbitrary workers grab arbitrary rows:
-* **Bucket by Aggregate Key**: Route events to specific workers by hashing the entity ID:
-  ```sql
-  WHERE status = 'PENDING' AND (hashtext(aggregate_id) % 4) = :worker_index
-  ```
-* **Or assign keys in Kafka**: Ensure the relay uses `aggregate_id` (e.g. `order_id`) as the Kafka partition key so downstream consumers process that specific order sequentially.
+If events for the same entity must be processed in order, you cannot let arbitrary workers grab arbitrary rows.
+
+**Pin each aggregate to one worker.** Hash the entity ID and give each worker one bucket:
+
+```sql
+WHERE status = 'PENDING'
+  AND (hashtext(aggregate_id) & 3) = :worker_index   -- 4 workers, buckets 0..3
+```
+
+Use `& 3`, not `% 4`. `hashtext()` returns a signed 32-bit integer, and Postgres's `%` keeps the sign of the left side, so `hashtext(x) % 4` lands anywhere from -3 to 3. No worker asks for bucket -2, so those rows are never published, and nothing errors. Over 10,000 sample keys on Postgres 16, `% 4` left 3,721 rows (37%) with no owner. `& 3` split the same keys 2,550 / 2,411 / 2,531 / 2,508. The mask only works when the worker count is a power of two, so keep it one.
+
+Changing the worker count moves almost every aggregate to a different bucket. During a rollout from 4 to 8 workers, an old and a new worker can both own the same order. Drain the pending rows, or stop the old workers, before the new ones start.
+
+**Then key by aggregate in Kafka as well.** Use `aggregate_id` (e.g. `order_id`) as the message key, so every event for an order lands in one partition and consumers read them in the order they were published. This doesn't replace the bucketing above. If two relay workers publish one order's events out of sequence, Kafka will store them out of sequence, faithfully.
 
 ---
 

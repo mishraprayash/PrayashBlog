@@ -1,9 +1,9 @@
 export const SITE = {
   name: "Prayash Mishra",
   url: "https://prayashmishra.com",
-  tagline: "Distributed Systems & AI Engineer",
+  tagline: "Backend Engineer",
   description:
-    "Distributed Systems & AI Engineer specializing in cloud-native microservices, event-driven architectures, and intelligent agentic RAG systems.",
+    "Backend engineer writing about how distributed systems fail where they meet databases, message brokers, sidecars and the network, and what it takes to make them hold.",
   locale: "en_US",
 } as const;
 

@@ -446,18 +446,25 @@ SigV4. `ExposeHeaders` matters too: without it the browser cannot read
 `ETag` or `x-amz-version-id` from the response, so your client-side confirmation
 step has nothing to read.
 
-### Edge case: `us-east-1` path-style URLs are deprecated
+### Edge case: hand-built S3 URLs
 
-The example URL above is path-style:
+The URL in section 3 is virtual-hosted style, with the bucket in the hostname:
 
 ```
 https://my-bucket.s3.us-east-1.amazonaws.com/uploads/user-123/avatar.png
 ```
 
-AWS is retiring path-style addressing. Use virtual-hosted style — the SDK
-produces it by default for most regions, so this is mostly a matter of not
-hand-constructing URLs, and of not assuming a custom endpoint resolver is
-required for `us-east-1` specifically.
+Path-style puts the bucket in the path instead, and AWS has announced its
+deprecation:
+
+```
+https://s3.us-east-1.amazonaws.com/my-bucket/uploads/user-123/avatar.png
+```
+
+The SDK generates virtual-hosted URLs for you, so this only bites URLs you
+build by hand. The `publicUrl` in the confirm endpoint above is one: it
+hard-codes the global `s3.amazonaws.com` host. For a bucket outside
+`us-east-1`, put the region in the hostname.
 
 ---
 
