@@ -139,10 +139,10 @@ Shown only within a series. Outside a series, chronological prev/next is replace
 | From | To | Why |
 |---|---|---|
 | `/blog?tag={kept tag}` | `/tags/{tag}` | Tag links in old shares and in search caches |
-| `/blog?tag={dropped tag}` | the matching pillar or tag page (`backend`/`architecture` → `/blog`; `distributed-systems`/`event-driven` → `/topics/messaging`; `devops`/`cloud-native`/`observability` → `/topics/running-services`; `lua`/`waf`/`ml` → `/tags/nginx`; `s3` → `/tags/aws`; `redis`/`grpc` → `/tags/dapr`; `rabbitmq` → `/tags/queues`; `gcp`/`azure` → `/tags/kubernetes`) | No dead ends |
+| `/blog?tag={dropped tag}` | the matching pillar or tag page (`backend`/`architecture`: no redirect, `/blog` already shows everything; `distributed-systems`/`event-driven` → `/topics/messaging`; `devops`/`cloud-native`/`observability` → `/topics/running-services`; `lua`/`waf`/`ml` → `/tags/nginx`; `s3` → `/tags/aws`; `redis`/`grpc` → `/tags/dapr`; `rabbitmq` → `/tags/queues`; `gcp`/`azure` → `/tags/kubernetes`) | No dead ends |
 | `/blog?series={old id}` | `/series/{new id}` | The homepage currently links these |
-| `/blog?category=engineering` | `/blog` | Used in post breadcrumbs and JSON-LD |
-| `/blog?q=…` | `/blog` | The client-side search box is going away |
+| `/blog?category=engineering` | none needed | `/blog` ignores the query and renders the full list; a redirect to itself could loop |
+| `/blog?q=…` | none needed | same as above |
 
 All of these are 301s, except the trailing-slash 308 that Vercel issues itself.
 

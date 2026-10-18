@@ -6,10 +6,12 @@ publishDate: "2026-09-09T23:50:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Corrected how concurrent duplicates behave. With the claim and the business writes in one transaction, a duplicate never sees IN_PROGRESS. Postgres makes it wait on the key, then it replays the stored response. The handler now caps that wait with lock_timeout and only returns 409 when it expires. I also replaced the diagram, which the site wasn't rendering, and added the test results."
 author: "Prayash Mishra"
-tags: ["distributed-systems", "architecture", "backend", "postgresql"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Idempotency in Distributed Systems diagram showing request deduplication and safe state transitions"
+pillar: "messaging"
+tags: ["postgresql", "microservices"]
+series: "reliable-messaging"
+seriesPart: 3
+startHere: 2
+related: ["scaling-event-dispatching-nestjs-strategy-pattern"]
 draft: false
 ---
 

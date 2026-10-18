@@ -1,13 +1,13 @@
 ---
-title: "Part 2: Docker Multi-Stage Builds – Layer Optimization & Image Size Reduction"
+title: "Docker Multi-Stage Builds: Layer Optimization and Image Size"
 slug: "docker-production-traps-edge-cases"
 description: "How to shrink container images from 1.2GB to 140MB using multi-stage builds, BuildKit cache mounts, production pruning, and handling Linux kernel whiteout traps."
 publishDate: "2026-06-04T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["docker", "devops", "backend", "node"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Multi-stage Docker build pipeline diagram showing deps, builder, and minimal runner stages"
+pillar: "running-services"
+tags: ["docker", "node"]
+series: "docker-node"
+seriesPart: 2
 draft: false
 ---
 

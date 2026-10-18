@@ -4,10 +4,8 @@ slug: "mastering-k9s-kubernetes-terminal-ui-guide"
 description: "Connecting k9s to AWS EKS, Azure AKS, and GCP GKE: per-cluster skins, the real config paths, ephemeral debug containers that fail on hardened pods, and read-only hardening."
 publishDate: "2026-08-28T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["kubernetes", "devops", "aws", "azure", "gcp", "cloud-native"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "k9s terminal interface connecting to multi-cloud AWS EKS, Azure AKS, and GCP GKE clusters"
+pillar: "running-services"
+tags: ["kubernetes", "aws"]
 draft: false
 ---
 

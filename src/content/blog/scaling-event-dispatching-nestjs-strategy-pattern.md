@@ -4,10 +4,9 @@ slug: "scaling-event-dispatching-nestjs-strategy-pattern"
 description: "How to eliminate massive switch statements in event-driven backends: polymorphic class-validator DTOs, dynamic NestJS strategy registries, hierarchical webhook handlers, and isolated queues."
 publishDate: "2026-07-16T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "typescript", "architecture", "backend", "event-driven"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "NestJS Strategy and Factory Pattern architecture diagram for multi-channel event dispatching"
+pillar: "messaging"
+tags: ["nestjs", "typescript", "queues"]
+related: ["idempotency-in-distributed-systems"]
 draft: false
 ---
 

@@ -1,13 +1,13 @@
 ---
-title: "Part 1: Building Cloud-Native Microservices with NestJS and Dapr – Core Fundamentals & Architecture"
+title: "NestJS and Dapr: Core Fundamentals and Architecture"
 slug: "nestjs-dapr-core-fundamentals-architecture"
 description: "Why I stopped pulling cloud SDKs into NestJS: exploring Dapr sidecar runtime mechanics, protocol abstraction, and how it compares to native @nestjs/microservices."
 publishDate: "2026-08-01T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "dapr", "microservices", "cloud-native", "architecture", "distributed-systems"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "NestJS and Dapr sidecar runtime architecture diagram showing protocol abstraction and building blocks"
+pillar: "running-services"
+tags: ["nestjs", "dapr", "microservices"]
+series: "nestjs-dapr"
+seriesPart: 1
 draft: false
 ---
 

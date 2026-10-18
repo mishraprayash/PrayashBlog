@@ -1,13 +1,14 @@
 ---
-title: "Part 3: Building Cloud-Native Microservices with NestJS and Dapr – State, Secrets, Config & Pub/Sub"
+title: "NestJS and Dapr: State, Secrets, Configuration and Pub/Sub"
 slug: "nestjs-dapr-state-secrets-config-pubsub"
 description: "Implementing Dapr building blocks in NestJS: key-value state with ETag optimistic concurrency, dynamic secrets, real-time configuration streams, and CloudEvents pub/sub."
 publishDate: "2026-08-14T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "dapr", "microservices", "event-driven", "redis", "kafka"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Dapr building blocks architecture showing State Store, Secret Store, Configuration, and PubSub integration in NestJS"
+pillar: "running-services"
+tags: ["nestjs", "dapr", "microservices", "kafka"]
+series: "nestjs-dapr"
+seriesPart: 3
+related: ["transactional-outbox-pattern-production-realities", "idempotency-in-distributed-systems"]
 draft: false
 ---
 

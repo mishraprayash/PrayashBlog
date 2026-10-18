@@ -1,0 +1,266 @@
+/* Post body. Uses .post-body rather than .prose so it can't collide with the
+   Tailwind typography plugin while pages are being migrated. */
+
+.post-body {
+  font-family: var(--font-serif);
+  font-size: var(--text-body);
+  line-height: 1.65;
+  color: var(--ink);
+  font-variant-numeric: oldstyle-nums;
+  overflow-wrap: break-word;
+}
+.post-body > * { margin-block: 0; }
+.post-body > * + * { margin-top: 1em; }
+
+.post-body h2,
+.post-body h3,
+.post-body h4 {
+  position: relative;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  scroll-margin-top: calc(var(--header-h) + 1.5rem);
+  font-variant-numeric: lining-nums;
+}
+.post-body h2 { font-size: var(--text-h2); line-height: 1.25; font-weight: 650; margin-top: 2.2em; }
+.post-body h3 { font-size: var(--text-h3); line-height: 1.3; font-weight: 600; margin-top: 1.8em; }
+.post-body h4 { font-size: var(--text-h4); line-height: 1.4; font-weight: 600; margin-top: 1.6em; }
+.post-body h2 + *,
+.post-body h3 + *,
+.post-body h4 + * { margin-top: 0.6em; }
+
+.heading-anchor {
+  position: absolute;
+  left: -1.1em;
+  top: 0;
+  padding-right: 0.3em;
+  color: var(--muted);
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 0;
+}
+.post-body :is(h2, h3):hover .heading-anchor,
+.heading-anchor:focus-visible { opacity: 1; }
+@media (max-width: 767px) {
+  .heading-anchor { display: none; }
+}
+
+.post-body a {
+  color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+.post-body a:hover { color: var(--accent-hover); text-decoration-thickness: 2px; }
+.post-body a.heading-anchor { color: var(--muted); text-decoration: none; }
+
+.post-body strong { font-weight: 650; }
+
+.post-body ul,
+.post-body ol { padding-left: 1.4em; }
+.post-body li + li { margin-top: 0.35em; }
+.post-body :is(li, blockquote, .callout) > * + * { margin-top: 0.8em; }
+.post-body li > .code-block,
+.post-body li > .table-wrap { margin-top: 0.8em; }
+.post-body li > ul,
+.post-body li > ol { margin-top: 0.35em; }
+.post-body li::marker { color: var(--muted); }
+.post-body ol > li::marker { font-variant-numeric: lining-nums; }
+
+.post-body hr {
+  border: 0;
+  height: 1px;
+  background: var(--rule);
+  margin: 2.5em 0;
+}
+
+/* Quotations (callouts are asides, below). */
+.post-body blockquote {
+  margin-left: 0;
+  padding-left: 1.25em;
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-2);
+  font-style: italic;
+}
+.post-body blockquote > * + * { margin-top: 0.8em; }
+
+/* ---------- Inline code ---------- */
+.post-body :not(pre) > code {
+  font-size: 0.84em;
+  padding: 0.1em 0.3em;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--raised);
+  color: var(--ink);
+  font-variant-numeric: lining-nums;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.post-body a code { color: inherit; }
+
+/* ---------- Code blocks ---------- */
+.code-block {
+  margin-top: 1.4em;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.post-body > .code-block + * { margin-top: 1.4em; }
+.code-block__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--rule);
+  font: 400 var(--text-tiny) / 1.4 var(--font-ui);
+  color: var(--muted);
+}
+.code-block__title { color: var(--ink-2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code-block__title:empty,
+.code-block__lang:empty { display: none; }
+.code-block__copy {
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: 500 var(--text-tiny) / 1 var(--font-ui);
+  cursor: pointer;
+}
+.code-block__copy:hover { color: var(--ink); text-decoration: underline; }
+.no-js .code-block__copy { display: none; }
+
+.code-block pre {
+  margin: 0;
+  padding: 14px 0;
+  overflow-x: auto;
+  background: var(--raised);
+  font-size: var(--text-code);
+  line-height: 1.6;
+  tab-size: 2;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.code-block pre:focus-visible { outline-offset: -2px; }
+.code-block code { display: block; width: max-content; min-width: 100%; }
+.code-block .line { display: inline-block; width: 100%; padding: 0 var(--space-4); box-sizing: border-box; }
+.code-block--output .code-block__bar { font-style: italic; }
+
+/* Dual theme: Shiki emits --shiki-light / --shiki-dark on every token. */
+.astro-code,
+.astro-code span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+:root[data-theme="dark"] .astro-code,
+:root[data-theme="dark"] .astro-code span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
+/* {3-5} in the fence meta. The tint alone is too faint (1.12:1), so the
+   accent bar in the gutter carries the meaning. */
+.code-block .line.highlighted {
+  background: var(--line-hl);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.code-block .line.diff.add { background: rgb(46 106 58 / 0.12); }
+.code-block .line.diff.remove { background: rgb(163 38 27 / 0.1); }
+:root[data-theme="dark"] .code-block .line.diff.add { background: rgb(140 199 154 / 0.12); }
+:root[data-theme="dark"] .code-block .line.diff.remove { background: rgb(240 138 115 / 0.12); }
+
+/* ---------- Tables ---------- */
+.table-wrap {
+  margin-top: 1.4em;
+  overflow-x: auto;
+  border-top: 1px solid var(--rule-strong);
+}
+.post-body > .table-wrap + * { margin-top: 1.4em; }
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.table-wrap th {
+  background: var(--raised);
+  font: 600 var(--text-small) / 1.4 var(--font-ui);
+  color: var(--ink);
+  text-align: left;
+  vertical-align: bottom;
+}
+.table-wrap th,
+.table-wrap td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+.table-wrap td { min-width: 8ch; }
+.table-wrap :is(td, th)[align="right"] { text-align: right; }
+.table-wrap :is(td, th)[align="center"] { text-align: center; }
+
+/* ---------- Callouts ---------- */
+.callout {
+  --callout: var(--note);
+  margin-top: 1.4em;
+  padding: 14px 16px;
+  border-left: 3px solid var(--callout);
+  background: var(--raised);
+  font-size: 0.95em;
+}
+.post-body > .callout + * { margin-top: 1.4em; }
+.callout > * + * { margin-top: 0.7em; }
+.callout__label {
+  margin: 0;
+  font: 600 var(--text-small) / 1.4 var(--font-ui);
+  color: var(--callout);
+}
+.callout--tip { --callout: var(--tip); }
+.callout--caution { --callout: var(--caution); }
+.callout--warning { --callout: var(--accent); }
+
+/* ---------- Images and figures ---------- */
+.post-body img { max-width: 100%; height: auto; }
+.post-body figure { margin: 1.4em 0 0; }
+.post-body figcaption {
+  margin-top: var(--space-2);
+  font: 400 var(--text-small) / 1.5 var(--font-ui);
+  color: var(--muted);
+}
+
+/* ---------- Footnotes (GFM) ---------- */
+.post-body sup a { text-decoration: none; font: 600 0.75em / 1 var(--font-ui); padding: 0 0.1em; }
+.post-body .footnotes {
+  margin-top: 3em;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+  font: 400 var(--text-small) / 1.55 var(--font-ui);
+  color: var(--ink-2);
+}
+.post-body .footnotes h2 { font: 600 var(--text-ui) / 1.4 var(--font-ui); margin: 0; }
+
+/* Wide content (code, tables) may use the empty notes column on big screens. */
+@media (min-width: 1280px) {
+  .post-body > .code-block,
+  .post-body > .table-wrap {
+    margin-right: calc(-1 * var(--wide-bleed, 0px));
+  }
+}
+
+@media (max-width: 639px) {
+  /* Let code and tables use the full width on phones. */
+  .post-body > .code-block,
+  .post-body > .table-wrap {
+    margin-left: calc(-1 * var(--gutter));
+    margin-right: calc(-1 * var(--gutter));
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+}

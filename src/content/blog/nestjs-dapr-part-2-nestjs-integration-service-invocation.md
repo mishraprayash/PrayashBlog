@@ -1,13 +1,14 @@
 ---
-title: "Part 2: Building Cloud-Native Microservices with NestJS and Dapr – NestJS Module & Service Invocation"
+title: "NestJS and Dapr: A Dapr Module and Service Invocation"
 slug: "nestjs-dapr-nestjs-integration-service-invocation"
 description: "How to integrate Dapr cleanly in NestJS: building a dynamic DaprModule, structuring independent microservices, and handling synchronous Service Invocation with mTLS."
 publishDate: "2026-08-07T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "dapr", "microservices", "typescript", "architecture", "grpc"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "NestJS Service Invocation flow through Dapr sidecars using HTTP and gRPC protocols"
+pillar: "running-services"
+tags: ["nestjs", "dapr", "microservices", "typescript"]
+series: "nestjs-dapr"
+seriesPart: 2
+related: ["idempotency-in-distributed-systems"]
 draft: false
 ---
 

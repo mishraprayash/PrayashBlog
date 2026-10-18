@@ -1,7 +1,15 @@
 // @ts-check
 import { defineConfig } from "astro/config";
-import tailwindcss from "@tailwindcss/vite";
 import sitemap from "@astrojs/sitemap";
+import { rehypeHeadingIds } from "@astrojs/markdown-remark";
+import { transformerMetaHighlight, transformerNotationDiff } from "@shikijs/transformers";
+import { notebookDark, notebookLight } from "./src/lib/markdown/shiki-themes";
+import {
+  rehypeCallouts,
+  rehypeHeadingAnchors,
+  rehypeTables,
+  transformerCodeBlock,
+} from "./src/lib/markdown/rehype-plugins";
 
 // https://astro.build/config
 export default defineConfig({
@@ -9,21 +17,17 @@ export default defineConfig({
   // One URL per page: no trailing slash. vercel.json redirects /x/ to /x.
   trailingSlash: "never",
   integrations: [sitemap()],
-  vite: {
-    plugins: [tailwindcss()],
-  },
   markdown: {
     shikiConfig: {
-      // Dual themes: tokens are emitted as CSS custom properties and the
-      // active palette is switched by the `.dark` class in global.css. The
-      // previous single `github-dark-default` theme meant light mode rendered
-      // near-black code slabs on a cream page.
-      themes: {
-        light: "github-light-default",
-        dark: "github-dark-default",
-      },
+      // Custom theme pair built from the page palette; colours are switched by
+      // [data-theme] in src/styles/prose.css.
+      themes: { light: notebookLight, dark: notebookDark },
       defaultColor: false,
       wrap: false,
+      transformers: [transformerMetaHighlight(), transformerNotationDiff(), transformerCodeBlock()],
     },
+    // Custom plugins need the unified pipeline (@astrojs/markdown-remark);
+    // rehypeHeadingIds runs first so the heading anchors have ids to link to.
+    rehypePlugins: [rehypeHeadingIds, rehypeCallouts, rehypeTables, rehypeHeadingAnchors],
   },
 });

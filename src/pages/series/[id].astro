@@ -1,0 +1,36 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPosts, getSeries, postUrl, readingTime, type SeriesInfo } from "../../lib/posts";
+
+export async function getStaticPaths() {
+  return getSeries(await getPosts()).map((series) => ({ params: { id: series.id }, props: { series } }));
+}
+
+const { series } = Astro.props as { series: SeriesInfo };
+const total = series.parts.reduce((n, p) => n + readingTime(p.body), 0);
+---
+
+<BaseLayout title={series.title} description={series.description}>
+  <div class="page">
+    <div class="page__col">
+      <header>
+        <p class="inline-nav"><a href="/series">Series</a></p>
+        <h1 class="page-title">{series.title}</h1>
+        <p class="page-lede">{series.description}</p>
+        <p class="def-list__meta" style="margin-top: var(--space-3)">{series.parts.length} parts · {total} min in total</p>
+      </header>
+
+      <ol class="def-list series-parts">
+        {series.parts.map((p, i) => (
+          <li>
+            <p class="def-list__meta">Part {i + 1} · {readingTime(p.body)} min</p>
+            <a class="def-list__name" href={postUrl(p)}>{p.data.title}</a>
+            <p class="def-list__desc">{p.data.description}</p>
+          </li>
+        ))}
+      </ol>
+
+      <p class="section-more"><a href={postUrl(series.parts[0])}>Start with part 1 →</a></p>
+    </div>
+  </div>
+</BaseLayout>

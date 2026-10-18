@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPosts, getSeries, readingTime } from "../../lib/posts";
+
+const series = getSeries(await getPosts());
+---
+
+<BaseLayout title="Series" description="Multi-part posts, meant to be read in order.">
+  <div class="page">
+    <div class="page__col">
+      <header>
+        <p class="inline-nav"><a href="/blog">Writing</a></p>
+        <h1 class="page-title">Series</h1>
+        <p class="page-lede">Multi-part posts, meant to be read in order.</p>
+      </header>
+      <ul class="def-list">
+        {series.map((s) => (
+          <li>
+            <a class="def-list__name" href={`/series/${s.id}`}>{s.title}</a>
+            <p class="def-list__desc">{s.description}</p>
+            <p class="def-list__meta">
+              {s.parts.length} parts · {s.parts.reduce((n, p) => n + readingTime(p.body), 0)} min
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

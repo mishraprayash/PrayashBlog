@@ -1,0 +1,120 @@
+---
+export interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const items = Astro.props.headings
+  .filter((h) => h.depth === 2 || h.depth === 3)
+  // The heading anchor plugin appends a "#" link to each heading.
+  .map((h) => ({ ...h, text: h.text.replace(/\s*#$/, "") }));
+const sections = items.filter((h) => h.depth === 2).length;
+const show = sections >= 4;
+---
+
+{show && (
+  <>
+    <nav class="toc toc--rail" aria-label="Contents">
+      <p class="toc__label">Contents</p>
+      <ol class="toc__list">
+        {items.map((h) => (
+          <li class={h.depth === 3 ? "toc__sub" : undefined}>
+            <a href={`#${h.slug}`} data-toc-link={h.slug}>{h.text}</a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+
+    <details class="toc toc--inline">
+      <summary>Contents ({sections} sections)</summary>
+      <ol class="toc__list">
+        {items.filter((h) => h.depth === 2).map((h) => (
+          <li><a href={`#${h.slug}`}>{h.text}</a></li>
+        ))}
+      </ol>
+    </details>
+  </>
+)}
+
+<script>
+  // Marks the section currently being read in the side ToC.
+  const links = new Map(
+    [...document.querySelectorAll<HTMLAnchorElement>("[data-toc-link]")].map((a) => [a.dataset.tocLink!, a]),
+  );
+  if (links.size) {
+    let current: HTMLAnchorElement | undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const link = links.get(entry.target.id);
+          if (!link || link === current) continue;
+          current?.removeAttribute("aria-current");
+          link.setAttribute("aria-current", "location");
+          current = link;
+        }
+      },
+      { rootMargin: "-72px 0px -70% 0px" },
+    );
+    for (const id of links.keys()) {
+      const heading = document.getElementById(id);
+      if (heading) observer.observe(heading);
+    }
+  }
+</script>
+
+<style>
+  .toc {
+    font: 400 var(--text-small) / 1.45 var(--font-ui);
+  }
+  .toc__label {
+    margin: 0 0 var(--space-2);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .toc a {
+    display: block;
+    padding: 5px 0 5px var(--space-3);
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .toc a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 0.18em; }
+  .toc a[aria-current] {
+    color: var(--ink);
+    border-left-color: var(--accent);
+  }
+  .toc__sub a { padding-left: calc(var(--space-3) + var(--space-4)); }
+
+  .toc--rail {
+    display: none;
+  }
+  .toc--inline {
+    margin: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .toc--inline summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--ink-2);
+    font-weight: 600;
+  }
+  .toc--inline .toc__list { padding-bottom: var(--space-3); }
+
+  @media (min-width: 1280px) {
+    .toc--rail {
+      display: block;
+      position: sticky;
+      top: calc(var(--header-h) + var(--space-6));
+      max-height: calc(100vh - var(--header-h) - var(--space-8));
+      overflow-y: auto;
+    }
+    .toc--inline { display: none; }
+  }
+</style>

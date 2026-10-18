@@ -6,11 +6,11 @@ publishDate: "2026-09-09T23:15:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Fixed the worker-sharding query in the ordering section. `hashtext(...) % 4` produces negative buckets for about a third of keys, and those events were never published. It now uses `& 3`. Also made clear that the Kafka message key works alongside the bucketing, not instead of it."
 author: "Prayash Mishra"
-tags: ["architecture", "backend", "postgresql", "kafka", "distributed-systems", "microservices"]
-category: "engineering"
-featured: true
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Transactional Outbox Pattern architecture diagram showing dual-write failure and outbox table relay"
+pillar: "messaging"
+tags: ["postgresql", "kafka", "microservices"]
+series: "reliable-messaging"
+seriesPart: 2
+startHere: 1
 draft: false
 ---
 

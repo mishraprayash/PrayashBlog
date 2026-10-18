@@ -1,243 +1,75 @@
 ---
-import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { seriesCatalog } from "../data/series";
+import PostList from "../components/PostList.astro";
+import { PILLARS, PILLAR_IDS } from "../data/taxonomy";
 import { SITE } from "../lib/seo";
+import { getPosts, getSeries, postsByPillar } from "../lib/posts";
 
-const allPosts = await getCollection("blog", ({ data }) => {
-  if (import.meta.env.PROD) return !data.draft;
-  return true;
-});
+const posts = await getPosts();
+const seriesTotals = new Map(getSeries(posts).map((s) => [s.id, s.parts.length]));
+const startHere = posts
+  .filter((p) => p.data.startHere)
+  .sort((a, b) => a.data.startHere! - b.data.startHere!);
+const recent = posts.slice(0, 5);
 
-const publishedPosts = allPosts.sort((a, b) => {
-  const dateA = a.data.updatedDate ? Math.max(a.data.publishDate.getTime(), a.data.updatedDate.getTime()) : a.data.publishDate.getTime();
-  const dateB = b.data.updatedDate ? Math.max(b.data.publishDate.getTime(), b.data.updatedDate.getTime()) : b.data.publishDate.getTime();
-  return dateB - dateA;
-});
-
-// Only surface series whose parts are actually published, so the homepage can
-// never link a reader into an incomplete thread.
-const liveIds = new Set(publishedPosts.map((p) => p.id));
-const publishedSeries = seriesCatalog
-  .map((series) => ({
-    ...series,
-    posts: series.posts.filter((p) => liveIds.has(p.slug)),
-  }))
-  .filter((series) => series.posts.length > 0);
-
-// `featured: true` in frontmatter wins; otherwise fall back to the newest post
-// (by publish or last-update date) so the slot is never empty.
-const featuredPost =
-  publishedPosts.find((post) => post.data.featured) ?? publishedPosts[0];
-const featuredSeriesInfo = featuredPost
-  ? publishedSeries.find((s) => s.posts.some((p) => p.slug === featuredPost.id))
-  : undefined;
+// One line on why each "Start here" post is worth reading. Edit freely;
+// these are meant to sound like you recommending your own work.
+const startNotes: Record<string, string> = {
+  "transactional-outbox-pattern-production-realities":
+    "Why the obvious polling relay loses events, and what Postgres does to you once you fix that.",
+  "idempotency-in-distributed-systems":
+    "Why a Redis lock isn't idempotency, and how to make retries safe inside one Postgres transaction.",
+  "nginx-lua-ai-waf-traps-bypasses":
+    "The ways an ML filter on the request path fails open or gets bypassed, and what holds up.",
+};
 ---
 
-<BaseLayout
-  title={SITE.name}
-  titleOverride={`${SITE.name} — ${SITE.tagline}`}
-  description={SITE.description}
->
-  <div class="mx-auto max-w-shell px-5 sm:px-8 py-12 sm:py-20 relative z-10">
-    <!-- Hero / Profile Section -->
-    <section class="mb-24 grid gap-12 lg:grid-cols-12 items-center">
-      <div class="lg:col-span-7 space-y-6">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono font-medium bg-paper-200 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-paper-400 dark:border-brand-500/20">
-          <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400 animate-pulse"></span>
-          backend &middot; distributed systems
-        </div>
-
-        <h1 class="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tighter text-paper-950 dark:text-zinc-50 leading-[1.05]">
-          Prayash Mishra
-        </h1>
-
-        <p class="text-lg sm:text-xl text-paper-900 dark:text-zinc-300 leading-relaxed max-w-2xl">
-          I'm a backend engineer. I write about how distributed systems fail where they meet databases, message brokers, sidecars and the network, and what it takes to make them hold.
+<BaseLayout title={SITE.name} titleOverride={`${SITE.name}: ${SITE.tagline}`} description={SITE.description}>
+  <div class="page">
+    <div class="page__col">
+      <section>
+        <h1 class="page-title">Prayash Mishra</h1>
+        <p class="page-lede">
+          I'm a backend engineer. I write about how distributed systems fail where they meet databases,
+          message brokers, sidecars and the network, and what it takes to make them hold. Most of these posts
+          come out of problems I worked through on a recent project.
         </p>
+        <ul class="page-links">
+          <li><a href="/blog">All writing</a></li>
+          <li><a href="https://github.com/mishraprayash">GitHub</a></li>
+          <li><a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a></li>
+          <li><a href="/rss.xml">RSS</a></li>
+        </ul>
+      </section>
 
-        <div class="pt-2 flex flex-wrap items-center gap-3 text-sm">
-          <a
-            href="/blog"
-            class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-brand-700 text-white font-medium hover:bg-brand-600 transition-all shadow-sm"
-          >
-            Read Publications &rarr;
-          </a>
-          <a
-            href="https://github.com/mishraprayash"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-medium text-paper-900 dark:text-zinc-300 hover:border-brand-600/40 transition-all shadow-sm shadow-black/[0.04] dark:shadow-none"
-          >
-            GitHub Profile
-          </a>
-          <a
-            href="https://www.linkedin.com/in/prayash-mishra-5a409422b/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center justify-center px-4 py-2 rounded-xl border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-medium text-paper-900 dark:text-zinc-300 hover:border-brand-600/40 transition-all shadow-sm shadow-black/[0.04] dark:shadow-none"
-          >
-            LinkedIn
-          </a>
-        </div>
-      </div>
-
-      <!-- Developer Terminal -->
-      <div class="lg:col-span-5 w-full">
-        <div class="code-terminal">
-          <div class="pt-3 font-mono space-y-1.5 text-paper-900 dark:text-zinc-400 text-xs">
-            <p class="text-paper-800 dark:text-zinc-600"># Engineering Profile</p>
-            <p><span class="text-emerald-600 dark:text-emerald-400">$</span> whoami --details</p>
-            <p class="text-paper-950 dark:text-zinc-200 font-semibold pl-2">
-              role: <span class="text-brand-700 dark:text-brand-300">"Backend Engineer"</span>
-            </p>
-            <p class="text-paper-900 dark:text-zinc-400 pl-2">
-              focus: [<span class="text-amber-700 dark:text-amber-300">"Event-Driven"</span>, <span class="text-amber-700 dark:text-amber-300">"PostgreSQL"</span>, <span class="text-amber-700 dark:text-amber-300">"Sidecars (Dapr)"</span>]
-            </p>
-            <p class="text-paper-900 dark:text-zinc-400 pl-2">
-              stack: [<span class="text-brand-700 dark:text-brand-300">"Go"</span>, <span class="text-brand-700 dark:text-brand-300">"Node.js"</span>, <span class="text-brand-700 dark:text-brand-300">"NestJS"</span>, <span class="text-brand-700 dark:text-brand-300">"PostgreSQL"</span>, <span class="text-brand-700 dark:text-brand-300">"Docker"</span>]
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Featured Spotlight Post -->
-    {
-      featuredPost && (
-        <section class="mb-16">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-paper-800 dark:text-zinc-500 flex items-center gap-2">
-              <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400"></span>
-              Featured Deep Dive
-            </h2>
-          </div>
-
-          <a
-            href={`/blog/${featuredPost.id}`}
-            class="group block p-6 sm:p-8 rounded-2xl border border-paper-400 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 backdrop-blur-sm shadow-sm shadow-black/[0.04] hover:shadow-md hover:border-brand-600/40 transition-all duration-200"
-          >
-            <div class="flex flex-wrap items-center gap-2 mb-3 text-xs text-paper-800 dark:text-zinc-500">
-              {featuredPost.data.category && (
-                <span class="font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-paper-200 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-mono border border-paper-400 dark:border-brand-500/20">
-                  {featuredPost.data.category}
-                </span>
-              )}
-              {featuredPost.data.category && <span>&middot;</span>}
-              <time datetime={featuredPost.data.publishDate.toISOString()}>
-                {featuredPost.data.publishDate.toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </time>
-              {featuredPost.data.updatedDate && (
-                <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800/50" title={`Revised on ${featuredPost.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}`}>
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Updated {featuredPost.data.updatedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </span>
-              )}
-              {featuredSeriesInfo && (
-                <span class="inline-flex items-center gap-1 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-800 dark:text-brand-300 font-semibold border border-brand-200 dark:border-brand-500/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
-                    <path d="M6 6h10"></path>
-                    <path d="M6 10h10"></path>
-                  </svg>
-                  {featuredSeriesInfo.shortTitle} &middot; Part{" "}
-                  {featuredSeriesInfo.posts.findIndex((p) => p.slug === featuredPost.id) + 1} of{" "}
-                  {featuredSeriesInfo.posts.length}
-                </span>
-              )}
-            </div>
-
-            <h3 class="text-2xl sm:text-3xl font-black text-paper-950 dark:text-zinc-50 group-hover:text-brand-800 dark:group-hover:text-brand-300 transition-colors mb-3 leading-tight">
-              {featuredPost.data.title}
-            </h3>
-
-            <p class="text-sm sm:text-base text-paper-900 dark:text-zinc-400 leading-relaxed mb-5 line-clamp-3">
-              {featuredPost.data.description}
-            </p>
-
-            <div class="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-paper-200 dark:border-zinc-800/80">
-              <div class="flex flex-wrap gap-1.5">
-                {featuredPost.data.tags.slice(0, 4).map((tag) => (
-                  <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-paper-200 dark:bg-zinc-800 text-paper-900 dark:text-zinc-400 border border-paper-400/60 dark:border-transparent">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-              <span class="text-xs font-semibold text-brand-700 dark:text-brand-300 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                Read deep dive &rarr;
-              </span>
-            </div>
-          </a>
+      {startHere.length > 0 && (
+        <section aria-labelledby="start-here">
+          <h2 class="section-title" id="start-here">Start here</h2>
+          <PostList posts={startHere} notes={startNotes} seriesTotals={seriesTotals} />
         </section>
-      )
-    }
+      )}
 
-    <!-- Series: the navigational spine, not a flat list of posts -->
-    {
-      publishedSeries.length > 0 && (
-        <section>
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-paper-800 dark:text-zinc-500 flex items-center gap-2">
-              <span class="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400"></span>
-              Start with a thread
-            </h2>
-            <a
-              href="/blog"
-              class="text-xs font-semibold text-brand-700 dark:text-brand-300 hover:underline flex items-center gap-1"
-            >
-              All {allPosts.length} publications &rarr;
-            </a>
-          </div>
+      <section aria-labelledby="recent">
+        <h2 class="section-title" id="recent">Recent</h2>
+        <PostList posts={recent} seriesTotals={seriesTotals} />
+        <p class="section-more"><a href="/blog">All {posts.length} posts →</a></p>
+      </section>
 
-          <div class="grid gap-4 sm:grid-cols-2">
-            {publishedSeries.map((series) => (
-              <div class="group flex flex-col p-5 card p-6 hover:border-brand-600/50 transition-all duration-200">
-                <div class="flex items-start justify-between gap-3 mb-2">
-                  <a
-                    href={`/blog?series=${encodeURIComponent(series.id)}`}
-                    class="text-base font-bold text-paper-950 dark:text-zinc-100 group-hover:text-brand-800 dark:group-hover:text-brand-300 transition-colors leading-snug"
-                  >
-                    {series.title}
-                  </a>
-                  <span class="shrink-0 text-[10px] font-mono text-paper-800 dark:text-zinc-500 pt-1">
-                    {series.posts.length} parts
-                  </span>
-                </div>
-
-                <p class="text-sm text-paper-900 dark:text-zinc-400 leading-relaxed mb-5">
-                  {series.description}
-                </p>
-
-                <ol class="mt-auto space-y-1.5 pt-3 border-t border-paper-200 dark:border-zinc-800/60">
-                  {series.posts.map((p) => (
-                    <li>
-                      <a
-                        href={`/blog/${p.slug}`}
-                        class="group/link flex items-baseline gap-2.5 text-xs text-paper-900 dark:text-zinc-400 hover:text-brand-800 dark:hover:text-brand-300 transition-colors"
-                      >
-                        {/* Gutter must fit "Part 10" on one line: 10px mono is
-                            ~6px/char, so 8 characters needs ~3.5rem, not w-8.
-                            whitespace-nowrap stops a narrow column from
-                            re-wrapping the number. */}
-                        <span class="shrink-0 font-mono text-[10px] tracking-tight text-paper-800 dark:text-zinc-500 pt-px w-14 whitespace-nowrap">
-                          Part {p.part}
-                        </span>
-                        <span class="leading-relaxed group-hover/link:underline">
-                          {p.title.replace(/^Part \d+:\s*/, "")}
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-          </div>
-        </section>
-      )
-    }
+      <section aria-labelledby="topics">
+        <h2 class="section-title" id="topics">Topics</h2>
+        <ul class="def-list">
+          {PILLAR_IDS.map((id) => {
+            const count = postsByPillar(posts, id).length;
+            return (
+              <li>
+                <a class="def-list__name" href={`/topics/${id}`}>{PILLARS[id].title}</a>
+                <p class="def-list__desc">{PILLARS[id].description}</p>
+                <p class="def-list__meta">{count > 0 ? `${count} ${count === 1 ? "post" : "posts"}` : "Posts coming"}</p>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </div>
   </div>
 </BaseLayout>

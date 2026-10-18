@@ -8,30 +8,284 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        }
       ]
     },
     {
       "source": "/images/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     },
     {
       "source": "/favicon.(svg|ico)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
       ]
     },
     {
       "source": "/(.*).html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400"
+        }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "(?<tag>aws|dapr|docker|kafka|kubernetes|microservices|nestjs|nginx|node|postgresql|queues|security|tls|typescript)"
+        }
+      ],
+      "destination": "/tags/:tag",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "distributed-systems"
+        }
+      ],
+      "destination": "/topics/messaging",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "event-driven"
+        }
+      ],
+      "destination": "/topics/messaging",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "devops"
+        }
+      ],
+      "destination": "/topics/running-services",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "cloud-native"
+        }
+      ],
+      "destination": "/topics/running-services",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "observability"
+        }
+      ],
+      "destination": "/topics/running-services",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "lua"
+        }
+      ],
+      "destination": "/tags/nginx",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "waf"
+        }
+      ],
+      "destination": "/tags/nginx",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "ml"
+        }
+      ],
+      "destination": "/tags/nginx",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "s3"
+        }
+      ],
+      "destination": "/tags/aws",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "redis"
+        }
+      ],
+      "destination": "/tags/dapr",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "grpc"
+        }
+      ],
+      "destination": "/tags/dapr",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "rabbitmq"
+        }
+      ],
+      "destination": "/tags/queues",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "gcp"
+        }
+      ],
+      "destination": "/tags/kubernetes",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "tag",
+          "value": "azure"
+        }
+      ],
+      "destination": "/tags/kubernetes",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "series",
+          "value": "distributed-systems"
+        }
+      ],
+      "destination": "/series/reliable-messaging",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "series",
+          "value": "nestjs-dapr"
+        }
+      ],
+      "destination": "/series/nestjs-dapr",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "series",
+          "value": "nginx-ai-waf"
+        }
+      ],
+      "destination": "/series/nginx-ml-waf",
+      "permanent": true
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "query",
+          "key": "series",
+          "value": "docker-mastery"
+        }
+      ],
+      "destination": "/series/docker-node",
+      "permanent": true
     }
   ]
 }

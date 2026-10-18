@@ -1,0 +1,39 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostList from "../../components/PostList.astro";
+import { PILLARS, TAGS, type Tag } from "../../data/taxonomy";
+import { getPosts, getSeries, postsByTag } from "../../lib/posts";
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  // The vocabulary only holds tags used on 2+ posts; a tag that drops below
+  // that should be removed from src/data/taxonomy.ts rather than get a page.
+  for (const tag of TAGS) {
+    const n = postsByTag(posts, tag).length;
+    if (n < 2) throw new Error(`Tag "${tag}" is used on ${n} post(s); remove it from TAGS or use it on another post.`);
+  }
+  return TAGS.map((tag) => ({ params: { tag } }));
+}
+
+const tag = Astro.params.tag as Tag;
+const posts = await getPosts();
+const tagged = postsByTag(posts, tag);
+const seriesTotals = new Map(getSeries(posts).map((s) => [s.id, s.parts.length]));
+const pillars = [...new Set(tagged.map((p) => p.data.pillar))];
+---
+
+<BaseLayout title={`#${tag}`} description={`Posts tagged ${tag}.`}>
+  <div class="page">
+    <div class="page__col">
+      <header>
+        <p class="inline-nav"><a href="/blog">Writing</a></p>
+        <h1 class="page-title">#{tag}</h1>
+        <p class="page-lede">
+          {tagged.length} posts.
+          {pillars.length === 1 && <> Part of <a href={`/topics/${pillars[0]}`}>{PILLARS[pillars[0]].title}</a>.</>}
+        </p>
+      </header>
+      <PostList posts={tagged} seriesTotals={seriesTotals} />
+    </div>
+  </div>
+</BaseLayout>

@@ -1,378 +1,291 @@
 ---
-import { getCollection, render } from "astro:content";
+import { render } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import TableOfContents from "../../components/TableOfContents.astro";
-import SeriesBanner from "../../components/SeriesBanner.astro";
-import ShareWidget from "../../components/ShareWidget.astro";
-import PostNavigation from "../../components/PostNavigation.astro";
-import AuthorBio from "../../components/AuthorBio.astro";
+import TableOfContents from "../../components/post/TableOfContents.astro";
+import SeriesNav from "../../components/post/SeriesNav.astro";
+import CopyLink from "../../components/post/CopyLink.astro";
+import PostList from "../../components/PostList.astro";
+import { PILLARS } from "../../data/taxonomy";
 import { SITE, canonicalFor, socialImage } from "../../lib/seo";
+import { formatDate, getPosts, readingTime, relatedPosts, seriesFor, type Post } from "../../lib/posts";
 
 export async function getStaticPaths() {
-  const posts = await getCollection("blog", ({ data }) => {
-    if (import.meta.env.PROD) return !data.draft;
-    return true;
-  });
-
-  // Sort chronological
-  posts.sort((a, b) => a.data.publishDate.getTime() - b.data.publishDate.getTime());
-
-  return posts.map((post, index) => ({
-    params: { slug: post.id },
-    props: {
-      post,
-      prevPost: index > 0 ? posts[index - 1] : undefined,
-      nextPost: index < posts.length - 1 ? posts[index + 1] : undefined,
-    },
-  }));
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post, posts } }));
 }
 
-const { post, prevPost, nextPost } = Astro.props;
+interface Props {
+  post: Post;
+  posts: Post[];
+}
+
+const { post, posts } = Astro.props;
+const { data } = post;
 const { Content, headings } = await render(post);
 
-function estimateReadingTime(body: string | null | undefined): number {
-  if (!body) return 0;
-  const wordsPerMinute = 200;
-  const wordCount = body.split(/\s+/).length;
-  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
-}
-
-const readingTime = estimateReadingTime(post.body);
 const site = Astro.site ?? new URL(SITE.url);
-const currentUrl = canonicalFor(`/blog/${post.id}`, site);
-const socialCard = socialImage(post.data.featuredImage, site);
+const url = canonicalFor(`/blog/${post.id}`, site);
+const pillar = PILLARS[data.pillar];
+const series = seriesFor(post, posts);
+const partIndex = series ? series.parts.findIndex((p) => p.id === post.id) : -1;
+const related = relatedPosts(post, posts);
+const minutes = readingTime(post.body);
+const socialCard = socialImage(data.featuredImage, site);
 ---
 
-<BaseLayout
-  title={post.data.title}
-  description={post.data.description}
-  ogImage={post.data.featuredImage}
-  canonicalURL={currentUrl}
-  ogType="article"
->
-  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "BlogPosting",
-        "@id": `${currentUrl}#article`,
-        isPartOf: { "@id": `${SITE.url}/#website` },
-        headline: post.data.title,
-        description: post.data.description,
-        image: socialCard.href,
-        datePublished: post.data.publishDate.toISOString(),
-        ...(post.data.updatedDate
-          ? { dateModified: post.data.updatedDate.toISOString() }
-          : {}),
-        author: {
-          "@id": `${SITE.url}/#person`,
-          "@type": "Person",
-          name: post.data.author,
-        },
-        publisher: { "@id": `${SITE.url}/#person` },
-        mainEntityOfPage: { "@type": "WebPage", "@id": currentUrl },
-        inLanguage: "en-US",
-        articleSection: post.data.category,
-        ...(post.data.tags.length > 0 ? { keywords: post.data.tags.join(", ") } : {}),
-        wordCount: post.body ? post.body.split(/\s+/).length : undefined,
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: `${SITE.url}/` },
-          { "@type": "ListItem", position: 2, name: "Publications", item: `${SITE.url}/blog` },
-          ...(post.data.category
-            ? [{
-                "@type": "ListItem",
-                position: 3,
-                name: post.data.category,
-                item: `${SITE.url}/blog?category=${encodeURIComponent(post.data.category)}`,
-              }]
-            : []),
-          { "@type": "ListItem", position: post.data.category ? 4 : 3, name: post.data.title, item: currentUrl },
-        ],
-      },
-    ],
-  })} />
-
-  <!-- Scroll Reading Progress Bar -->
-  <div class="mx-auto max-w-shell px-5 sm:px-8 py-10 sm:py-14 relative z-10">
-    <!-- Breadcrumb Routing Path -->
-    <nav class="flex flex-wrap items-center gap-2 text-xs font-mono text-paper-800 dark:text-zinc-500 mb-8" aria-label="Breadcrumb">
-      <a href="/" class="hover:text-brand-800 dark:hover:text-brand-300 transition-colors">
-        Home
-      </a>
-      <span class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">/</span>
-      <a href="/blog" class="hover:text-brand-800 dark:hover:text-brand-300 transition-colors">
-        Publications
-      </a>
-      {
-        post.data.category && (
-          <>
-            <span class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">/</span>
-            <a
-              href={`/blog?category=${encodeURIComponent(post.data.category)}`}
-              class="hover:text-brand-800 dark:hover:text-brand-300 uppercase font-semibold text-[10px] tracking-wider text-brand-700 dark:text-brand-300"
-            >
-              {post.data.category}
-            </a>
-          </>
-        )
-      }
-      <span class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">/</span>
-      <span class="text-paper-950 dark:text-zinc-300 font-medium truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-        {post.data.title}
-      </span>
-    </nav>
-
-    <!-- Header Section -->
-    <header class="max-w-4xl mb-14">
-      {
-        post.data.category && (
-          <span class="inline-block text-xs font-bold tracking-widest uppercase text-brand-700 dark:text-brand-300 mb-4 bg-paper-200 dark:bg-brand-500/20 px-3 py-1 rounded-md border border-paper-400 dark:border-transparent font-mono">
-            {post.data.category}
-          </span>
-        )
-      }
-
-      <h1 class="text-[1.75rem] sm:text-4xl md:text-[2.5rem] font-black tracking-tight text-paper-950 dark:text-zinc-50 mb-5 leading-[1.12] text-balance">
-        {post.data.title}
-      </h1>
-
-      <p class="text-base sm:text-lg text-paper-900 dark:text-zinc-400 leading-relaxed mb-6 font-normal max-w-2xl">
-        {post.data.description}
-      </p>
-
-      <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-paper-800 dark:text-zinc-400 border-y border-paper-400 dark:border-zinc-800 py-3.5">
-        <span class="font-semibold text-paper-950 dark:text-zinc-200">
-          {post.data.author}
-        </span>
-        <span aria-hidden="true" class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">&middot;</span>
-        <time datetime={post.data.publishDate.toISOString()}>
-          {post.data.publishDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </time>
+<BaseLayout title={data.title} description={data.description} ogImage={data.featuredImage} canonicalURL={url} ogType="article">
+  <Fragment slot="head">
+    <meta property="article:published_time" content={data.publishDate.toISOString()} />
+    {data.updatedDate && <meta property="article:modified_time" content={data.updatedDate.toISOString()} />}
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@graph": [
         {
-          post.data.updatedDate && (
-            <>
-              <span aria-hidden="true" class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">&middot;</span>
-              <span class="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                <span>
-                  Updated{" "}
-                  <time datetime={post.data.updatedDate.toISOString()}>
-                    {post.data.updatedDate.toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </time>
-                </span>
-              </span>
-            </>
-          )
-        }
-        <span aria-hidden="true" class="text-paper-500 dark:text-zinc-700 dark:text-zinc-700">&middot;</span>
-        <span class="bg-paper-200 dark:bg-zinc-800 px-2 py-0.5 rounded text-xs font-mono text-paper-900 dark:text-zinc-300">{readingTime} min read</span>
-      </div>
+          "@type": "BlogPosting",
+          "@id": `${url}#article`,
+          isPartOf: { "@id": `${SITE.url}/#website` },
+          headline: data.title,
+          description: data.description,
+          image: socialCard.href,
+          datePublished: data.publishDate.toISOString(),
+          dateModified: (data.updatedDate ?? data.publishDate).toISOString(),
+          author: { "@id": `${SITE.url}/#person`, "@type": "Person", name: data.author, url: SITE.url },
+          publisher: { "@id": `${SITE.url}/#person` },
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
+          inLanguage: "en-US",
+          articleSection: pillar.title,
+          keywords: data.tags.join(", ") || undefined,
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Writing", item: `${SITE.url}/blog` },
+            { "@type": "ListItem", position: 2, name: pillar.title, item: `${SITE.url}/topics/${data.pillar}` },
+            { "@type": "ListItem", position: 3, name: data.title, item: url },
+          ],
+        },
+      ],
+    })} />
+  </Fragment>
 
-      {
-        post.data.tags.length > 0 && (
-          <div class="flex flex-wrap gap-2 mt-5">
-            {post.data.tags.map((tag) => (
-              <a
-                href={`/blog?tag=${encodeURIComponent(tag)}`}
-                class="inline-block text-xs font-mono px-2.5 py-1 rounded-md bg-white dark:bg-zinc-900 text-paper-900 dark:text-zinc-400 border border-paper-400 dark:border-zinc-800 hover:border-brand-600 dark:hover:border-brand-400 transition-colors shadow-sm shadow-black/[0.04] dark:shadow-none"
-              >
-                #{tag}
-              </a>
-            ))}
-          </div>
-        )
-      }
+  <div class="post">
+    <header class="post-header">
+      <p class="post-kicker">
+        <a href={`/topics/${data.pillar}`}>{pillar.title}</a>
+        {series && (
+          <span>
+            Part {partIndex + 1} of {series.parts.length} in <a href={`/series/${series.id}`}>{series.title}</a>
+          </span>
+        )}
+      </p>
+      <h1 class="post-title">{data.title}</h1>
+      <p class="post-dek">{data.description}</p>
+      <div class="post-meta">
+        <time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time>
+        <span>{minutes} min read</span>
+        {data.updatedDate && (
+          <details class="post-revised">
+            <summary>
+              Revised <time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate)}</time>
+            </summary>
+            {data.updateSummary && <p>{data.updateSummary}</p>}
+          </details>
+        )}
+        {data.draft && <span class="post-draft">Draft</span>}
+      </div>
     </header>
 
-    <!--
-      Three columns at xl. The extra width is spent on rails, not on the prose:
-      the measure stays capped so line length remains readable.
-      lg  = prose + right rail (no ToC, it lives in the mobile disclosure)
-      xl  = ToC rail + prose + right rail
-    -->
-    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[15rem_minmax(0,1fr)_18rem] gap-10 lg:gap-12 xl:gap-14 items-start">
+    <aside class="post-toc">
+      <TableOfContents headings={headings} />
+    </aside>
 
-      <!-- Left rail: sticky table of contents (xl and up) -->
-      <TableOfContents headings={headings} mode="desktop" />
+    <article class="post-body" id="post-body">
+      <Content />
+    </article>
 
-      <article class="min-w-0 max-w-prose mx-auto lg:mx-0 xl:mx-auto w-full">
-        {
-          post.data.updatedDate && (
-            <div class="mb-8 p-4 sm:p-5 rounded-2xl border border-emerald-600/25 bg-emerald-500/5 dark:bg-emerald-950/20 backdrop-blur-sm">
-              <div class="flex items-start gap-3.5">
-                <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5 border border-emerald-200 dark:border-emerald-800/40">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                </div>
-                <div class="space-y-1">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                      Article Revised
-                    </span>
-                    <span class="text-[11px] font-mono text-paper-800 dark:text-zinc-400">
-                      ({post.data.updatedDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })})
-                    </span>
-                  </div>
-                  <p class="text-xs sm:text-sm text-paper-900 dark:text-zinc-300 leading-relaxed font-normal">
-                    {post.data.updateSummary ?? "This publication was recently updated with revised benchmarks, architectural changes, or new production insights."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        }
+    <footer class="post-footer">
+      {series && <SeriesNav series={series} current={post} />}
 
-        <!-- Series Banner (Top) -->
-        <SeriesBanner currentSlug={post.id} />
+      {data.tags.length > 0 && (
+        <p class="post-tags">
+          <span>Tags:</span>
+          {data.tags.map((tag) => <a href={`/tags/${tag}`}>#{tag}</a>)}
+        </p>
+      )}
 
-        <!-- Mobile ToC (Only on < lg screens) -->
-        <TableOfContents headings={headings} mode="mobile" />
+      <CopyLink url={url} />
 
-        <!-- Prose Content -->
-        <div
-          class="prose prose-zinc dark:prose-invert max-w-none
-            prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-paper-950 dark:prose-headings:text-zinc-50
-            prose-h2:text-[1.6rem] prose-h2:sm:text-[1.9rem] prose-h2:mt-16 prose-h2:mb-5 prose-h2:leading-[1.2]
-            prose-h3:text-xl prose-h3:sm:text-2xl prose-h3:mt-10 prose-h3:mb-4
-            prose-p:leading-[1.75] prose-p:text-paper-900 dark:prose-p:text-zinc-300 prose-p:mb-6 prose-p:text-[1.0625rem]
-            prose-a:text-brand-800 dark:prose-a:text-brand-300 prose-a:font-medium prose-a:no-underline hover:prose-a:underline
-            prose-strong:text-paper-950 dark:prose-strong:text-zinc-50
-            prose-li:marker:text-brand-600 prose-li:leading-[1.7]
-            prose-hr:border-paper-400 dark:prose-hr:border-zinc-800
-            prose-table:text-sm
-          "
-        >
-          <Content />
-        </div>
+      {related.length > 0 && (
+        <section class="post-related" aria-labelledby="related-heading">
+          <h2 id="related-heading">Related</h2>
+          <PostList posts={related} />
+          <p class="post-more"><a href={`/topics/${data.pillar}`}>More on {pillar.title.toLowerCase()} →</a></p>
+        </section>
+      )}
 
-        <!-- Series Banner (Bottom) -->
-        <SeriesBanner currentSlug={post.id} />
-
-        <!-- Share widget lives in the right rail; on mobile it falls back
-             to an inline row so it is never unreachable. -->
-        <div class="lg:hidden">
-          <ShareWidget title={post.data.title} url={currentUrl} instance="inline" />
-        </div>
-
-        <!-- Post Navigation (Prev/Next) -->
-        <PostNavigation prevPost={prevPost} nextPost={nextPost} />
-
-        <!-- Author Bio Card -->
-        <AuthorBio author={post.data.author} />
-      </article>
-
-      <!-- Right rail: sticky metadata. On lg it sits beside the prose; at xl it
-           balances the ToC on the other side. -->
-      <aside class="hidden lg:block w-72 shrink-0 sticky top-24 self-start">
-        <div class="space-y-5 max-h-[calc(100vh-8rem)] overflow-y-auto pb-8 pr-1">
-          <div class="card p-5">
-            <p class="text-[11px] font-mono uppercase tracking-wider text-paper-800 dark:text-zinc-400 mb-3">
-              Written by
-            </p>
-            <p class="text-sm font-bold text-paper-950 dark:text-zinc-100 mb-1">
-              {post.data.author}
-            </p>
-            <p class="text-xs text-paper-800 dark:text-zinc-400 leading-relaxed">
-              Backend engineer working on event-driven systems and the
-              reliability problems that come with them.
-            </p>
-            <div class="flex items-center gap-3 mt-4 pt-4 border-t border-paper-200 dark:border-zinc-800">
-              <a href="https://github.com/mishraprayash" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-brand-800 dark:text-brand-300 hover:underline">GitHub &rarr;</a>
-              <a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-brand-800 dark:text-brand-300 hover:underline">LinkedIn &rarr;</a>
-            </div>
-          </div>
-
-          <div class="card p-5">
-            <p class="text-[11px] font-mono uppercase tracking-wider text-paper-800 dark:text-zinc-400 mb-3">
-              Topics
-            </p>
-            <div class="flex flex-wrap gap-1.5">
-              {post.data.tags.map((tag) => (
-                <a
-                  href={`/blog?tag=${encodeURIComponent(tag)}`}
-                  class="text-[11px] font-mono px-2 py-1 rounded-md bg-paper-200 dark:bg-zinc-900 text-paper-900 dark:text-zinc-300 border border-paper-400/70 dark:border-zinc-800 hover:border-brand-600 dark:hover:border-brand-400 transition-colors"
-                >
-                  #{tag}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          <ShareWidget title={post.data.title} url={currentUrl} instance="inline" />
-        </div>
-      </aside>
-    </div>
+      <p class="post-follow">
+        New posts go out by <a href="/rss.xml">RSS</a>. Written by {data.author}. <a href="https://github.com/mishraprayash">GitHub</a> · <a href="https://www.linkedin.com/in/prayash-mishra-5a409422b/">LinkedIn</a>
+      </p>
+    </footer>
   </div>
-
-  <script is:inline>
-    // Reading progress bar
-    window.addEventListener("scroll", () => {
-      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrolled = (winScroll / height) * 100;
-      const progressBar = document.getElementById("reading-progress");
-      if (progressBar) {
-        progressBar.style.width = scrolled + "%";
-      }
-    });
-
-    // Code block copy button injection with non-scrolling wrapper
-    const initCodeCopy = () => {
-      const preBlocks = document.querySelectorAll(".prose pre");
-      preBlocks.forEach((pre) => {
-        // If already wrapped, skip
-        if (pre.parentElement && pre.parentElement.classList.contains("code-block-wrapper")) return;
-
-        // 1. Create a relative, non-scrolling wrapper
-        const wrapper = document.createElement("div");
-        wrapper.className = "code-block-wrapper";
-
-        // 2. Insert wrapper before pre and move pre inside it
-        pre.parentNode?.insertBefore(wrapper, pre);
-        wrapper.appendChild(pre);
-
-        // 3. Create static-anchored copy button
-        const button = document.createElement("button");
-        button.className = "copy-code-btn";
-        button.setAttribute("aria-label", "Copy code");
-        button.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        `;
-
-        // 4. Attach button to wrapper (NOT to the scrolling pre)
-        wrapper.appendChild(button);
-
-        button.addEventListener("click", async () => {
-          const code = pre.querySelector("code")?.innerText || "";
-          await navigator.clipboard.writeText(code);
-
-          button.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          `;
-
-          setTimeout(() => {
-            button.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            `;
-          }, 2000);
-        });
-      });
-    };
-
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initCodeCopy);
-    } else {
-      initCodeCopy();
-    }
-  </script>
 </BaseLayout>
+
+<script>
+  // Copy buttons on code blocks (the markup comes from rehypeCodeBlocks).
+  for (const btn of document.querySelectorAll<HTMLButtonElement>(".code-block__copy")) {
+    btn.addEventListener("click", async () => {
+      const pre = btn.closest(".code-block")?.querySelector("pre");
+      if (!pre) return;
+      const lines = [...pre.querySelectorAll<HTMLElement>(".line")];
+      const isDiff = btn.closest<HTMLElement>(".code-block")?.dataset.lang === "diff";
+      const code = lines.length
+        ? lines.map((l) => (isDiff ? l.textContent!.replace(/^[+-]/, "") : l.textContent)).join("\n")
+        : pre.textContent ?? "";
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = "Copied";
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(pre);
+        const sel = getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        btn.textContent = "Press Ctrl/⌘ C";
+      }
+      setTimeout(() => (btn.textContent = "Copy"), 2000);
+    });
+  }
+</script>
+
+<style>
+  .post {
+    --toc-w: 12rem;
+    --notes-w: 12rem;
+    --col-gap: 2.5rem;
+    max-width: var(--shell);
+    margin: 0 auto;
+    padding: var(--space-5) var(--gutter) 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "toc" "body" "footer";
+  }
+  .post-header { grid-area: header; }
+  .post-toc { grid-area: toc; }
+  .post-body { grid-area: body; }
+  .post-footer { grid-area: footer; }
+  .post-header,
+  .post-body,
+  .post-footer { max-width: var(--measure); min-width: 0; }
+
+  @media (min-width: 1024px) {
+    .post {
+      grid-template-columns: minmax(0, var(--measure)) var(--notes-w);
+      column-gap: var(--col-gap);
+      grid-template-areas: "header ." "toc ." "body ." "footer .";
+      font-size: var(--text-body);
+      justify-content: start;
+      padding-top: var(--space-6);
+    }
+  }
+  @media (min-width: 1280px) {
+    .post {
+      grid-template-columns: var(--toc-w) minmax(0, var(--measure)) var(--notes-w);
+      grid-template-areas: ". header ." "toc body ." ". footer .";
+    }
+    .post-toc { align-self: stretch; }
+    .post-body { --wide-bleed: calc(var(--col-gap) + var(--notes-w)); }
+  }
+
+  /* ---------- header ---------- */
+  .post-kicker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-3);
+    margin: 0 0 var(--space-3);
+    font: 400 var(--text-ui) / 1.5 var(--font-ui);
+    color: var(--muted);
+  }
+  .post-kicker > span { flex-basis: 100%; }
+  @media (min-width: 640px) {
+    .post-kicker > span { flex-basis: auto; }
+    .post-kicker > span::before { content: "·"; margin-right: var(--space-3); }
+  }
+  .post-kicker a { color: var(--ink-2); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+  .post-kicker a:hover { color: var(--ink); }
+  .post-title {
+    margin: 0;
+    font: 700 var(--text-display) / 1.12 var(--font-serif);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .post-dek {
+    margin: var(--space-4) 0 0;
+    font: italic 400 var(--text-dek) / 1.45 var(--font-serif);
+    color: var(--ink-2);
+  }
+  .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px var(--space-3);
+    margin-top: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--rule);
+    font: 400 var(--text-ui) / 1.5 var(--font-ui);
+    color: var(--muted);
+  }
+  .post-meta > :is(span, time) + :is(span, time)::before,
+  .post-meta > * + .post-revised > summary::before { content: "·"; margin-right: var(--space-3); display: inline-block; text-decoration: none; }
+  .post-revised { display: contents; }
+  .post-revised summary { cursor: pointer; color: var(--ink-2); text-decoration: underline dotted; text-underline-offset: 0.2em; }
+  .post-revised summary::marker { content: ""; }
+  .post-revised summary::-webkit-details-marker { display: none; }
+  .post-revised > summary { display: inline; }
+  .post-revised p {
+    flex-basis: 100%;
+    margin: var(--space-2) 0 0;
+    padding: var(--space-3) var(--space-4);
+    border-left: 3px solid var(--rule-strong);
+    background: var(--raised);
+    font-size: var(--text-small);
+    line-height: 1.55;
+    color: var(--ink-2);
+  }
+  .post-draft { color: var(--accent); font-weight: 600; }
+
+  .post-body { margin-top: var(--space-5); }
+  @media (min-width: 1024px) {
+    .post-body { margin-top: var(--space-6); }
+  }
+  .post-toc :global(.toc--rail) { margin-top: var(--space-6); }
+
+  /* ---------- footer ---------- */
+  .post-footer {
+    margin-top: var(--space-8);
+    display: grid;
+    gap: var(--space-6);
+  }
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-3);
+    margin: 0;
+    font: 400 var(--text-ui) / 2 var(--font-ui);
+    color: var(--muted);
+  }
+  .post-tags a { color: var(--ink-2); text-decoration: none; }
+  .post-tags a:hover { color: var(--ink); text-decoration: underline; }
+  .post-related h2 {
+    margin: 0 0 var(--space-3);
+    font: 600 var(--text-ui) / 1.4 var(--font-ui);
+    color: var(--ink);
+  }
+  .post-more { margin: var(--space-3) 0 0; font: 400 var(--text-ui) / 1.5 var(--font-ui); }
+  .post-follow {
+    margin: 0;
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--rule);
+    font: 400 var(--text-ui) / 1.6 var(--font-ui);
+    color: var(--ink-2);
+  }
+</style>

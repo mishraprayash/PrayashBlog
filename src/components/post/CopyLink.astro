@@ -1,0 +1,54 @@
+---
+export interface Props {
+  url: string;
+}
+const { url } = Astro.props;
+---
+
+<p class="copy-link">
+  <button type="button" class="copy-link__btn" data-copy-link={url}>Copy link to this post</button>
+  <span class="copy-link__status" role="status" aria-live="polite"></span>
+</p>
+
+<script>
+  for (const btn of document.querySelectorAll<HTMLButtonElement>("[data-copy-link]")) {
+    const status = btn.nextElementSibling as HTMLElement | null;
+    btn.addEventListener("click", async () => {
+      const url = btn.dataset.copyLink || location.href;
+      try {
+        await navigator.clipboard.writeText(url);
+        if (status) status.textContent = "Copied";
+      } catch {
+        // No clipboard access (e.g. an insecure context): show the URL so it
+        // can be copied by hand.
+        if (status) status.textContent = url;
+      }
+      setTimeout(() => status && (status.textContent = ""), 3000);
+    });
+  }
+</script>
+
+<style>
+  .copy-link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0;
+    font: 400 var(--text-ui) / 1.4 var(--font-ui);
+  }
+  .copy-link__btn {
+    min-height: 40px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .copy-link__btn:hover { border-color: var(--ink); }
+  .copy-link__status { color: var(--muted); overflow-wrap: anywhere; }
+  .no-js .copy-link { display: none; }
+</style>

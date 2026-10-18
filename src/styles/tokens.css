@@ -44,7 +44,7 @@
   --space-8: 64px;
   --space-9: 96px;
 
-  --shell: 72rem;
+  --shell: 76rem;
   --measure: 34em;
   --gutter: 16px;
   --header-h: 56px;
@@ -103,9 +103,14 @@
 
 /* ------------------------------------------------------------------ */
 
-/* Element defaults live in the base layer so Tailwind utilities on pages
-   not yet rebuilt still win over them. */
+/* Element defaults, in a layer so any component style overrides them. */
 @layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  img, svg, video { max-width: 100%; }
+  img, video { height: auto; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  summary { cursor: pointer; }
+
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;

@@ -1,13 +1,13 @@
 ---
-title: "Part 1: Docker Fundamentals – Container Mechanics & Single-Stage Best Practices"
+title: "Docker Fundamentals: Container Mechanics and Single-Stage Builds"
 slug: "architecting-lightweight-docker-builds"
 description: "Mastering Docker from first principles: container mechanics, immutable layer caching, .dockerignore setup, and crafting a secure, production-grade single-stage build."
 publishDate: "2026-05-28T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["docker", "devops", "backend", "node"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Docker container architecture, layer caching, and single-stage Dockerfile diagram"
+pillar: "running-services"
+tags: ["docker", "node"]
+series: "docker-node"
+seriesPart: 1
 draft: false
 ---
 

@@ -6,10 +6,9 @@ publishDate: "2026-05-10T10:00:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Corrected the intermediate-certificate section. I'd written that putting the intermediate in `ca` makes Node send only the leaf. Testing on Node 22 showed it sends the full chain. Keeping the chain in `cert` is still the right call, for the reasons now in the post."
 author: "Prayash Mishra"
-tags: ["node", "backend", "security", "tls"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "TLS handshake and certificate chain validation diagram"
+pillar: "network-edge"
+tags: ["node", "tls", "security"]
+related: ["nginx-lua-ai-waf-gatekeeper"]
 draft: false
 ---
 

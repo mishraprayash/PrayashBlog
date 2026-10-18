@@ -1,0 +1,71 @@
+---
+import { postUrl, type Post, type SeriesInfo } from "../../lib/posts";
+
+export interface Props {
+  series: SeriesInfo;
+  current: Post;
+}
+
+const { series, current } = Astro.props;
+const index = series.parts.findIndex((p) => p.id === current.id);
+const next = series.parts[index + 1];
+---
+
+<nav class="series-nav" aria-label={`Series: ${series.title}`}>
+  <p class="series-nav__label">
+    Part {index + 1} of {series.parts.length} in <a href={`/series/${series.id}`}>{series.title}</a>
+  </p>
+  <ol class="series-nav__list">
+    {series.parts.map((p) => (
+      <li>
+        {p.id === current.id ? (
+          <span aria-current="page">{p.data.title} <span class="series-nav__here">(you're here)</span></span>
+        ) : (
+          <a href={postUrl(p)}>{p.data.title}</a>
+        )}
+      </li>
+    ))}
+  </ol>
+  {next ? (
+    <p class="series-nav__next">
+      <a href={postUrl(next)}>Next: {next.data.title} →</a>
+    </p>
+  ) : (
+    <p class="series-nav__end">
+      That's the end of the series. <a href={postUrl(series.parts[0])}>Start from part 1</a>, or <a href="/series">see all series</a>.
+    </p>
+  )}
+</nav>
+
+<style>
+  .series-nav {
+    padding: var(--space-5) 0;
+    border-top: 1px solid var(--rule);
+  }
+  .series-nav__label {
+    margin: 0 0 var(--space-3);
+    font: 400 var(--text-ui) / 1.5 var(--font-ui);
+    color: var(--muted);
+  }
+  .series-nav__list {
+    margin: 0;
+    padding-left: 1.4em;
+    font: 400 var(--text-ui) / 1.5 var(--font-ui);
+    color: var(--ink-2);
+  }
+  .series-nav__list li + li { margin-top: 6px; }
+  .series-nav__list li::marker { color: var(--muted); }
+  .series-nav__list a { color: var(--ink-2); }
+  .series-nav__list a:hover { color: var(--ink); }
+  [aria-current="page"] { color: var(--ink); font-weight: 600; }
+  .series-nav__here { font-weight: 400; color: var(--muted); }
+  .series-nav__next {
+    margin: var(--space-5) 0 0;
+    font: 600 1.1875rem / 1.4 var(--font-serif);
+  }
+  .series-nav__end {
+    margin: var(--space-5) 0 0;
+    font: 400 var(--text-ui) / 1.5 var(--font-ui);
+    color: var(--ink-2);
+  }
+</style>

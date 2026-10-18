@@ -1,13 +1,13 @@
 ---
-title: "Part 4: Building Cloud-Native Microservices with NestJS and Dapr – Local Dev & Production Kubernetes"
+title: "NestJS and Dapr: Local Development and Production Kubernetes"
 slug: "nestjs-dapr-local-dev-production-kubernetes"
 description: "How to ship NestJS and Dapr microservices: multi-container local Docker Compose pipelines, Kubernetes sidecar injection, production YAML components, and OpenTelemetry observability."
 publishDate: "2026-08-21T10:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "dapr", "kubernetes", "docker", "devops", "observability"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Kubernetes cluster architecture showing Dapr control plane, sidecar injection, and production Zipkin tracing"
+pillar: "running-services"
+tags: ["nestjs", "dapr", "kubernetes", "docker"]
+series: "nestjs-dapr"
+seriesPart: 4
 draft: false
 ---
 

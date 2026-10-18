@@ -6,10 +6,10 @@ publishDate: "2026-08-25T10:00:00Z"
 updatedDate: "2026-09-09T22:50:00Z"
 updateSummary: "Refactored to be significantly more compact and experience-driven: removed textbook definitions, focused on practical trade-offs (consumer models, retention, ordering, and redeliveries), and streamlined the decision guide."
 author: "Prayash Mishra"
-tags: ["architecture", "backend", "distributed-systems", "microservices", "event-driven", "kafka", "rabbitmq"]
-category: "engineering"
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Comparison architecture diagram showing Message Queues, Pub/Sub Topics, and Event Streams"
+pillar: "messaging"
+tags: ["queues", "kafka", "microservices"]
+series: "reliable-messaging"
+seriesPart: 1
 draft: false
 ---
 

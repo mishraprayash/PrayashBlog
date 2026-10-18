@@ -1,0 +1,74 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostList from "../../components/PostList.astro";
+import { PILLARS, PILLAR_IDS, TAGS, type PillarId } from "../../data/taxonomy";
+import { getPosts, getSeries, postsByPillar, postsByTag } from "../../lib/posts";
+
+export function getStaticPaths() {
+  return PILLAR_IDS.map((pillar) => ({ params: { pillar } }));
+}
+
+const id = Astro.params.pillar as PillarId;
+const pillar = PILLARS[id];
+const posts = await getPosts();
+const inPillar = postsByPillar(posts, id);
+const allSeries = getSeries(posts);
+const seriesTotals = new Map(allSeries.map((s) => [s.id, s.parts.length]));
+const series = allSeries.filter((s) => s.parts.some((p) => p.data.pillar === id));
+const tags = TAGS.filter((t) => inPillar.some((p) => p.data.tags.includes(t)));
+// A pillar with no posts of its own yet points at the posts that lean on it,
+// via the tag of the same name (PostgreSQL today).
+const leaning = inPillar.length === 0 && (TAGS as readonly string[]).includes(id) ? postsByTag(posts, id as never) : [];
+---
+
+<BaseLayout title={pillar.title} description={`${pillar.title}: ${pillar.description}`}>
+  <div class="page">
+    <div class="page__col">
+      <header>
+        <p class="inline-nav"><a href="/blog">Writing</a></p>
+        <h1 class="page-title">{pillar.title}</h1>
+        <p class="page-lede">{pillar.description}</p>
+      </header>
+
+      {series.length > 0 && (
+        <section aria-labelledby="series">
+          <h2 class="section-title" id="series">Series</h2>
+          <ul class="def-list">
+            {series.map((s) => (
+              <li>
+                <a class="def-list__name" href={`/series/${s.id}`}>{s.title}</a>
+                <p class="def-list__meta">{s.parts.length} parts</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {inPillar.length > 0 ? (
+        <section aria-labelledby="posts">
+          <h2 class="section-title" id="posts">Posts</h2>
+          <PostList posts={inPillar} showPillar={false} seriesTotals={seriesTotals} />
+        </section>
+      ) : (
+        <section aria-labelledby="posts">
+          <h2 class="section-title" id="posts">Nothing here yet</h2>
+          {leaning.length > 0 && (
+            <>
+              <p class="page-text">Posts dedicated to this are coming. These are the ones that lean on it most:</p>
+              <div style="margin-top: var(--space-4)">
+                <PostList posts={leaning} seriesTotals={seriesTotals} />
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {tags.length > 0 && (
+        <p class="inline-nav">
+          <strong>Tags</strong>
+          {tags.map((t) => <a href={`/tags/${t}`}>#{t}</a>)}
+        </p>
+      )}
+    </div>
+  </div>
+</BaseLayout>
