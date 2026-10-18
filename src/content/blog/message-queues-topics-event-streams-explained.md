@@ -1,7 +1,7 @@
 ---
 title: "Message Queues, Topics, and Event Streams Explained: How They Differ and When to Use Each"
 slug: "message-queues-topics-event-streams-explained"
-description: "A practical, experience-driven guide to messaging patterns: what actually separates queues, pub/sub topics, and event streams, where the lines blur, and how to choose between them."
+description: "What actually separates queues, pub/sub topics and event streams, where real tools blur the lines, and how to choose between them."
 publishDate: "2026-08-25T10:00:00Z"
 updatedDate: "2026-09-09T22:50:00Z"
 updateSummary: "Refactored to be significantly more compact and experience-driven: removed textbook definitions, focused on practical trade-offs (consumer models, retention, ordering, and redeliveries), and streamlined the decision guide."
@@ -273,23 +273,6 @@ Start with the simplest model that satisfies your requirements. For 80% of backe
 
 ---
 
-## Series Navigation
+## What comes next
 
-This is **Part 1** of a three-part series. Choosing a transport is the easy part;
-the hard part is what happens at the two boundaries where your application meets
-it, and neither is solved by the broker:
-
-1. **Message Queues, Topics, and Event Streams** (you are here) — the transport
-   primitives and what each delivery guarantee actually means.
-2. **[The Transactional Outbox Pattern](/blog/transactional-outbox-pattern-production-realities)**
-   — the *producer* boundary. How do you commit to your database and publish to
-   the broker as one logical act, without a window where one succeeded and the
-   other did not?
-3. **[Idempotency in Distributed Systems](/blog/idempotency-in-distributed-systems)**
-   — the *consumer* boundary. At-least-once means duplicates, so how do you make
-   a redelivered message safe to process twice?
-
-If you take one thing from this series: the transport does not give you
-exactly-once, and no amount of broker configuration will. At-least-once plus an
-idempotent consumer is the strongest guarantee you can actually build, and
-Parts 2 and 3 are how you get there.
+Picking the transport is the easy part. The next two posts cover the two places where your code meets it, and neither is solved by the broker: [getting events into it without losing any](/blog/transactional-outbox-pattern-production-realities) when you also write to a database, and [handling the same event twice safely](/blog/idempotency-in-distributed-systems), because at-least-once means it will arrive twice.

@@ -1,7 +1,7 @@
 ---
 title: "The Transactional Outbox Pattern: Why Your 100-Line Node.js Script Will Break in Production"
 slug: "transactional-outbox-pattern-production-realities"
-description: "A home-made Postgres outbox skips events under concurrency, bloats when vacuum is held back, stalls when you drop old partitions, and a CDC relay can fill the disk and take the primary down. Each failure reproduced on Postgres 16, with the fix."
+description: "A home-made Postgres outbox skips events, bloats, stalls when you drop partitions, and its CDC slot can fill the disk. Each failure reproduced, with the fix."
 publishDate: "2026-09-09T23:15:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Rewritten. Every failure in the post is now reproduced on Postgres 16 with the output shown. New sections on what actually stops vacuum from cleaning the table and why dropping a partition can stall the poller. Fixed the worker-sharding query (`% 4` skipped about a third of events) and the consumer example, which could lose or double-process an event if the process died mid-way."

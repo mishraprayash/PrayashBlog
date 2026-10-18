@@ -1,7 +1,7 @@
 ---
 title: "NestJS and Dapr: State, Secrets, Configuration and Pub/Sub"
 slug: "nestjs-dapr-state-secrets-config-pubsub"
-description: "Implementing Dapr building blocks in NestJS: key-value state with ETag optimistic concurrency, dynamic secrets, real-time configuration streams, and CloudEvents pub/sub."
+description: "Dapr state with ETag concurrency (and why the Node SDK loses the ETag), secrets, live configuration and pub/sub, from NestJS."
 publishDate: "2026-08-14T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"

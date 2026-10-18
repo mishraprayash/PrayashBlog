@@ -1,59 +1,47 @@
-# Prayash Mishra — Blog
+# Prayash Mishra: blog
 
-Personal blog built with [Astro](https://astro.build) + Tailwind CSS v4. In-depth analyses of backend systems, cloud-native microservices, containerization, and distributed reliability — featuring edge cases, real-world pitfalls, and production best practices.
+Source for [prayashmishra.com](https://prayashmishra.com): writing on how backend systems fail where they meet databases, message brokers and the network, and what fixes them.
 
 ## Stack
 
-- **Astro v7** — static site generation, content collections, fast builds
-- **Tailwind CSS v4** — modern styling via `@tailwindcss/vite`
-- **Markdown & Frontmatter** — Git-native content management via `src/content/blog/`
-- **RSS + Sitemap** — auto-generated at `/rss.xml` and `/sitemap-index.xml`
+- **Astro 7**, static output, with the unified Markdown pipeline (`@astrojs/markdown-remark`) for the custom plugins in `src/lib/markdown/`
+- **Plain CSS on design tokens:** `src/styles/tokens.css`, `prose.css`, `pages.css`, `print.css`. Values and contrast ratios are in `docs/redesign/04-design-system.md`.
+- **Self-hosted fonts:** Source Serif 4 and JetBrains Mono, via fontsource
+- **Build-time output:** syntax highlighting with a custom light/dark Shiki theme pair, social cards (Satori + resvg), RSS and sitemap
+- **Hosting:** Vercel (`vercel.json` holds headers and redirects for old URLs)
 
-## Getting Started
+## Commands
 
-```bash
-npm install
-npm run dev
-```
+| Command | What it does |
+| :--- | :--- |
+| `npm run dev` | Dev server with drafts visible |
+| `npm run build` | Production build into `dist/`, including content checks |
+| `npm run preview` | Serve the build locally |
+| `npm run check` | Astro and TypeScript checks |
+| `npm run test:pages` | Every built page at 360px and 1440px, light and dark: sideways scroll, JS errors, one `<h1>`, axe. Needs Chromium (set `CHROMIUM_PATH` if Playwright doesn't manage one). |
+| `npm run todos` | Lists `[TODO: …]` placeholders still in the content |
 
-Open `http://localhost:4321` in your browser.
+## Writing a post
 
-## Available Commands
-
-| Command           | Action                                        |
-| :---------------- | :-------------------------------------------- |
-| `npm run dev`     | Start local development server with hot reload |
-| `npm run build`   | Build production static site to `./dist/`      |
-| `npm run preview` | Preview production build locally               |
-| `npm run check`   | Run Astro + TypeScript type checks            |
-
-## Writing & Managing Posts
-
-All blog posts live in `src/content/blog/` as Markdown files adhering to the schema in `src/content.config.ts`:
+Start from `docs/post-template.md` and follow `docs/blog-writing-guide.md`. Posts live in `src/content/blog/`; the schema is in `src/content.config.ts` and summarised in `AGENTS.md`. The short version:
 
 ```yaml
 ---
-title: "Post Title"
-slug: "post-slug"
-description: "One or two sentence summary shown in cards, search, and meta tags."
-publishDate: "2026-08-24T10:00:00Z"
-updatedDate: "2026-08-25T10:00:00Z"   # optional
+title: "Say what breaks and where"
+slug: "lowercase-with-hyphens"   # the URL; never change it once published
+description: "Up to 160 characters."
+publishDate: "2026-11-01T09:00:00Z"
 author: "Prayash Mishra"
-tags: ["nestjs", "dapr", "architecture"]
-category: "engineering"               # engineering | design | tutorial | opinion | career
-featuredImage: "/images/uploads/placeholder.svg"
-featuredImageAlt: "Describe the image"
-draft: false
+pillar: "messaging"              # messaging | postgresql | running-services | network-edge
+tags: ["postgresql"]             # from src/data/taxonomy.ts, max 4
+series: "reliable-messaging"     # optional, with seriesPart
+seriesPart: 4
+draft: true
 ---
 ```
 
-Posts marked `draft: true` are hidden in production builds and only visible in local development.
+The build fails on an unknown tag, a series with a gap or a duplicate part, or a `related` slug that doesn't exist. After changing a Markdown plugin, clear the content cache: `rm -rf .astro node_modules/.astro`.
 
-### Quick Typo Edits
-Because the blog is 100% Git-native, you can fix any typo by navigating to the file on GitHub and pressing `.` to open the web editor. Committing changes automatically triggers an instant rebuild.
+## Redesign notes
 
-## Deployment (Vercel)
-
-1. Push this repository to GitHub.
-2. In Vercel, import the repository (framework preset: Astro).
-3. The build command (`npm run build`) and output directory (`dist`) are pre-configured in `vercel.json`.
+The October 2026 redesign is documented phase by phase in `docs/redesign/`, from the audit (`01`) to the final review and the checklist of things left to do (`10`).

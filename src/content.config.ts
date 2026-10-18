@@ -12,7 +12,9 @@ const blogCollection = defineCollection({
       // The glob loader derives `entry.id` from this field, which is what
       // [...slug].astro routes on. Changing it changes the post's URL.
       slug: z.string().regex(/^[a-z0-9-]+$/),
-      description: z.string(),
+      // Shown under the title and used as the search snippet, which is cut
+      // at about 160 characters.
+      description: z.string().max(160),
       publishDate: z.coerce.date(),
       updatedDate: z.coerce.date().optional(),
       // Reader-facing: shown under "Revised" on the post and in the feed.

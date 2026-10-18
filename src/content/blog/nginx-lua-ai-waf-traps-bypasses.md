@@ -1,7 +1,7 @@
 ---
 title: "Building an AI-Powered WAF on Nginx: Traps, Bypasses, and Hardening"
 slug: "nginx-lua-ai-waf-traps-bypasses"
-description: "The hard lessons learned deploying an AI WAF: the silent get_body_data() disk-spill bypass, ephemeral socket exhaustion, zero-latency shared-memory circuit breakers, and adversarial evasion."
+description: "How an ML filter on the Nginx request path gets bypassed or fails open: spooled bodies, token truncation, socket churn and a breaker attackers can trip."
 publishDate: "2026-06-29T10:00:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Rewrote the socket-churn section. request_uri() already pools connections. The real cause was the Flask/Werkzeug sidecar sending Connection: close on every response. Also corrected the default body buffer size (8 KB on x86-64), and added the 512-token truncation gap that lets the padding trick work even after the body fix."

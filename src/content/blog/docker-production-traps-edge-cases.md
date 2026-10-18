@@ -1,7 +1,7 @@
 ---
 title: "Docker Multi-Stage Builds: Layer Optimization and Image Size"
 slug: "docker-production-traps-edge-cases"
-description: "How to shrink container images from 1.2GB to 140MB using multi-stage builds, BuildKit cache mounts, production pruning, and handling Linux kernel whiteout traps."
+description: "Shrinking a Node.js image with multi-stage builds and BuildKit cache mounts, plus the layer, musl and PID 1 traps that catch people out."
 publishDate: "2026-06-04T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"

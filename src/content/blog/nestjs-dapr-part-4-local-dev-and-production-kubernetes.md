@@ -1,7 +1,7 @@
 ---
 title: "NestJS and Dapr: Local Development and Production Kubernetes"
 slug: "nestjs-dapr-local-dev-production-kubernetes"
-description: "How to ship NestJS and Dapr microservices: multi-container local Docker Compose pipelines, Kubernetes sidecar injection, production YAML components, and OpenTelemetry observability."
+description: "Running NestJS services with Dapr sidecars in Docker Compose and on Kubernetes: ports, health checks, API tokens and trace sampling."
 publishDate: "2026-08-21T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
@@ -474,11 +474,3 @@ That is the full local-to-production path. Before you call it done, walk this li
 - [ ] **Tracing sample rate is deliberate.** `0.1` is a starting point, not a recommendation. Confirm it against your span volume and retention window, and confirm the collector keeps up.
 - [ ] **Sidecars are pinned.** `daprio/daprd` and any tracing backend on `:latest` will change under you between a green deploy and a rollback.
 - [ ] **Health probes bypass the sidecar.** Probe the app container directly. A probe routed through `daprd` reports the sidecar's health, not your service's.
-
----
-
-### Series Index
-1. **[Part 1: Core Fundamentals & Architecture](/blog/nestjs-dapr-core-fundamentals-architecture)**
-2. **[Part 2: NestJS Module & Service Invocation](/blog/nestjs-dapr-nestjs-integration-service-invocation)**
-3. **[Part 3: State, Secrets, Config & Pub/Sub](/blog/nestjs-dapr-state-secrets-config-pubsub)**
-4. **Part 4: Local Dev & Production Kubernetes (you are here)**

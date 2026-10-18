@@ -1,7 +1,7 @@
 ---
 title: "TLS in Node.js: Handshake Mechanics, Event-Loop Stalls, and Cert Chain Traps"
 slug: "demystifying-ssl-tls-node-https"
-description: "A practical deep dive into Node.js TLS termination: how handshakes impact the event loop, why AIA chasing hides missing intermediate certs, and handling live cert rotation without downtime."
+description: "Serving the full certificate chain from Node.js, why your browser hides it when you don't, handshake cost, and rotating certificates without a restart."
 publishDate: "2026-05-10T10:00:00Z"
 updatedDate: "2026-10-18T10:00:00Z"
 updateSummary: "Corrected the intermediate-certificate section. I'd written that putting the intermediate in `ca` makes Node send only the leaf. Testing on Node 22 showed it sends the full chain. Keeping the chain in `cert` is still the right call, for the reasons now in the post."

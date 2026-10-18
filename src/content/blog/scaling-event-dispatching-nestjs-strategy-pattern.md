@@ -1,7 +1,7 @@
 ---
 title: "Scaling Multi-Channel Event Dispatching in NestJS: Strategy Pattern, Polymorphic DTOs, and OCP"
 slug: "scaling-event-dispatching-nestjs-strategy-pattern"
-description: "How to eliminate massive switch statements in event-driven backends: polymorphic class-validator DTOs, dynamic NestJS strategy registries, hierarchical webhook handlers, and isolated queues."
+description: "Replacing a growing switch statement in a NestJS notification service with per-channel strategies, validated payloads and separate queues."
 publishDate: "2026-07-16T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "messaging"

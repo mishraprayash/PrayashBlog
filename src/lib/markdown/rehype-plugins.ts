@@ -5,7 +5,7 @@
  */
 import type { Element, ElementContent, Root, Text } from "hast";
 import type { ShikiTransformer } from "shiki";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 
 const el = (tagName: string, properties: Element["properties"], children: ElementContent[] = []): Element => ({
   type: "element",
@@ -85,7 +85,7 @@ export function rehypeTables() {
       if (seen > 1) label += ` (${seen})`;
 
       parent.children[index] = el("div", { className: ["table-wrap"], tabIndex: 0, role: "region", ariaLabel: label }, [node]);
-      return [visit.SKIP, index + 1];
+      return [SKIP, index + 1];
     });
   };
 }

@@ -245,6 +245,10 @@ const socialCard = socialImage(ogImage, site);
   .post-revised summary::marker { content: ""; }
   .post-revised summary::-webkit-details-marker { display: none; }
   .post-revised > summary { display: inline; }
+  @media (max-width: 639px) {
+    .post-revised > summary { flex-basis: 100%; }
+    .post-meta > * + .post-revised > summary::before { content: none; }
+  }
   .post-revised p {
     flex-basis: 100%;
     margin: var(--space-2) 0 0;

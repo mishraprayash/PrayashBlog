@@ -1,7 +1,7 @@
 ---
 title: "Building an AI-Powered WAF on Nginx: Architecture and Implementation"
 slug: "nginx-lua-ai-waf-gatekeeper"
-description: "How I built a real-time AI web-attack gatekeeper at the edge: Nginx TLS termination, the ngx_lua access phase, non-blocking cosockets, and a Python PyTorch inference sidecar."
+description: "Putting a PyTorch classifier on the Nginx request path with OpenResty: the access phase, non-blocking cosockets, and a Python inference sidecar."
 publishDate: "2026-06-22T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "network-edge"

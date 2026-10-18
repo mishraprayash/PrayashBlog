@@ -1,7 +1,7 @@
 ---
 title: "Production Kubernetes Debugging with k9s: Shortcuts, Cloud Auth, and Triage Workflows"
 slug: "mastering-k9s-kubernetes-terminal-ui-guide"
-description: "Connecting k9s to AWS EKS, Azure AKS, and GCP GKE: per-cluster skins, the real config paths, ephemeral debug containers that fail on hardened pods, and read-only hardening."
+description: "Using k9s on EKS, AKS and GKE without hurting production: per-cluster skins, read-only mode, RBAC, and debug containers on hardened pods."
 publishDate: "2026-08-28T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"

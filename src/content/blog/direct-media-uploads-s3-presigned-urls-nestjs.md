@@ -1,7 +1,7 @@
 ---
 title: "Direct Media Uploads at Scale: S3 Presigned URLs, Security Constraints, and NestJS Implementation"
 slug: "direct-media-uploads-s3-presigned-urls-nestjs"
-description: "Why proxying large file uploads through Node.js exhausts memory and bandwidth: exploring AWS SigV4 presigned URLs, MIME-type locking, and clean NestJS implementation."
+description: "Moving uploads off your Node.js servers with S3 presigned URLs: how SigV4 signing works, what it doesn't enforce, and a NestJS implementation."
 publishDate: "2026-08-23T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "network-edge"

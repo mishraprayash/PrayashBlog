@@ -1,7 +1,7 @@
 ---
 title: "Docker Fundamentals: Container Mechanics and Single-Stage Builds"
 slug: "architecting-lightweight-docker-builds"
-description: "Mastering Docker from first principles: container mechanics, immutable layer caching, .dockerignore setup, and crafting a secure, production-grade single-stage build."
+description: "How images, layers and the build cache work, what belongs in .dockerignore, and a non-root single-stage Dockerfile for a Node service."
 publishDate: "2026-05-28T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"

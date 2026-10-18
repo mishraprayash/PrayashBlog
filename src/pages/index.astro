@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
 import PostList from "../components/PostList.astro";
+import TodoText from "../components/TodoText.astro";
 import { PILLARS, PILLAR_IDS } from "../data/taxonomy";
 import { SITE } from "../lib/seo";
 import { getPosts, getSeries, postsByPillar } from "../lib/posts";
@@ -11,6 +13,9 @@ const startHere = posts
   .filter((p) => p.data.startHere)
   .sort((a, b) => a.data.startHere! - b.data.startHere!);
 const recent = posts.slice(0, 5);
+const projects = (await getCollection("projects", ({ data }) => import.meta.env.DEV || !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order,
+);
 
 // One line on why each "Start here" post is worth reading. Edit freely;
 // these are meant to sound like you recommending your own work.
@@ -47,6 +52,20 @@ const startNotes: Record<string, string> = {
         <section aria-labelledby="start-here">
           <h2 class="section-title" id="start-here">Start here</h2>
           <PostList posts={startHere} notes={startNotes} seriesTotals={seriesTotals} />
+        </section>
+      )}
+
+      {projects.length > 0 && (
+        <section aria-labelledby="projects">
+          <h2 class="section-title" id="projects">Projects</h2>
+          <ul class="def-list">
+            {projects.map((p) => (
+              <li>
+                <a class="def-list__name" href={`/projects/${p.id}`}><TodoText text={p.data.title} /></a>
+                <p class="def-list__desc"><TodoText text={p.data.summary} /></p>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

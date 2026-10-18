@@ -1,7 +1,7 @@
 ---
 title: "NestJS and Dapr: Core Fundamentals and Architecture"
 slug: "nestjs-dapr-core-fundamentals-architecture"
-description: "Why I stopped pulling cloud SDKs into NestJS: exploring Dapr sidecar runtime mechanics, protocol abstraction, and how it compares to native @nestjs/microservices."
+description: "What Dapr's sidecar gives a NestJS service, how it compares to @nestjs/microservices, and when it isn't worth the extra moving part."
 publishDate: "2026-08-01T10:00:00Z"
 author: "Prayash Mishra"
 pillar: "running-services"
