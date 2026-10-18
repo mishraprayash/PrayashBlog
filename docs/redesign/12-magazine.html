@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magazine Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f1eee6; --paper-2: #e7e3d8; --ink: #111111; --ink-2: #3a3a38; --muted: #6c6a64;
+  --night: #0f0f11; --night-2: #1a1a1d; --night-line: #2c2c31;
+  --msg: #ff4f1a; --pg: #2f5bff; --run: #00b874; --edge: #8b5cf6;
+  --display: "Archivo", "Arial Black", system-ui, sans-serif;
+  --serif: "Newsreader", Georgia, serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 19px/1.65 var(--serif); -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--msg); outline-offset: 3px; }
+::selection { background: var(--ink); color: var(--paper); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+.mono { font-family: var(--mono); }
+[data-view] { display: none; }
+[data-view].on { display: block; }
+
+/* ---------- masthead bar ---------- */
+.bar { position: sticky; top: 0; z-index: 50; background: var(--ink); color: var(--paper); }
+.bar__in { display: flex; align-items: center; gap: 20px; height: 52px; padding: 0 24px; font: 500 12px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.bar__logo { font: 900 18px/1 var(--display); font-stretch: 125%; letter-spacing: -.01em; text-transform: none; }
+.bar__logo span { color: var(--msg); }
+.bar__issue { color: #8c8a84; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar nav { display: flex; gap: 20px; }
+.bar nav a:hover { color: var(--msg); }
+.bar__progress { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--msg); width: 0; }
+@media (max-width: 720px) { .bar__issue { display: none; } .bar nav { gap: 14px; } }
+
+/* ---------- ticker ---------- */
+.ticker { overflow: hidden; background: var(--night); color: #d9d6cf; border-bottom: 1px solid var(--night-line); }
+.ticker__track { display: flex; gap: 48px; width: max-content; padding: 11px 0; animation: tick 60s linear infinite; font: 400 13px/1 var(--mono); }
+.ticker:hover .ticker__track { animation-play-state: paused; }
+.ticker__track span::before { content: "●"; color: var(--msg); margin-right: 10px; font-size: 9px; vertical-align: 2px; }
+.ticker__track .ok::before { color: var(--run); }
+@keyframes tick { to { transform: translateX(-50%); } }
+
+/* ---------- home: masthead ---------- */
+.mast { padding: 48px 24px 0; border-bottom: 3px solid var(--ink); overflow: hidden; }
+.mast__top { display: flex; justify-content: space-between; font: 500 12px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); border-bottom: 1px solid var(--ink); padding-bottom: 12px; }
+.mast__title { font: 900 clamp(30px, 14.2vw, 260px)/.82 var(--display); font-stretch: 125%; letter-spacing: -.045em; margin: 22px 0 0; text-transform: uppercase; }
+.mast__title .row { display: block; overflow: hidden; }
+.mast__title .row > span { display: inline-block; transform: translateY(105%); animation: rise .9s cubic-bezier(.2,.8,.2,1) forwards; }
+.mast__title .row:nth-child(2) > span { animation-delay: .12s; color: transparent; -webkit-text-stroke: 2px var(--ink); }
+@keyframes rise { to { transform: none; } }
+.mast__sub { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; padding: 22px 0 26px; }
+.mast__sub p { margin: 0; max-width: 46ch; font-size: 22px; line-height: 1.4; }
+.mast__sub p em { font-style: italic; }
+.mast__stats { display: flex; gap: 28px; font: 500 12px/1.3 var(--mono); text-transform: uppercase; color: var(--ink-2); }
+.mast__stats b { display: block; font: 900 40px/1 var(--display); font-stretch: 110%; color: var(--ink); }
+@media (max-width: 720px) { .mast__top span:last-child { display: none; } .mast__sub { grid-template-columns: 1fr; } .mast__title .row:nth-child(2) > span { -webkit-text-stroke-width: 1.2px; } }
+
+/* ---------- home: lead story ---------- */
+.lead { display: grid; grid-template-columns: 1.05fr 1fr; background: var(--msg); color: var(--ink); border-bottom: 3px solid var(--ink); min-height: 560px; }
+.lead__text { padding: 44px 24px 40px; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; }
+.label { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.lead h2 { font: 900 clamp(42px, 6vw, 92px)/.9 var(--display); font-stretch: 112%; letter-spacing: -.035em; margin: 14px 0 0; text-transform: uppercase; }
+.lead p { font-size: 21px; line-height: 1.45; margin: 0; max-width: 40ch; }
+.cta { display: inline-flex; align-items: center; gap: 12px; align-self: flex-start; padding: 15px 20px; background: var(--ink); color: var(--paper); font: 600 13px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; transition: transform .2s; }
+.cta:hover { transform: translateX(6px); }
+.lead__art { border-left: 3px solid var(--ink); background: var(--ink); display: grid; place-items: center; overflow: hidden; }
+.lead__art svg { width: 100%; height: 100%; }
+@media (max-width: 900px) { .lead { grid-template-columns: 1fr; } .lead__art { border-left: 0; border-top: 3px solid var(--ink); min-height: 320px; } }
+
+/* ---------- home: issue grid ---------- */
+.sect-h { display: flex; justify-content: space-between; align-items: baseline; padding: 26px 24px 18px; border-bottom: 1px solid var(--ink); }
+.sect-h { gap: 12px; }
+.sect-h h3 { margin: 0; font: 900 clamp(24px, 7vw, 34px)/1 var(--display); font-stretch: 120%; letter-spacing: -.02em; text-transform: uppercase; }
+.sect-h span { font: 500 12px/1 var(--mono); text-transform: uppercase; color: var(--ink-2); }
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); border-bottom: 3px solid var(--ink); }
+.card { position: relative; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); display: flex; flex-direction: column; background: var(--paper); transition: background .25s; }
+.card:hover { background: #fff; }
+.card__art { aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--ink); }
+.card__art svg { width: 100%; height: 100%; display: block; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.card:hover .card__art svg { transform: scale(1.04); }
+.card__body { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.card h4 { margin: 0; font: 800 26px/1 var(--display); font-stretch: 105%; letter-spacing: -.02em; }
+.card p { margin: 0; font-size: 17px; line-height: 1.45; color: var(--ink-2); }
+.card .meta { margin-top: auto; display: flex; gap: 14px; font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.card .pill { padding: 5px 7px; color: #fff; }
+.c-wide { grid-column: span 7; } .c-tall { grid-column: span 5; } .c-third { grid-column: span 4; }
+.c-wide .card__art { aspect-ratio: 16 / 8; } .c-wide h4 { font-size: 40px; }
+@media (max-width: 900px) { .c-wide, .c-tall, .c-third { grid-column: span 12; } .c-wide h4 { font-size: 30px; } }
+
+/* ---------- home: pillar bands ---------- */
+.band { display: grid; grid-template-columns: 360px 1fr; border-bottom: 3px solid var(--ink); }
+.band__name { padding: 30px 24px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; gap: 30px; }
+.band__name h3 { margin: 0; font: 900 46px/.92 var(--display); font-stretch: 118%; letter-spacing: -.03em; text-transform: uppercase; }
+.band__name p { margin: 0; font-size: 17px; line-height: 1.45; opacity: .92; }
+.band ol { list-style: none; margin: 0; padding: 0; }
+.band li a { display: grid; grid-template-columns: 70px 1fr auto; gap: 18px; align-items: baseline; padding: 18px 24px; border-bottom: 1px solid var(--ink); transition: background .2s, padding .2s; }
+.band li:last-child a { border-bottom: 0; }
+.band li a:hover { background: #fff; padding-left: 32px; }
+.band .n { font: 600 13px/1 var(--mono); color: var(--muted); }
+.band .t { font: 700 22px/1.2 var(--display); font-stretch: 100%; letter-spacing: -.01em; }
+.band .m { font: 500 12px/1 var(--mono); color: var(--muted); text-transform: uppercase; }
+@media (max-width: 900px) { .band { grid-template-columns: minmax(0, 1fr); } .band__name h3 { font-size: clamp(28px, 8.4vw, 46px); overflow-wrap: anywhere; } .band li a { grid-template-columns: 40px 1fr; } .band .m { display: none; } }
+
+.foot { background: var(--ink); color: var(--paper); padding: 60px 24px 28px; }
+.foot__big { font: 900 clamp(48px, 11vw, 180px)/.85 var(--display); font-stretch: 125%; letter-spacing: -.045em; text-transform: uppercase; }
+.foot__big span { color: var(--msg); }
+.foot__row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; margin-top: 36px; padding-top: 18px; border-top: 1px solid #333; font: 500 12px/1 var(--mono); text-transform: uppercase; color: #9c9991; }
+.foot__row a:hover { color: var(--msg); }
+
+/* reveal on scroll */
+.rv { opacity: 0; transform: translateY(28px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
+.rv.in { opacity: 1; transform: none; }
+
+/* ---------- post: hero ---------- */
+.p-hero { background: var(--msg); border-bottom: 3px solid var(--ink); display: grid; grid-template-columns: 1fr 1fr; min-height: calc(100vh - 52px); }
+.p-hero__text { padding: 40px 24px 36px; display: flex; flex-direction: column; justify-content: space-between; gap: 30px; }
+.crumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.crumbs a { font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; padding: 7px 9px; border: 1.5px solid var(--ink); }
+.crumbs a:hover { background: var(--ink); color: var(--msg); }
+.p-hero h1 { font: 900 clamp(46px, 7.4vw, 124px)/.86 var(--display); font-stretch: 115%; letter-spacing: -.045em; margin: 0; text-transform: uppercase; }
+.p-hero h1 .row { display: block; overflow: hidden; padding-bottom: .04em; }
+.p-hero h1 .row > span { display: inline-block; transform: translateY(105%); animation: rise .9s cubic-bezier(.2,.8,.2,1) forwards; }
+.p-hero h1 .row:nth-child(2) > span { animation-delay: .1s; } .p-hero h1 .row:nth-child(3) > span { animation-delay: .2s; }
+.dek { font-size: 23px; line-height: 1.4; max-width: 34ch; margin: 0; }
+.p-meta { display: flex; flex-wrap: wrap; gap: 22px; font: 500 12px/1.3 var(--mono); text-transform: uppercase; letter-spacing: .05em; border-top: 1.5px solid var(--ink); padding-top: 14px; }
+.p-meta b { display: block; font-weight: 600; }
+.p-hero__art { background: var(--ink); border-left: 3px solid var(--ink); overflow: hidden; position: relative; }
+.p-hero__art svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+@media (max-width: 900px) { .p-hero { grid-template-columns: 1fr; min-height: 0; } .p-hero__art { border-left: 0; border-top: 3px solid var(--ink); aspect-ratio: 4 / 3; } }
+
+/* ---------- post: body ---------- */
+.article { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 680px) minmax(0, 1fr); padding: 70px 24px 40px; column-gap: 40px; }
+.article > * { grid-column: 2; }
+.article p { margin: 0 0 22px; }
+.article > p:first-of-type::first-letter { float: left; font: 900 108px/.8 var(--display); font-stretch: 125%; margin: 8px 12px 0 0; color: var(--msg); }
+.article h2 { font: 900 clamp(34px, 4.6vw, 60px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.035em; text-transform: uppercase; margin: 80px 0 22px; }
+.article h2 small { display: block; font: 600 13px/1 var(--mono); letter-spacing: .08em; color: var(--msg); margin-bottom: 12px; }
+.article code { font: 500 .8em/1 var(--mono); background: var(--paper-2); padding: .15em .35em; }
+.pull { grid-column: 1 / -1 !important; margin: 46px 0; padding: 40px 0; border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); text-align: center; }
+.pull q { quotes: none; display: block; max-width: 22ch; margin: 0 auto; font: 900 clamp(32px, 4.6vw, 64px)/.98 var(--display); font-stretch: 110%; letter-spacing: -.03em; text-transform: uppercase; }
+.pull q em { font-style: normal; color: var(--msg); }
+.pull cite { display: block; margin-top: 16px; font: 500 12px/1 var(--mono); text-transform: uppercase; font-style: normal; color: var(--muted); }
+.code { grid-column: 1 / -1 !important; max-width: 920px; width: 100%; justify-self: center; margin: 14px 0 34px; background: var(--night); color: #e8e6df; border: 3px solid var(--ink); box-shadow: 10px 10px 0 var(--ink); }
+.code__bar { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--night-line); font: 500 12px/1 var(--mono); color: #8f8c85; text-transform: uppercase; letter-spacing: .05em; }
+.code__bar b { color: var(--msg); font-weight: 600; }
+.code pre { margin: 0; padding: 18px 20px; overflow-x: auto; font: 400 15px/1.7 var(--mono); }
+.code .k { color: #ff8a5c; } .code .s { color: #8ee0a8; } .code .c { color: #77746d; font-style: italic; } .code .bad { background: rgb(255 79 26 / .18); display: block; margin: 0 -20px; padding: 0 20px; box-shadow: inset 4px 0 0 var(--msg); }
+
+/* ---------- post: scrollytelling ---------- */
+.story { grid-column: 1 / -1 !important; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 0; margin: 40px -24px; border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); background: var(--night); color: #e8e6df; }
+.story__steps { padding: 0 32px; }
+.step { min-height: 78vh; display: flex; flex-direction: column; justify-content: center; opacity: .28; transition: opacity .4s; }
+.step.on { opacity: 1; }
+.step .label { color: var(--msg); margin-bottom: 14px; }
+.step h4 { font: 800 32px/1 var(--display); font-stretch: 108%; letter-spacing: -.02em; margin: 0 0 14px; color: #fff; }
+.step p { font-size: 19px; margin: 0; color: #c8c5bd; }
+.step code { background: #26262b; color: #fff; }
+.story__fig { position: sticky; top: 52px; height: calc(100vh - 52px); border-left: 1px solid var(--night-line); display: grid; place-items: center; padding: 24px; }
+.story__fig > div { width: 100%; max-width: 640px; }
+.story__fig svg { width: 100%; height: auto; max-height: calc(100vh - 110px); display: block; }
+@media (max-width: 900px) { .story { grid-template-columns: 1fr; } .story__fig { order: -1; height: 56vh; top: 52px; z-index: 2; background: var(--night); border-left: 0; border-bottom: 1px solid var(--night-line); } .step { min-height: 60vh; } }
+
+/* diagram parts */
+.dg text { font-family: var(--mono); font-size: 14px; fill: #c8c5bd; }
+.dg .box { fill: #1c1c20; stroke: #3a3a40; stroke-width: 1.5; transition: stroke .4s, fill .4s; }
+.dg .title { font-family: var(--display); font-weight: 800; font-size: 16px; fill: #fff; }
+.dg .wire { stroke: #3a3a40; stroke-width: 2; fill: none; stroke-dasharray: 6 6; }
+.dg .pkt { fill: var(--msg); opacity: 0; }
+.dg .row-r { fill: #26262b; transition: fill .4s, stroke .4s; stroke: transparent; stroke-width: 1.5; }
+.dg .tag { font-size: 11px; }
+.dg .x { opacity: 0; transition: opacity .3s; }
+.dg .lost { opacity: 0; transition: opacity .3s; }
+.dg .gauge { fill: var(--msg); transition: width .8s cubic-bezier(.2,.8,.2,1), fill .3s; }
+.dg .hide { opacity: 0; transition: opacity .4s; }
+/* step states */
+.dg[data-s="1"] .p1 { animation: travel1 2.2s ease-in-out infinite; }
+.dg[data-s="1"] .x { opacity: 1; }
+.dg[data-s="1"] .kafka { stroke: var(--msg); }
+.dg[data-s="2"] .p2, .dg[data-s="3"] .p2 { animation: travel2 2.4s ease-in-out infinite; }
+.dg[data-s="2"] .db, .dg[data-s="3"] .db { stroke: var(--run); }
+.dg[data-s="2"] .ob-rows, .dg[data-s="3"] .ob-rows, .dg[data-s="4"] .ob-rows { opacity: 1; }
+.dg[data-s="3"] .r1 { fill: rgb(255 79 26 / .22); stroke: var(--msg); }
+.dg[data-s="3"] .lost { opacity: 1; }
+.dg[data-s="4"] .walg { opacity: 1; }
+.dg[data-s="4"] .db { stroke: var(--msg); fill: #2a1610; }
+.dg[data-s="4"] .gauge { width: 300px; }
+.dg[data-s="4"] .panic { opacity: 1; }
+@keyframes travel1 { 0% { opacity: 0; transform: translate(0,0); } 10% { opacity: 1; } 45% { transform: translate(0, 120px); opacity: 1; } 55% { transform: translate(0,120px); } 85% { transform: translate(250px, 120px); opacity: 1; } 100% { transform: translate(250px, 120px); opacity: 0; } }
+@keyframes travel2 { 0% { opacity: 0; transform: translate(0,0); } 10% { opacity: 1; } 40% { transform: translate(0,120px); } 70% { transform: translate(0,250px); } 100% { transform: translate(250px,250px); opacity: 0; } }
+
+/* lab (compact) */
+.lab { grid-column: 1 / -1 !important; max-width: 920px; width: 100%; justify-self: center; margin: 10px 0 40px; border: 3px solid var(--ink); background: #fff; box-shadow: 10px 10px 0 var(--msg); }
+.lab__h { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 16px; border-bottom: 3px solid var(--ink); background: var(--ink); color: var(--paper); font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.lab__h .tabs { display: flex; }
+.lab__h .tabs button { border: 1.5px solid var(--paper); background: none; padding: 7px 10px; font: 600 11px/1 var(--mono); text-transform: uppercase; }
+.lab__h .tabs button + button { border-left: 0; }
+.lab__h .tabs button[aria-pressed="true"] { background: var(--msg); color: var(--ink); border-color: var(--msg); }
+.lab__b { display: grid; grid-template-columns: 1fr 1fr; }
+@media (max-width: 720px) { .lab__b { grid-template-columns: 1fr; } }
+.lab__col { padding: 16px; }
+.lab__col + .lab__col { border-left: 1.5px solid var(--ink); }
+@media (max-width: 720px) { .lab__col + .lab__col { border-left: 0; border-top: 1.5px solid var(--ink); } }
+.lab__col h5 { margin: 0 0 10px; font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.trow { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--ink); margin-bottom: 8px; font: 500 13px/1.2 var(--mono); transition: all .3s; }
+.trow .st { font-size: 11px; text-transform: uppercase; }
+.trow.unc { border-style: dashed; color: var(--muted); }
+.trow.pub { background: var(--run); color: #fff; }
+.trow.lost { background: var(--msg); animation: shake .4s; }
+@keyframes shake { 30% { transform: translateX(-4px); } 70% { transform: translateX(4px); } }
+.log { list-style: none; margin: 0; padding: 0; font: 400 13px/1.55 var(--mono); }
+.log li { padding: 6px 0; border-bottom: 1px dashed #ccc; color: var(--muted); }
+.log li:last-child { color: var(--ink); }
+.log b { color: var(--msg); font-weight: 600; }
+.lab__f { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 3px solid var(--ink); }
+.lab__f p { margin: 0; font-size: 17px; line-height: 1.4; flex: 1 1 260px; }
+.btn { border: 2px solid var(--ink); background: none; padding: 10px 14px; font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+.btn--go { background: var(--ink); color: var(--paper); }
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 var(--ink); }
+
+/* next */
+.next { display: grid; grid-template-columns: 1fr 1fr; border-top: 3px solid var(--ink); }
+.next a { padding: 40px 24px; border-right: 3px solid var(--ink); transition: background .25s; }
+.next a:last-child { border-right: 0; }
+.next a:hover { background: #fff; }
+.next .t { display: block; margin-top: 12px; font: 900 clamp(28px, 3.6vw, 46px)/.95 var(--display); font-stretch: 112%; letter-spacing: -.03em; text-transform: uppercase; }
+@media (max-width: 720px) { .next { grid-template-columns: 1fr; } .next a { border-right: 0; border-bottom: 3px solid var(--ink); } }
+
+.proto { background: #fffbe8; border-bottom: 1px dashed var(--ink); padding: 8px 24px; font: 500 12px/1.5 var(--mono); }
+.proto a { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<p class="proto">Prototype v2 · magazine direction · <a href="#home" data-go="home">Home</a> · <a href="#post" data-go="post">Post page (Outbox)</a> · every cover is an animated SVG drawn for that post's subject</p>
+
+<header class="bar">
+  <div class="bar__in">
+    <a class="bar__logo" href="#home" data-go="home">PM<span>/</span>SYSTEMS</a>
+    <span class="bar__issue">Backend notes · how systems fail at the seams · Oct 2026 · Issue 15</span>
+    <nav><a href="#home" data-go="home">Writing</a><a href="#">Projects</a><a href="#">About</a></nav>
+  </div>
+  <div class="bar__progress" id="prog"></div>
+</header>
+
+<div class="ticker" aria-hidden="true"><div class="ticker__track" id="ticker"></div></div>
+
+<!-- =============================== HOME =============================== -->
+<main data-view="home" id="home">
+  <section class="mast">
+    <div class="mast__top"><span>Prayash Mishra · backend engineer</span><span>Messaging · PostgreSQL · Running services · The edge</span></div>
+    <h1 class="mast__title"><span class="row"><span>Systems,</span></span><span class="row"><span>broken down.</span></span></h1>
+    <div class="mast__sub">
+      <p>Long-form notes on how backend systems fail where they meet databases, brokers and the network, <em>with each failure reproduced</em> and each fix tested.</p>
+      <div class="mast__stats"><span><b>15</b>posts</span><span><b>4</b>series</span><span><b>PG16</b>tested on</span></div>
+    </div>
+  </section>
+
+  <section class="lead rv">
+    <div class="lead__text">
+      <div>
+        <span class="label">Lead story · Messaging &amp; delivery · Part 2 of 3</span>
+        <h2>The outbox, and five ways it breaks</h2>
+      </div>
+      <p>A home-made Postgres outbox skips events, bloats, stalls when you drop partitions, and its CDC slot can fill the disk. Each failure reproduced, with the fix.</p>
+      <a class="cta" href="#post" data-go="post">Read the story →</a>
+    </div>
+    <div class="lead__art" data-cover="outbox" data-bg="#111"></div>
+  </section>
+
+  <div class="sect-h"><h3>In this issue</h3><span>scroll ↓</span></div>
+  <section class="grid" id="cards"></section>
+
+  <div class="sect-h"><h3>Departments</h3><span>4 topics</span></div>
+  <section id="bands"></section>
+
+  <footer class="foot">
+    <div class="foot__big">Read the <span>failure</span>, keep the fix.</div>
+    <div class="foot__row"><span>© 2026 Prayash Mishra</span><span><a href="#">RSS</a> · <a href="#">GitHub</a> · <a href="#">LinkedIn</a></span></div>
+  </footer>
+</main>
+
+<!-- =============================== POST =============================== -->
+<main data-view="post" id="post">
+  <section class="p-hero">
+    <div class="p-hero__text">
+      <div class="crumbs"><a href="#">Messaging</a><a href="#">Series · Part 2 / 3</a><a href="#">#postgresql</a><a href="#">#kafka</a></div>
+      <h1><span class="row"><span>The outbox,</span></span><span class="row"><span>and five ways</span></span><span class="row"><span>it breaks</span></span></h1>
+      <p class="dek">Skipped events, bloat, stalled partition drops, and a CDC slot that fills the disk. Every failure reproduced on Postgres 16.</p>
+      <div class="p-meta"><span><b>Published</b>9 Sep 2026</span><span><b>Revised</b>18 Oct 2026</span><span><b>Reading</b>13 min</span><span><b>Tested on</b>Postgres 16.15</span></div>
+    </div>
+    <div class="p-hero__art" data-cover="outbox" data-bg="#111" data-big="1"></div>
+  </section>
+
+  <article class="article">
+    <p>This code has a bug that won't show up in review or in staging. If the Kafka call fails after the insert has committed, the order exists and nothing downstream hears about it. Billing never charges, inventory never reserves, and there's no error anywhere, because from the point of view of the code that made it, the database write succeeded.</p>
+
+    <div class="code rv"><div class="code__bar"><span><b>●</b> dual-write.ts</span><span>broken</span></div>
+<pre><span class="k">await</span> db.orders.create({ data: order });
+<span class="bad"><span class="c">// ← process dies or broker times out here</span></span><span class="k">await</span> kafka.send({ topic: <span class="s">"orders"</span>, messages: [{ value: JSON.stringify(order) }] });</pre></div>
+
+    <p>The usual answer is the transactional outbox: write the event into a table in the same transaction, and let a relay publish it. Scroll through what that buys you, and where it breaks.</p>
+
+    <section class="story" aria-label="How the outbox works and fails, step by step">
+      <div class="story__steps">
+        <div class="step" data-step="1"><span class="label">Step 01 · the dual write</span><h4>Two systems, no shared commit</h4><p>The order commits to Postgres. The publish to Kafka is a separate call, and when it fails, the event is simply gone.</p></div>
+        <div class="step" data-step="2"><span class="label">Step 02 · the outbox</span><h4>One transaction, then a relay</h4><p>The order and its event are written together, so both commit or neither does. A relay reads the <code>outbox</code> table and publishes.</p></div>
+        <div class="step" data-step="3"><span class="label">Step 03 · the ghost row</span><h4>The relay skips row 1</h4><p>Ids are handed out on insert, not commit. Row 2 commits first, the relay moves its cursor past it, and row 1, committed later, is never published.</p></div>
+        <div class="step" data-step="4"><span class="label">Step 04 · the full disk</span><h4>A stalled slot fills <code>pg_wal</code></h4><p>With CDC, a stopped connector makes Postgres keep every WAL file. On a full disk: <code>PANIC: No space left on device</code>.</p></div>
+      </div>
+      <div class="story__fig"><div id="storyFig"></div></div>
+    </section>
+
+    <h2><small>01 · data loss</small>The poller that skips rows</h2>
+    <p>The obvious relay remembers the highest id it has published and asks for anything newer. It loses events whenever two transactions commit in a different order from the one they got their ids in. Run it yourself, then switch the query.</p>
+
+    <div class="lab rv" id="lab">
+      <div class="lab__h"><span>Lab · ghost row</span><div class="tabs"><button data-mode="cursor" aria-pressed="true">id &gt; last_seen</button><button data-mode="status" aria-pressed="false">status = pending</button></div></div>
+      <div class="lab__b"><div class="lab__col"><h5>outbox table</h5><div id="rows"></div></div><div class="lab__col"><h5>session log</h5><ol class="log" id="log"></ol></div></div>
+      <div class="lab__f"><p id="narr">Press step to start.</p><span><button class="btn" id="reset">Reset</button> <button class="btn btn--go" id="step">Step →</button></span></div>
+    </div>
+
+    <div class="pull rv"><q>Nothing errors and nothing is logged. You find out when someone asks <em>why an order never shipped.</em></q><cite>Section 01</cite></div>
+
+    <h2><small>04 · outage</small>Change data capture and the full disk</h2>
+    <p>A replication slot is a promise: Postgres keeps every WAL file the slot hasn't confirmed, however long that takes. Since Postgres 13, <code>max_slot_wal_keep_size</code> caps it, and past the cap Postgres gives up on the slot instead of on the database.</p>
+  </article>
+
+  <nav class="next">
+    <a href="#home" data-go="home"><span class="label">← Previous · Part 1</span><span class="t">Queues, topics &amp; streams</span></a>
+    <a href="#home" data-go="home" style="background:var(--msg)"><span class="label">Next · Part 3 →</span><span class="t">Idempotency, for real</span></a>
+  </nav>
+</main>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ------------------------------------------------------------------
+   Covers: one animated SVG per post, drawn from what the post is about.
+   ------------------------------------------------------------------ */
+const anim = (dur, extra = "") => `style="animation:${dur} ${extra}"`;
+const COVERS = {
+  // Outbox: app → db+outbox → relay → kafka, one packet lost on the dual-write path
+  outbox: (c = "#ff4f1a") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs><pattern id="g1" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#222" stroke-width="1"/></pattern></defs>
+      <rect width="400" height="260" fill="#111"/><rect width="400" height="260" fill="url(#g1)"/>
+      <g font-family="IBM Plex Mono" font-size="10" fill="#9a978f">
+        <rect x="30" y="40" width="80" height="44" fill="none" stroke="#f1eee6" stroke-width="2"/><text x="44" y="66">app</text>
+        <rect x="160" y="30" width="96" height="64" fill="none" stroke="#f1eee6" stroke-width="2"/><text x="174" y="52">postgres</text>
+        <rect x="170" y="62" width="76" height="22" fill="${c}" opacity=".9"/><text x="178" y="77" fill="#111">outbox</text>
+        <rect x="160" y="170" width="96" height="44" fill="none" stroke="#f1eee6" stroke-width="2"/><text x="182" y="196">relay</text>
+        <rect x="300" y="100" width="76" height="60" fill="none" stroke="#f1eee6" stroke-width="2"/><text x="318" y="134">kafka</text>
+      </g>
+      <path d="M110 62H160 M208 94V170 M256 192H338V160" stroke="#f1eee6" stroke-width="2" fill="none" stroke-dasharray="5 6"><animate attributeName="stroke-dashoffset" from="22" to="0" dur="1s" repeatCount="indefinite"/></path>
+      <path d="M110 50C200 0 300 20 338 100" stroke="${c}" stroke-width="2" fill="none" stroke-dasharray="3 6" opacity=".7"/>
+      <circle r="6" fill="${c}"><animateMotion dur="3.2s" repeatCount="indefinite" path="M110 62H208V192H338V160"/></circle>
+      <circle r="6" fill="#f1eee6"><animateMotion dur="3.2s" begin="1.6s" repeatCount="indefinite" path="M110 62H208V192H338V160"/></circle>
+      <g><circle r="6" fill="${c}"><animateMotion dur="2.4s" repeatCount="indefinite" keyPoints="0;.62;.62" keyTimes="0;.6;1" calcMode="linear" path="M110 50C200 0 300 20 338 100"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.6;.65;1" dur="2.4s" repeatCount="indefinite"/></circle>
+      <text x="262" y="34" font-family="IBM Plex Mono" font-size="16" fill="${c}" font-weight="600">✕<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.58;.62;.9;1" dur="2.4s" repeatCount="indefinite"/></text></g>
+    </svg>`,
+  // Idempotency: three duplicate requests converge, one row lights up once
+  idem: (c = "#ff4f1a") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="${c}"/>
+      ${[50, 130, 210].map((y, i) => `<path d="M20 ${y}C140 ${y} 160 130 250 130" stroke="#111" stroke-width="2" fill="none"/><circle r="9" fill="#111"><animateMotion dur="2.6s" begin="${i * .25}s" repeatCount="indefinite" path="M20 ${y}C140 ${y} 160 130 250 130"/></circle>`).join("")}
+      <rect x="250" y="96" width="120" height="68" fill="#f1eee6" stroke="#111" stroke-width="3"/>
+      <text x="262" y="122" font-family="IBM Plex Mono" font-size="11" fill="#111">key: abc</text>
+      <text x="262" y="146" font-family="IBM Plex Mono" font-size="11" fill="#111" font-weight="600">1 row · 201<animate attributeName="opacity" values=".2;1;1;.2" dur="2.6s" repeatCount="indefinite"/></text>
+      <text x="22" y="246" font-family="Archivo" font-weight="900" font-size="22" fill="#111" font-stretch="125%">×3 → ×1</text>
+    </svg>`,
+  // Queues / topics / streams: three lanes behaving differently
+  queues: (c = "#ff4f1a") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="#f1eee6"/>
+      <g font-family="IBM Plex Mono" font-size="10" fill="#111">
+        <text x="16" y="44">QUEUE</text><text x="16" y="124">TOPIC</text><text x="16" y="204">STREAM</text></g>
+      <path d="M80 40H360" stroke="#111" stroke-width="2"/>
+      ${[0, .7, 1.4].map((d) => `<rect width="16" height="16" y="32" fill="#111"><animate attributeName="x" from="80" to="344" dur="2.1s" begin="${d}s" repeatCount="indefinite"/></rect>`).join("")}
+      <path d="M80 120H200M200 120L360 90M200 120H360M200 120L360 150" stroke="#111" stroke-width="2" fill="none"/>
+      ${[90, 120, 150].map((y) => `<circle r="7" fill="${c}"><animateMotion dur="2s" repeatCount="indefinite" path="M80 120H200L360 ${y}"/></circle>`).join("")}
+      ${Array.from({ length: 14 }, (_, i) => `<rect x="${80 + i * 20}" y="190" width="18" height="24" fill="${i % 3 ? "#111" : c}"/>`).join("")}
+      <path d="M0 0V-14" stroke="#111" stroke-width="3"><animateTransform attributeName="transform" type="translate" values="90 186;350 186" dur="4s" repeatCount="indefinite"/></path>
+      <path d="M0 0V-14" stroke="${c}" stroke-width="3"><animateTransform attributeName="transform" type="translate" values="90 186;350 186" dur="7s" repeatCount="indefinite"/></path>
+    </svg>`,
+  // TLS: leaf → intermediate → root, the middle link blinking (missing intermediate)
+  tls: (c = "#8b5cf6") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="${c}"/>
+      ${["LEAF", "INTERMEDIATE", "ROOT"].map((t, i) => `<g transform="translate(${40 + i * 116} 96)"><rect width="96" height="68" rx="34" fill="none" stroke="#111" stroke-width="6" ${i === 1 ? `stroke-dasharray="10 8"` : ""}>${i === 1 ? `<animate attributeName="opacity" values="1;.15;1" dur="1.6s" repeatCount="indefinite"/>` : ""}</rect><text x="48" y="40" text-anchor="middle" font-family="IBM Plex Mono" font-size="${i === 1 ? 9 : 11}" fill="#111" font-weight="600">${t}</text></g>`).join("")}
+      <text x="40" y="214" font-family="IBM Plex Mono" font-size="11" fill="#111">unable to verify the first certificate</text>
+    </svg>`,
+  // WAF: requests through a gate, some blocked
+  waf: (c = "#8b5cf6") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="#111"/>
+      <rect x="196" y="20" width="10" height="220" fill="${c}"/>
+      ${[50, 90, 130, 170, 210].map((y, i) => i % 2 ? `<circle r="7" cy="${y}" fill="#ff4f1a"><animate attributeName="cx" values="20;190;190" keyTimes="0;.6;1" dur="2.2s" begin="${i * .3}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.62;.7" dur="2.2s" begin="${i * .3}s" repeatCount="indefinite"/></circle>` : `<circle r="7" cy="${y}" fill="#f1eee6"><animate attributeName="cx" from="20" to="390" dur="2.2s" begin="${i * .3}s" repeatCount="indefinite"/></circle>`).join("")}
+      <text x="214" y="246" font-family="IBM Plex Mono" font-size="11" fill="${c}">403 · score &gt; 0.85</text>
+    </svg>`,
+  // Docker: layers stacking and the image shrinking
+  docker: (c = "#00b874") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="${c}"/>
+      ${[0, 1, 2, 3, 4].map((i) => `<rect x="70" y="${190 - i * 34}" height="28" fill="#111"><animate attributeName="width" values="${260 - i * 20};${120 - i * 10};${260 - i * 20}" dur="4s" begin="${i * .12}s" repeatCount="indefinite"/></rect>`).join("")}
+      <text x="70" y="244" font-family="IBM Plex Mono" font-size="11" fill="#111">FROM node:20-slim AS runner</text>
+    </svg>`,
+  // Dapr: pods with sidecars, pulses between sidecars
+  dapr: (c = "#00b874") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="#111"/>
+      ${[[40, 50], [230, 50], [135, 160]].map(([x, y]) => `<rect x="${x}" y="${y}" width="130" height="60" fill="none" stroke="#f1eee6" stroke-width="2"/><rect x="${x + 8}" y="${y + 8}" width="70" height="44" fill="#f1eee6"/><rect x="${x + 86}" y="${y + 8}" width="36" height="44" fill="${c}"/>`).join("")}
+      <path id="dp" d="M162 80H252M252 80L240 168M240 168H162" stroke="${c}" stroke-width="2" fill="none" stroke-dasharray="4 5"/>
+      <circle r="6" fill="${c}"><animateMotion dur="2.4s" repeatCount="indefinite" path="M162 80H252L240 168H162"/></circle>
+    </svg>`,
+  // k9s: a grid of pods, some failing
+  k9s: (c = "#00b874") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="#f1eee6"/>
+      ${Array.from({ length: 40 }, (_, i) => { const x = 30 + (i % 10) * 35, y = 40 + Math.floor(i / 10) * 45, bad = [7, 18, 26, 33].includes(i); return `<rect x="${x}" y="${y}" width="26" height="30" fill="${bad ? "#ff4f1a" : "#111"}">${bad ? `<animate attributeName="opacity" values="1;.2;1" dur="${1 + i % 3 * .4}s" repeatCount="indefinite"/>` : ""}</rect>`; }).join("")}
+      <text x="30" y="238" font-family="IBM Plex Mono" font-size="11" fill="#111">CrashLoopBackOff · 4 / 40</text>
+    </svg>`,
+  // S3: upload bypasses the API server
+  s3: (c = "#8b5cf6") => `
+    <svg viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="400" height="260" fill="#f1eee6"/>
+      <rect x="30" y="100" width="70" height="60" fill="#111"/><rect x="165" y="30" width="70" height="50" fill="none" stroke="#111" stroke-width="3"/><path d="M300 90h70v80l-35 20-35-20z" fill="${c}"/>
+      <g font-family="IBM Plex Mono" font-size="10" fill="#111"><text x="174" y="60">API</text><text x="310" y="210">bucket</text></g>
+      <path d="M100 110L165 60M235 60L100 120" stroke="#111" stroke-width="1.5" stroke-dasharray="3 4" fill="none"/>
+      <path d="M100 140C190 160 230 150 300 130" stroke="${c}" stroke-width="10" fill="none" stroke-dasharray="14 10"><animate attributeName="stroke-dashoffset" from="48" to="0" dur=".8s" repeatCount="indefinite"/></path>
+    </svg>`,
+};
+function paintCovers(root = document) {
+  $$("[data-cover]", root).forEach((el) => {
+    el.innerHTML = COVERS[el.dataset.cover]();
+    const svg = el.querySelector("svg");
+    // The big post-page cover shows the whole drawing; cards crop to fill.
+    if (el.dataset.big) svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    if (RM) svg.pauseAnimations?.();
+  });
+}
+
+/* ------------------------------------------------------------------
+   Home content (real posts)
+   ------------------------------------------------------------------ */
+const POSTS = [
+  { c: "idem", t: "Idempotency, for real", d: "Why a Redis lock doesn't make retries safe, and how to do it inside one Postgres transaction.", p: "Messaging", col: "var(--msg)", m: "13 min", size: "c-wide" },
+  { c: "queues", t: "Queues, topics & streams", d: "What actually separates them, and how to choose.", p: "Messaging", col: "var(--msg)", m: "14 min", size: "c-tall" },
+  { c: "waf", t: "Bypassing my own ML firewall", d: "Spooled bodies, token truncation and a breaker attackers can trip.", p: "The edge", col: "var(--edge)", m: "14 min", size: "c-third" },
+  { c: "tls", t: "The missing intermediate", d: "Why curl fails while Chrome passes, on Node 22.", p: "The edge", col: "var(--edge)", m: "7 min", size: "c-third" },
+  { c: "docker", t: "Shrinking a Node image", d: "Multi-stage builds, cache mounts, and the PID 1 trap.", p: "Running services", col: "var(--run)", m: "8 min", size: "c-third" },
+  { c: "s3", t: "Uploads that skip your server", d: "S3 presigned URLs, and what they don't enforce.", p: "The edge", col: "var(--edge)", m: "19 min", size: "c-tall" },
+  { c: "dapr", t: "NestJS on Dapr sidecars", d: "Service invocation, state and pub/sub through the sidecar.", p: "Running services", col: "var(--run)", m: "4 parts", size: "c-wide" },
+];
+$("#cards").innerHTML = POSTS.map((x) => `
+  <a class="card ${x.size} rv" href="#post" data-go="post">
+    <div class="card__art" data-cover="${x.c}"></div>
+    <div class="card__body"><h4>${x.t}</h4><p>${x.d}</p><div class="meta"><span class="pill" style="background:${x.col}">${x.p}</span><span>${x.m}</span></div></div>
+  </a>`).join("");
+
+const BANDS = [
+  { n: "Messaging & delivery", col: "var(--msg)", d: "Queues, streams, the outbox, idempotency, retries and ordering.", posts: ["Queues, topics, and event streams", "The transactional outbox pattern", "Idempotency in distributed systems", "Notification dispatch without the giant switch"] },
+  { n: "PostgreSQL under load", col: "var(--pg)", d: "Locks, MVCC, vacuum, replication slots, and what the ORM hides.", posts: ["(coming) The transaction that stopped vacuum", "(coming) The lock queue behind your migration"] },
+  { n: "Running services", col: "var(--run)", d: "Containers, Kubernetes, sidecars, probes and deploys.", posts: ["NestJS and Dapr, parts 1–4", "Docker images for Node services", "Making k9s safe on production clusters"] },
+  { n: "The network edge", col: "var(--edge)", d: "TLS, proxies, request-path security and uploads.", posts: ["TLS in Node.js", "An ML request filter on Nginx, parts 1–2", "Uploads with S3 presigned URLs"] },
+];
+$("#bands").innerHTML = BANDS.map((b) => `
+  <div class="band rv"><div class="band__name" style="background:${b.col}"><h3>${b.n}</h3><p>${b.d}</p></div>
+  <ol>${b.posts.map((p, i) => `<li><a href="#post" data-go="post"><span class="n">${String(i + 1).padStart(2, "0")}</span><span class="t">${p}</span><span class="m">read →</span></a></li>`).join("")}</ol></div>`).join("");
+
+const LOGS = [
+  ["PANIC: could not write to file \"pg_wal/xlogtemp.4550\": No space left on device"],
+  ["tuples: 0 removed, 10002 remain, 10000 are dead but not yet removable"],
+  ["< Connection: close", "ok"], ["relay: SELECT … WHERE id > 2 → 0 rows"],
+  ["LOG: invalidating obsolete replication slot \"debezium\"", "ok"],
+  ["Verify return code: 21 (unable to verify the first certificate)"],
+  ["concurrent insert waited 2.54s, then replayed 201", "ok"],
+  ["hashtext(x) % 4 → 3,721 of 10,000 rows with no owner"],
+];
+const tk = LOGS.map(([t, c]) => `<span class="${c || ""}">${t.replace(/</g, "&lt;")}</span>`).join("");
+$("#ticker").innerHTML = tk + tk;
+
+/* ------------------------------------------------------------------
+   Scrollytelling figure for the post
+   ------------------------------------------------------------------ */
+$("#storyFig").innerHTML = `
+<svg class="dg" id="dg" data-s="1" viewBox="0 0 520 440" role="img" aria-label="Diagram: app writes to Postgres and an outbox table, a relay publishes to Kafka">
+  <rect class="box" x="30" y="40" width="130" height="70"/><text class="title" x="48" y="72">App</text><text x="48" y="94">order service</text>
+  <rect class="box db" x="200" y="20" width="160" height="150"/><text class="title" x="218" y="50">Postgres</text>
+  <g class="ob-rows hide" style="opacity:0">
+    <text x="218" y="74">outbox</text>
+    <rect class="row-r r1" x="218" y="82" width="136" height="22"/><text x="226" y="98">id 1 · #A</text><text class="lost tag" x="306" y="98" fill="#ff4f1a">skipped</text>
+    <rect class="row-r r2" x="218" y="110" width="136" height="22"/><text x="226" y="126">id 2 · #B</text><text class="tag" x="306" y="126" fill="#4ade80">sent</text>
+  </g>
+  <rect class="box" x="200" y="250" width="160" height="70"/><text class="title" x="218" y="282">Relay</text><text x="218" y="304">poll → publish</text>
+  <rect class="box kafka" x="400" y="250" width="100" height="70"/><text class="title" x="416" y="282">Kafka</text><text x="416" y="304">orders</text>
+  <path class="wire" d="M160 75H200"/><path class="wire" d="M280 170V250"/><path class="wire" d="M360 285H400"/>
+  <path class="wire" d="M95 110V360H450V320" style="stroke:#5a2a1c"/>
+  <circle class="pkt p1" cx="95" cy="240" r="9"/>
+  <text class="x" x="436" y="232" style="font-size:30px;fill:#ff4f1a;font-family:Archivo;font-weight:900">✕</text>
+  <circle class="pkt p2" cx="280" cy="40" r="9" style="fill:#4ade80"/>
+  <g class="walg hide" style="opacity:0">
+    <text x="30" y="394">pg_wal held by slot</text>
+    <rect x="30" y="402" width="300" height="16" fill="#26262b"/><rect class="gauge" x="30" y="402" width="0" height="16"/>
+    <text class="panic hide" x="30" y="436" style="fill:#ff4f1a;opacity:0">PANIC: No space left on device</text>
+  </g>
+</svg>`;
+// ensure group visibility toggles follow state (CSS handles most)
+const dg = $("#dg");
+const syncDg = () => { const s = +dg.dataset.s; $(".ob-rows", dg).style.opacity = s >= 2 ? 1 : 0; $(".walg", dg).style.opacity = s >= 4 ? 1 : 0; $(".panic", dg).style.opacity = s >= 4 ? 1 : 0; $(".lost", dg).style.opacity = s === 3 ? 1 : 0; $(".gauge", dg).setAttribute("width", s >= 4 ? 300 : 0); };
+const stepIO = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { $$(".step").forEach((s) => s.classList.toggle("on", s === e.target)); dg.dataset.s = e.target.dataset.step; syncDg(); } }), { rootMargin: "-45% 0px -45% 0px" });
+$$(".step").forEach((s) => stepIO.observe(s)); syncDg();
+
+/* ------------------------------------------------------------------
+   Ghost-row lab (same verified sequence as the post)
+   ------------------------------------------------------------------ */
+(() => {
+  let mode = "cursor", step = 0;
+  const S = (n) => {
+    const r = {}, log = []; let text = "Press step to start.";
+    if (n >= 1) { r[1] = "unc"; log.push("<b>txn A</b> INSERT → id 1 (not committed)"); text = "A inserts and gets id 1, then keeps working."; }
+    if (n >= 2) { r[2] = "pend"; log.push("<b>txn B</b> INSERT → id 2, COMMIT"); text = "B inserts id 2 and commits straight away."; }
+    if (n >= 3) { r[2] = "pub"; log.push(mode === "cursor" ? "<b>relay</b> WHERE id > 0 → [2] · last_seen = 2" : "<b>relay</b> WHERE status = 'PENDING' → [2]"); text = "The relay can only see committed rows. It publishes 2."; }
+    if (n >= 4) { r[1] = "pend"; log.push("<b>txn A</b> COMMIT → row 1 visible"); text = "A commits. Row 1 appears, with an id below one already passed."; }
+    if (n >= 5) { if (mode === "cursor") { r[1] = "lost"; log.push("<b>relay</b> WHERE id > 2 → 0 rows"); text = "Row 1 is never returned. No error. Switch the query and run again."; } else { r[1] = "pub"; log.push("<b>relay</b> WHERE status = 'PENDING' → [1]"); text = "Row 1 is still pending, so it goes out. Nothing lost."; } }
+    return { r, log, text };
+  };
+  const L = { unc: "uncommitted", pend: "pending", pub: "published", lost: "never sent" };
+  const draw = () => {
+    const f = S(step);
+    $("#rows").innerHTML = [1, 2].filter((i) => f.r[i]).map((i) => `<div class="trow ${f.r[i]}"><span>id ${i}</span><span>order #${i === 1 ? "A" : "B"}</span><span class="st">${L[f.r[i]]}</span></div>`).join("") || `<div class="trow unc"><span>—</span><span>empty</span><span></span></div>`;
+    $("#log").innerHTML = f.log.map((l) => `<li>${l}</li>`).join(""); $("#narr").innerHTML = f.text; $("#step").disabled = step >= 5;
+  };
+  $("#step").onclick = () => { step = Math.min(5, step + 1); draw(); };
+  $("#reset").onclick = () => { step = 0; draw(); };
+  $$("#lab [data-mode]").forEach((b) => b.onclick = () => { mode = b.dataset.mode; $$("#lab [data-mode]").forEach((x) => x.setAttribute("aria-pressed", x === b)); step = 0; draw(); });
+  draw();
+})();
+
+/* ------------------------------------------------------------------
+   Views, reveal, progress
+   ------------------------------------------------------------------ */
+const revealIO = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && e.target.classList.add("in")), { rootMargin: "0px 0px -10% 0px" });
+function show(v) {
+  $$("[data-view]").forEach((m) => m.classList.toggle("on", m.dataset.view === v));
+  scrollTo(0, 0); $$(".rv").forEach((el) => { if (RM) el.classList.add("in"); else revealIO.observe(el); });
+}
+document.addEventListener("click", (e) => { const a = e.target.closest("[data-go]"); if (a) { e.preventDefault(); history.replaceState(null, "", "#" + a.dataset.go); show(a.dataset.go); } });
+addEventListener("scroll", () => {
+  const h = document.documentElement; $("#prog").style.width = (scrollY / (h.scrollHeight - innerHeight)) * 100 + "%";
+}, { passive: true });
+paintCovers();
+show(location.hash === "#post" ? "post" : "home");
+addEventListener("hashchange", () => show(location.hash === "#post" ? "post" : "home"));
+</script>
+</body>
+</html>
