@@ -43,3 +43,6 @@ pnpm-debug.log*
 # Temporary / Scratch
 .temp/
 tmp/
+
+# Hallmark run state (theme deal log, preflight cache)
+.hallmark/
