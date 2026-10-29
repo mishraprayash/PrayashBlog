@@ -21,7 +21,7 @@ const projects = (await getCollection("projects", ({ data }) => import.meta.env.
             <span class="label">{String(i + 1).padStart(2, "0")} · <TodoText text={p.data.status} /></span>
             <h2 class="tile__h"><a href={`/projects/${p.id}`}><TodoText text={p.data.title} /></a></h2>
             <p><TodoText text={p.data.summary} /></p>
-            <p class="mono" style="font-size:.8125rem;color:#a6a39b"><TodoText text={p.data.role} /> · {p.data.stack.slice(0, 4).join(", ")}</p>
+            <p class="mono" style="font-size:.8125rem;color:#a9a49c"><TodoText text={p.data.role} /> · {p.data.stack.slice(0, 4).join(", ")}</p>
           </div>
         </li>
       ))}

@@ -10,13 +10,13 @@ export const dockerMultistage: Diagram = {
   height: 440,
   body: `
   <style>
-    .dg-docker-multistage .hot { fill: #ff8a5c; }
-    .dg-docker-multistage .cool { fill: #4ade80; }
-    .dg-docker-multistage .gone { fill: #a6a39b; text-decoration: line-through; }
-    .dg-docker-multistage .lay { fill: #1c1c20; stroke: #3a3a40; stroke-width: 1.5; transition: fill .4s, stroke .4s; }
-    .dg-docker-multistage .lay[data-hl-on] { fill: rgb(255 79 26 / .16); stroke: #ff4f1a; }
-    .dg-docker-multistage .chip { fill: #26262b; }
-    .dg-docker-multistage .zombie { fill: #2a1610; stroke: #ff4f1a; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .dg-docker-multistage .hot { fill: #eea285; }
+    .dg-docker-multistage .cool { fill: #86d1a8; }
+    .dg-docker-multistage .gone { fill: #a9a49c; text-decoration: line-through; }
+    .dg-docker-multistage .lay { fill: #221f1c; stroke: #403c38; stroke-width: 1.5; transition: fill .4s, stroke .4s; }
+    .dg-docker-multistage .lay[data-hl-on] { fill: rgb(255 79 26 / .16); stroke: #e58870; }
+    .dg-docker-multistage .chip { fill: #2b2824; }
+    .dg-docker-multistage .zombie { fill: #2a1610; stroke: #e58870; stroke-width: 1.5; stroke-dasharray: 5 4; }
   </style>
 
   <!-- Steps 1-3: the three stages -->
@@ -68,10 +68,10 @@ export const dockerMultistage: Diagram = {
     <text class="small" x="36" y="106">data.tar.gz is not there</text>
 
     <rect class="lay" x="20" y="150" width="480" height="50"/><text x="36" y="180">RUN rm -rf /data.tar.gz</text>
-    <rect class="chip" x="360" y="162" width="126" height="26"/><text class="tag" x="370" y="179" style="fill:#c8c5bd">whiteout 0:0</text>
+    <rect class="chip" x="360" y="162" width="126" height="26"/><text class="tag" x="370" y="179" style="fill:#c8c3bc">whiteout 0:0</text>
 
     <rect class="lay" data-hl="4" x="20" y="210" width="480" height="50"/><text x="36" y="240">RUN curl -O /data.tar.gz</text>
-    <rect class="chip" x="360" y="222" width="126" height="26" style="fill:#ff4f1a"/><text class="tag" x="370" y="239" style="fill:#0f0f11">data.tar.gz</text>
+    <rect class="chip" x="360" y="222" width="126" height="26" style="fill:#e58870"/><text class="tag" x="370" y="239" style="fill:#161311">data.tar.gz</text>
 
     <rect class="lay" x="20" y="270" width="480" height="50"/><text x="36" y="300">FROM node:20-slim</text>
 
@@ -84,23 +84,23 @@ export const dockerMultistage: Diagram = {
   <!-- Step 5: PID 1 -->
   <g data-show="5">
     <text class="title" x="20" y="40">node as PID 1</text>
-    <rect class="box" x="160" y="58" width="170" height="48" style="stroke:#ff4f1a"/><text x="176" y="88">PID 1  node</text>
-    <text x="20" y="88" style="fill:#ff8a5c">SIGTERM</text>
-    <path class="wire" d="M92 82H160" style="stroke:#7a3420"/>
-    <circle class="pkt" r="6" style="fill:#ff4f1a"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M92 82H150"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.58;.64;1" dur="2s" repeatCount="indefinite"/></circle>
-    <text x="340" y="88" style="font:900 22px var(--display);fill:#ff4f1a">✕</text>
+    <rect class="box" x="160" y="58" width="170" height="48" style="stroke:#e58870"/><text x="176" y="88">PID 1  node</text>
+    <text x="20" y="88" style="fill:#eea285">SIGTERM</text>
+    <path class="wire" d="M92 82H160" style="stroke:#7d4330"/>
+    <circle class="pkt" r="6" style="fill:#e58870"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M92 82H150"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.58;.64;1" dur="2s" repeatCount="indefinite"/></circle>
+    <text x="340" y="88" style="font:900 22px var(--display);fill:#e58870">✕</text>
     <text class="tag hot" x="366" y="86">no handler</text>
     <rect class="zombie" x="160" y="126" width="80" height="34"/><text class="tag hot" x="170" y="147">zombie</text>
     <rect class="zombie" x="250" y="126" width="80" height="34"/><text class="tag hot" x="260" y="147">zombie</text>
     <path class="wire" d="M245 106V126"/>
     <text class="tag hot" x="20" y="186">children never reaped; stop ends in SIGKILL</text>
 
-    <path d="M20 210H500" stroke="#3a3a40" stroke-width="1"/>
+    <path d="M20 210H500" stroke="#403c38" stroke-width="1"/>
 
     <text class="title" x="20" y="246">tini as PID 1</text>
-    <rect class="box" x="160" y="264" width="170" height="48" style="stroke:#00b874"/><text x="176" y="294">PID 1  tini</text>
+    <rect class="box" x="160" y="264" width="170" height="48" style="stroke:#5fae86"/><text x="176" y="294">PID 1  tini</text>
     <rect class="box" x="160" y="352" width="170" height="48"/><text x="176" y="382">node</text>
-    <text x="20" y="294" style="fill:#4ade80">SIGTERM</text>
+    <text x="20" y="294" style="fill:#86d1a8">SIGTERM</text>
     <path class="wire" d="M92 288H160"/><path class="wire" d="M245 312V352"/>
     <circle class="pkt" r="6"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.5;1" calcMode="linear" path="M92 288H154"/></circle>
     <circle class="pkt" r="6"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;0;1" keyTimes="0;.5;1" calcMode="linear" path="M245 318V346"/></circle>

@@ -11,15 +11,15 @@ export const dockerLayers: Diagram = {
   height: 440,
   body: `
   <style>
-    .dg-docker-layers .own[data-hl-on] { stroke: #ff4f1a; }
-    .dg-docker-layers .shared[data-hl-on] { stroke: #00b874; fill: #11251c; }
-    .dg-docker-layers .lay { fill: #1c1c20; stroke: #3a3a40; stroke-width: 1.5; transition: fill .4s, stroke .4s; }
-    .dg-docker-layers .lay[data-hl-on] { fill: rgb(255 79 26 / .16); stroke: #ff4f1a; }
-    .dg-docker-layers .lay.ok[data-hl-on] { fill: rgb(0 184 116 / .14); stroke: #00b874; }
-    .dg-docker-layers .rw { fill: none; stroke: #9f7aff; stroke-width: 1.5; stroke-dasharray: 5 5; }
-    .dg-docker-layers .hot { fill: #ff8a5c; }
-    .dg-docker-layers .cool { fill: #4ade80; }
-    .dg-docker-layers .gone { fill: #a6a39b; text-decoration: line-through; }
+    .dg-docker-layers .own[data-hl-on] { stroke: #e58870; }
+    .dg-docker-layers .shared[data-hl-on] { stroke: #5fae86; fill: #11251c; }
+    .dg-docker-layers .lay { fill: #221f1c; stroke: #403c38; stroke-width: 1.5; transition: fill .4s, stroke .4s; }
+    .dg-docker-layers .lay[data-hl-on] { fill: rgb(255 79 26 / .16); stroke: #e58870; }
+    .dg-docker-layers .lay.ok[data-hl-on] { fill: rgb(0 184 116 / .14); stroke: #5fae86; }
+    .dg-docker-layers .rw { fill: none; stroke: #b9a6dd; stroke-width: 1.5; stroke-dasharray: 5 5; }
+    .dg-docker-layers .hot { fill: #eea285; }
+    .dg-docker-layers .cool { fill: #86d1a8; }
+    .dg-docker-layers .gone { fill: #a9a49c; text-decoration: line-through; }
   </style>
 
   <!-- Step 1: VM vs container -->
@@ -36,7 +36,7 @@ export const dockerLayers: Diagram = {
     <rect class="box shared" data-hl="1" x="275" y="172" width="225" height="48"/><text x="291" y="202">host kernel</text>
     <text class="tag cool" x="430" y="201">shared</text>
 
-    <circle class="pkt" r="6" style="fill:#ff8a5c"><animateMotion dur="2.4s" repeatCount="indefinite" path="M230 80V202"/></circle>
+    <circle class="pkt" r="6" style="fill:#eea285"><animateMotion dur="2.4s" repeatCount="indefinite" path="M230 80V202"/></circle>
     <circle class="pkt" r="6"><animateMotion dur="1.4s" repeatCount="indefinite" path="M488 80V188"/></circle>
 
     <rect class="box" x="20" y="256" width="480" height="96"/>
@@ -61,15 +61,15 @@ export const dockerLayers: Diagram = {
     <rect class="lay" data-hl="3" x="20" y="218" width="480" height="46"/><text x="36" y="246">RUN npm ci</text>
   </g>
   <g data-show="2">
-    <rect class="rw" x="20" y="162" width="480" height="46"/><text x="36" y="190" style="fill:#9f7aff">container layer</text>
-    <text class="tag" x="410" y="189" style="fill:#9f7aff">writable</text>
+    <rect class="rw" x="20" y="162" width="480" height="46"/><text x="36" y="190" style="fill:#b9a6dd">container layer</text>
+    <text class="tag" x="410" y="189" style="fill:#b9a6dd">writable</text>
     <text class="small" x="20" y="410">running the image adds one writable layer on top</text>
   </g>
   <g data-show="3">
     <text class="tag hot" x="430" y="301">rebuilt</text>
     <text class="tag hot" x="430" y="245">rebuilt</text>
     <text class="hot" x="150" y="302">← you edit src/</text>
-    <circle class="pkt" r="8" style="fill:#ff4f1a"><animateMotion dur="2.2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.8;1" calcMode="linear" path="M480 297V230"/></circle>
+    <circle class="pkt" r="8" style="fill:#e58870"><animateMotion dur="2.2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.8;1" calcMode="linear" path="M480 297V230"/></circle>
     <text class="hot" x="20" y="410">npm ci re-runs on every commit</text>
   </g>
 
@@ -95,8 +95,8 @@ export const dockerLayers: Diagram = {
     <text class="gone" x="32" y="248">.git</text>
     <text class="gone" x="32" y="274">.env</text>
 
-    <text x="200" y="60" style="fill:#ff8a5c">.dockerignore</text>
-    <rect x="252" y="110" width="14" height="170" fill="#2a1610" stroke="#ff4f1a" stroke-width="1.5"/>
+    <text x="200" y="60" style="fill:#eea285">.dockerignore</text>
+    <rect x="252" y="110" width="14" height="170" fill="#2a1610" stroke="#e58870" stroke-width="1.5"/>
 
     <rect class="box" x="310" y="74" width="190" height="226"/><text class="title" x="322" y="100">daemon</text>
     <text class="small" x="322" y="118">build context</text>
@@ -105,10 +105,10 @@ export const dockerLayers: Diagram = {
     <text x="322" y="202">package-lock.json</text>
 
     <path class="wire" d="M210 160H310"/>
-    <path class="wire" d="M210 245H252" style="stroke:#7a3420"/>
+    <path class="wire" d="M210 245H252" style="stroke:#7d4330"/>
     <circle class="pkt" r="7"><animateMotion dur="2s" repeatCount="indefinite" path="M210 160H310"/></circle>
-    <circle class="pkt" r="7" style="fill:#ff4f1a"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M210 245H246"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.58;.64;1" dur="2s" repeatCount="indefinite"/></circle>
-    <text x="272" y="252" style="font:900 22px var(--display);fill:#ff4f1a">✕</text>
+    <circle class="pkt" r="7" style="fill:#e58870"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M210 245H246"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.58;.64;1" dur="2s" repeatCount="indefinite"/></circle>
+    <text x="272" y="252" style="font:900 22px var(--display);fill:#e58870">✕</text>
 
     <text x="20" y="340">The CLI tars the directory and sends it.</text>
     <text class="hot" x="20" y="366">without .dockerignore: node_modules, .git</text>

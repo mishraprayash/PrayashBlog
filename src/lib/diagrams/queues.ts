@@ -10,12 +10,12 @@ export const queues: Diagram = {
   height: 440,
   body: `
   <style>
-    .dg-queues .chip { fill: #26262b; stroke: #3a3a40; stroke-width: 1; }
-    .dg-queues .chip-a { fill: rgb(255 79 26 / .25); stroke: #ff4f1a; stroke-width: 1; }
-    .dg-queues .slot { fill: #26262b; stroke: #3a3a40; stroke-width: 1; }
-    .dg-queues .new { fill: rgb(0 184 116 / .2); stroke: #00b874; }
-    .dg-queues .down { stroke: #ff8a5c; fill: #2a1610; }
-    .dg-queues .slow { fill: rgb(255 79 26 / .25); stroke: #ff4f1a; stroke-width: 1.5; }
+    .dg-queues .chip { fill: #2b2824; stroke: #403c38; stroke-width: 1; }
+    .dg-queues .chip-a { fill: rgb(255 79 26 / .25); stroke: #e58870; stroke-width: 1; }
+    .dg-queues .slot { fill: #2b2824; stroke: #403c38; stroke-width: 1; }
+    .dg-queues .new { fill: rgb(0 184 116 / .2); stroke: #5fae86; }
+    .dg-queues .down { stroke: #eea285; fill: #2a1610; }
+    .dg-queues .slow { fill: rgb(255 79 26 / .25); stroke: #e58870; stroke-width: 1.5; }
   </style>
 
   <!-- steps 1-2: one sender, one broker box, three receivers -->
@@ -70,12 +70,12 @@ export const queues: Diagram = {
     <rect class="slot" x="332" y="164" width="50" height="40"/><text x="352" y="189">6</text>
     <rect class="slot new" x="384" y="164" width="50" height="40"/><text x="404" y="189">7</text>
     <text class="small" x="20" y="222">offset</text>
-    <path class="wire" d="M357 204V270" style="stroke:#7a3420"/>
+    <path class="wire" d="M357 204V270" style="stroke:#7d4330"/>
     <circle class="pkt" r="7" cx="357" cy="214"/>
     <rect class="box" x="290" y="270" width="160" height="56"/>
     <text class="title" x="304" y="294">Service A</text><text x="304" y="314">offset 6</text>
-    <path class="wire" d="M95 204V270" style="stroke:#1d6b4b"/>
-    <circle r="7" cy="214" style="fill:#4ade80"><animate attributeName="cx" values="45;357" dur="4s" repeatCount="indefinite"/></circle>
+    <path class="wire" d="M95 204V270" style="stroke:#356b54"/>
+    <circle r="7" cy="214" style="fill:#86d1a8"><animate attributeName="cx" values="45;357" dur="4s" repeatCount="indefinite"/></circle>
     <rect class="box" x="20" y="270" width="190" height="56"/>
     <text class="title" x="34" y="294">New service</text><text x="34" y="314">replays from 0</text>
     <text x="20" y="372">records stay after they are read</text>
@@ -98,7 +98,7 @@ export const queues: Diagram = {
     <rect class="box" x="20" y="290" width="220" height="62"/>
     <text class="title" x="36" y="316">Email workers</text><text x="36" y="338">50 msg/sec</text>
     <rect class="box down" x="280" y="290" width="220" height="62"/>
-    <text class="title" x="296" y="316">Billing workers</text><text x="296" y="338" style="fill:#ff8a5c">5 msg/sec · db down</text>
+    <text class="title" x="296" y="316">Billing workers</text><text x="296" y="338" style="fill:#eea285">5 msg/sec · db down</text>
     <circle class="pkt" r="8"><animateMotion dur="2.2s" repeatCount="indefinite" path="M260 82V110H130V290"/></circle>
     <circle class="pkt" r="8"><animateMotion dur="2.2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M260 82V110H390V150"/></circle>
     <text x="20" y="396">each subscriber gets its own queue,</text>
@@ -112,7 +112,7 @@ export const queues: Diagram = {
     <text x="36" y="87">P0</text><text x="36" y="137">P1</text><text x="36" y="187">P2</text><text x="36" y="237">P3</text>
     <rect class="slot" x="80" y="68" width="28" height="28"/><rect class="slot" x="114" y="68" width="28" height="28"/><rect class="slot" x="148" y="68" width="28" height="28"/>
     <rect class="slot" x="80" y="118" width="28" height="28"/><rect class="slot" x="114" y="118" width="28" height="28"/><rect class="slot" x="148" y="118" width="28" height="28"/><rect class="slot" x="182" y="118" width="28" height="28"/>
-    <rect class="slow" x="216" y="118" width="90" height="28"/><text class="tag" x="226" y="136" style="fill:#ff8a5c">slow export</text>
+    <rect class="slow" x="216" y="118" width="90" height="28"/><text class="tag" x="226" y="136" style="fill:#eea285">slow export</text>
     <rect class="slot" x="80" y="168" width="28" height="28"/><rect class="slot" x="114" y="168" width="28" height="28"/>
     <rect class="slot" x="80" y="218" width="28" height="28"/><rect class="slot" x="114" y="218" width="28" height="28"/><rect class="slot" x="148" y="218" width="28" height="28"/>
     <rect class="box" x="350" y="20" width="150" height="250"/>
@@ -127,7 +127,7 @@ export const queues: Diagram = {
     <circle class="pkt" r="7"><animateMotion dur="1.6s" begin="-1s" repeatCount="indefinite" path="M180 232H364"/></circle>
     <text x="20" y="306">key = accountId: one account,</text>
     <text x="20" y="326">one partition, in order</text>
-    <text x="20" y="370" style="fill:#ff8a5c">P1 waits behind its slow task</text>
+    <text x="20" y="370" style="fill:#eea285">P1 waits behind its slow task</text>
     <text class="small" x="20" y="392">head-of-line blocking; a queue suits</text>
     <text class="small" x="20" y="410">tasks with widely varying runtimes</text>
   </g>

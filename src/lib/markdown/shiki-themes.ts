@@ -46,16 +46,16 @@ function theme(name: string, type: "light" | "dark", c: Palette): ThemeRegistrat
 }
 
 /** The only code theme: code always sits on a dark "press" panel, in both
- * site themes. Line highlights use #26201c, which the comment colour also
+ * site themes. Line highlights use #2e2520, which the comment colour also
  * clears (4.79:1). */
 export const pressTheme = theme("press", "dark", {
-  bg: "#141416",
-  fg: "#e8e6df",
-  comment: "#8f8c85",
-  keyword: "#ff8a5c",
-  string: "#8ee0a8",
-  number: "#ffc66d",
-  func: "#8fb0ff",
-  type: "#c9a7eb",
+  bg: "#1b1815",
+  fg: "#e8e4dd",
+  comment: "#958f86",
+  keyword: "#eea285",
+  string: "#9bd4ae",
+  number: "#e6c686",
+  func: "#95c0e5",
+  type: "#c1b1e1",
   punct: "#b9b6ae",
 });

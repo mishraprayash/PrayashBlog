@@ -11,16 +11,16 @@ export const daprSidecar: Diagram = {
   height: 450,
   body: `
   <style>
-    .dg-dapr-sidecar .pod { fill: none; stroke: #55555c; stroke-width: 1.5; stroke-dasharray: 3 5; }
+    .dg-dapr-sidecar .pod { fill: none; stroke: #5d5852; stroke-width: 1.5; stroke-dasharray: 3 5; }
     .dg-dapr-sidecar .side { fill: #122019; }
-    .dg-dapr-sidecar .app[data-hl-on] { stroke: #ff4f1a; }
-    .dg-dapr-sidecar .local[data-hl-on] { stroke: #00b874; stroke-dasharray: none; }
+    .dg-dapr-sidecar .app[data-hl-on] { stroke: #e58870; }
+    .dg-dapr-sidecar .local[data-hl-on] { stroke: #5fae86; stroke-dasharray: none; }
   </style>
   <text class="small" x="20" y="22">pod / local process</text>
   <rect class="pod" x="20" y="30" width="480" height="122"/>
   <rect class="box" data-hl="1" x="36" y="56" width="170" height="74"/>
   <text class="title" x="52" y="86">NestJS app</text><text x="52" y="110">:3000</text>
-  <text class="tag" data-show="3" x="52" y="146" style="fill:#4ade80">code unchanged</text>
+  <text class="tag" data-show="3" x="52" y="146" style="fill:#86d1a8">code unchanged</text>
   <rect class="box side" data-hl="1-2" x="316" y="56" width="170" height="74"/>
   <text class="title" x="332" y="86">daprd</text><text x="332" y="110">sidecar (Go)</text>
   <path class="wire local" data-hl="1" d="M206 93H316"/>
@@ -35,7 +35,7 @@ export const daprSidecar: Diagram = {
   <rect class="box" data-hl="2-3" x="190" y="262" width="140" height="70"/>
   <text class="title" x="206" y="292">pub/sub</text>
   <text data-show="-2" x="206" y="316">Redis</text>
-  <text data-show="3-" x="206" y="316" style="fill:#f1eee6">Kafka</text>
+  <text data-show="3-" x="206" y="316" style="fill:#f4f0e7">Kafka</text>
   <rect class="box" data-hl="2" x="360" y="262" width="140" height="70"/>
   <text class="title" x="376" y="292">secrets</text><text x="376" y="316">Vault</text>
 
@@ -49,7 +49,7 @@ export const daprSidecar: Diagram = {
     <circle class="pkt" r="7"><animateMotion dur="2.4s" begin=".8s" repeatCount="indefinite" path="M401 130V200H430V262"/></circle>
   </g>
   <g data-show="3">
-    <text class="tag" x="190" y="352" style="fill:#4ade80">pubsub.yaml: redis to kafka</text>
+    <text class="tag" x="190" y="352" style="fill:#86d1a8">pubsub.yaml: redis to kafka</text>
   </g>
 
   <g data-show="4">
@@ -57,10 +57,10 @@ export const daprSidecar: Diagram = {
     <rect class="box app" data-hl="4" x="20" y="382" width="330" height="62"/>
     <text class="title" x="36" y="406">@nestjs/microservices</text>
     <text x="36" y="430">Kafka driver + retry logic</text>
-    <path class="wire" d="M350 413H400" style="stroke:#7a3420"/>
+    <path class="wire" d="M350 413H400" style="stroke:#7d4330"/>
     <rect class="box" x="400" y="382" width="100" height="62"/>
     <text class="title" x="416" y="406">Kafka</text><text x="416" y="430">cluster</text>
-    <circle class="pkt" r="7" style="fill:#ff4f1a"><animateMotion dur="1.6s" repeatCount="indefinite" path="M350 413H400"/></circle>
+    <circle class="pkt" r="7" style="fill:#e58870"><animateMotion dur="1.6s" repeatCount="indefinite" path="M350 413H400"/></circle>
   </g>
   `,
 };

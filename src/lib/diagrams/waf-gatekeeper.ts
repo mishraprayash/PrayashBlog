@@ -9,11 +9,11 @@ export const wafGatekeeper: Diagram = {
   height: 450,
   body: `
   <style>
-    .dg-waf-gatekeeper .ph[data-hl-on] { fill: rgb(159 122 255 / .22); stroke: #9f7aff; }
-    .dg-waf-gatekeeper .ph-bad[data-hl-on] { fill: rgb(255 79 26 / .18); stroke: #ff4f1a; }
-    .dg-waf-gatekeeper .ph-ok[data-hl-on] { fill: rgb(0 184 116 / .18); stroke: #00b874; }
-    .dg-waf-gatekeeper .deny[data-hl-on] { stroke: #ff4f1a; fill: #2a1610; }
-    .dg-waf-gatekeeper .up[data-hl-on] { stroke: #00b874; fill: #10241b; }
+    .dg-waf-gatekeeper .ph[data-hl-on] { fill: rgb(159 122 255 / .22); stroke: #b9a6dd; }
+    .dg-waf-gatekeeper .ph-bad[data-hl-on] { fill: rgb(255 79 26 / .18); stroke: #e58870; }
+    .dg-waf-gatekeeper .ph-ok[data-hl-on] { fill: rgb(0 184 116 / .18); stroke: #5fae86; }
+    .dg-waf-gatekeeper .deny[data-hl-on] { stroke: #e58870; fill: #2a1610; }
+    .dg-waf-gatekeeper .up[data-hl-on] { stroke: #5fae86; fill: #10241b; }
     .dg-waf-gatekeeper .cap { fill: #ffffff; }
   </style>
   <rect class="box" x="20" y="20" width="140" height="64"/><text class="title" x="36" y="48">Client</text><text x="36" y="72">HTTPS</text>
@@ -43,7 +43,7 @@ export const wafGatekeeper: Diagram = {
     <circle class="pkt" r="8"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.7;1" calcMode="linear" path="M140 84V104H270V173"/></circle>
   </g>
   <g data-show="2-3">
-    <rect class="row-r" x="336" y="110" width="166" height="74" style="stroke:#3a3a40"/>
+    <rect class="row-r" x="336" y="110" width="166" height="74" style="stroke:#403c38"/>
     <text class="small" x="348" y="128">request snapshot</text>
     <text x="348" y="152">method uri query</text>
     <text x="348" y="174">headers, body</text>
@@ -62,12 +62,12 @@ export const wafGatekeeper: Diagram = {
   <g data-show="4">
     <text class="cap" x="190" y="46">score ≥ 0.85: 403 at the edge</text>
     <text class="cap" x="190" y="70">the upstream never sees it</text>
-    <circle class="pkt" r="8" style="fill:#ff4f1a"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.75;1" calcMode="linear" path="M140 84V104H270V237H310V330H430V370"/></circle>
+    <circle class="pkt" r="8" style="fill:#e58870"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.75;1" calcMode="linear" path="M140 84V104H270V237H310V330H430V370"/></circle>
   </g>
   <g data-show="5">
     <text class="cap" x="190" y="46">safe: falls through</text>
     <text class="cap" x="190" y="70">to proxy_pass</text>
-    <circle class="pkt" r="8" style="fill:#4ade80"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.75;1" calcMode="linear" path="M140 84V104H270V408"/></circle>
+    <circle class="pkt" r="8" style="fill:#86d1a8"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.75;1" calcMode="linear" path="M140 84V104H270V408"/></circle>
     <text class="small" x="356" y="306">sidecar unreachable:</text>
     <text class="small" x="356" y="320">fails open, passes</text>
   </g>

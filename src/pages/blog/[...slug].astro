@@ -40,6 +40,9 @@ const seriesTotals = new Map((series ? [[series.id as string, series.parts.lengt
 // Long titles get a smaller hero size so they still fit the first screen.
 const display = headline(post);
 const titleSize = display.length <= 34 ? "xl" : display.length <= 64 ? "lg" : "md";
+// The longest word also caps the size, so a word like "Idempotency," is never
+// broken across lines.
+const longestWord = Math.max(...display.split(/\s+/).map((w) => w.length));
 // Previous/next: within the series when there is one, otherwise by date.
 const chrono = posts.indexOf(post);
 const prev = series ? series.parts[partIndex - 1] : posts[chrono + 1];
@@ -89,7 +92,7 @@ const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
         {series && <a class="chip" href={`/series/${series.id}`}>Series · Part {partIndex + 1} / {series.parts.length}</a>}
         {data.tags.map((tag) => <a class="chip" href={`/tags/${tag}`}>#{tag}</a>)}
       </p>
-      <Rise text={display} id="post-title" class:list={["p-hero__title", `p-hero__title--${titleSize}`]} />
+      <Rise text={display} id="post-title" class:list={["p-hero__title", `p-hero__title--${titleSize}`]} style={`--lw:${longestWord}`} />
       <p class="p-hero__dek">{data.description}</p>
       <div class="p-meta">
         <span><b>Published</b><time datetime={data.publishDate.toISOString()}>{formatDate(data.publishDate)}</time></span>
@@ -182,11 +185,12 @@ const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
     min-height: min(calc(100vh - var(--bar-h)), 820px);
     background: var(--c);
     color: var(--on);
-    border-bottom: var(--rule-w) solid #111111;
+    border-bottom: var(--rule-w) solid #1b1814;
   }
   .p-hero :focus-visible { outline-color: var(--on); }
   .p-hero a.chip:hover { background: var(--on); color: var(--c); border-color: var(--on); }
   .p-hero__text {
+    container-type: inline-size;
     padding: 36px var(--gutter) 32px;
     display: flex;
     flex-direction: column;
@@ -206,6 +210,11 @@ const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
   }
   :global(.p-hero__title--xl) { font-size: clamp(2.75rem, 7.4vw, 7.75rem); font-stretch: 118%; }
   :global(.p-hero__title--md) { font-size: clamp(1.875rem, 3.8vw, 4rem); line-height: 0.92; font-stretch: 105%; }
+  /* No word may be wider than the column: --k is the width of one capital
+     in em at each size's stretch, --lw the longest word's length. */
+  :global(.p-hero__title) { --k: 0.86; font-size: min(clamp(2.25rem, 6.6vw, 7rem), 100cqw / (var(--lw) * var(--k))); }
+  :global(.p-hero__title--xl) { --k: 0.9; font-size: min(clamp(2.75rem, 7.4vw, 7.75rem), 100cqw / (var(--lw) * var(--k))); }
+  :global(.p-hero__title--md) { --k: 0.82; font-size: min(clamp(1.875rem, 3.8vw, 4rem), 100cqw / (var(--lw) * var(--k))); }
   .p-hero__dek { margin: 0; max-width: 36ch; font-size: 1.375rem; line-height: 1.4; }
   .p-meta {
     display: flex;
@@ -224,17 +233,17 @@ const next = series ? series.parts[partIndex + 1] : posts[chrono - 1];
     margin: 10px 0 0;
     max-width: 52ch;
     padding: 10px 12px;
-    background: #111111;
-    color: #f1eee6;
+    background: #1b1814;
+    color: #f4f0e7;
     font: 400 0.9375rem / 1.5 var(--serif);
     text-transform: none;
     letter-spacing: 0;
   }
-  .p-hero__art { position: relative; background: #111111; border-left: var(--rule-w) solid #111111; overflow: hidden; }
+  .p-hero__art { position: relative; background: #1b1814; border-left: var(--rule-w) solid #1b1814; overflow: hidden; }
   .p-hero__art :global(.cover), .p-hero__art :global(svg) { position: absolute; inset: 0; width: 100%; height: 100%; }
   @media (max-width: 900px) {
     .p-hero { grid-template-columns: minmax(0, 1fr); min-height: 0; }
-    .p-hero__art { border-left: 0; border-top: var(--rule-w) solid #111111; aspect-ratio: 16 / 10; }
+    .p-hero__art { border-left: 0; border-top: var(--rule-w) solid #1b1814; aspect-ratio: 16 / 10; }
   }
 
   /* ---------- body ---------- */

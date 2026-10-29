@@ -6,10 +6,10 @@ import { SITE } from "../../lib/seo";
 
 // Same fills as the site; postgresql is the one pillar with light text.
 const FILL: Record<PillarId, [string, string]> = {
-  messaging: ["#ff4f1a", "#111111"],
-  postgresql: ["#2f5bff", "#ffffff"],
-  "running-services": ["#00b874", "#111111"],
-  "network-edge": ["#9f7aff", "#111111"],
+  messaging: ["#d77c60", "#1b1814"],
+  postgresql: ["#6198c6", "#1b1814"],
+  "running-services": ["#64aa85", "#1b1814"],
+  "network-edge": ["#9b86c1", "#1b1814"],
 };
 
 export const getStaticPaths = (async () => {
@@ -24,7 +24,7 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 export const GET: APIRoute = async ({ props }) => {
-  const [fill, ink] = props.pillar ? FILL[props.pillar as PillarId] : ["#111111", "#f1eee6"];
+  const [fill, ink] = props.pillar ? FILL[props.pillar as PillarId] : ["#1b1814", "#f4f0e7"];
   const png = await renderCard({ kicker: props.kicker as string, title: props.title as string, fill, ink, footer: new URL(SITE.url).host });
   return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png" } });
 };

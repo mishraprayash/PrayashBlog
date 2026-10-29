@@ -8,12 +8,13 @@ export interface Props {
   as?: "h1" | "h2" | "p" | "span";
   class?: string;
   id?: string;
+  style?: string;
 }
-const { text, as: Tag = "h1", class: cls, id } = Astro.props;
+const { text, as: Tag = "h1", class: cls, id, style } = Astro.props;
 const words: string[] = text.split(/\s+/).filter(Boolean);
 ---
 
-<Tag class:list={["rise", cls]} id={id}>
+<Tag class:list={["rise", cls]} id={id} style={style}>
   <span class="visually-hidden">{text}</span>
   {words.map((w: string, i: number) => (
     <>

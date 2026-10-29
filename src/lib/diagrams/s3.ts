@@ -9,12 +9,12 @@ export const s3: Diagram = {
   height: 440,
   body: `
   <style>
-    .dg-s3 .api[data-hl-on] { stroke: #9f7aff; fill: #1f1a2e; }
-    .dg-s3 .bkt[data-hl-on] { stroke: #9f7aff; fill: #1f1a2e; }
+    .dg-s3 .api[data-hl-on] { stroke: #b9a6dd; fill: #1f1a2e; }
+    .dg-s3 .bkt[data-hl-on] { stroke: #b9a6dd; fill: #1f1a2e; }
     .dg-s3 .bkt-bad { fill: none; stroke: transparent; }
-    .dg-s3 .bkt-bad[data-hl-on] { stroke: #ff4f1a; }
-    .dg-s3 .bad { fill: #ff8a5c; }
-    .dg-s3 .ok { fill: #4ade80; }
+    .dg-s3 .bkt-bad[data-hl-on] { stroke: #e58870; }
+    .dg-s3 .bad { fill: #eea285; }
+    .dg-s3 .ok { fill: #86d1a8; }
     .dg-s3 .cap { fill: #ffffff; }
     .dg-s3 .size { transform-box: fill-box; transform-origin: 0 50%; transform: scaleX(.12); transition: transform 1.4s cubic-bezier(.2,.8,.2,1); }
     .dg-s3 .size[data-hl-on] { transform: none; }
@@ -61,7 +61,7 @@ export const s3: Diagram = {
 
   <g data-show="4">
     <text x="104" y="228">PUT, wrong header</text>
-    <circle class="pkt" r="8" style="fill:#ff4f1a"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.7;1" calcMode="linear" path="M90 186V238H310"/></circle>
+    <circle class="pkt" r="8" style="fill:#e58870"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.7;1" calcMode="linear" path="M90 186V238H310"/></circle>
     <text x="20" y="316">signed:</text><text x="100" y="316">image/jpeg</text>
     <text x="20" y="342">sent:</text><text x="100" y="342">image/jpeg; charset=binary</text>
     <text class="bad" x="20" y="374">403 SignatureDoesNotMatch</text>
@@ -73,7 +73,7 @@ export const s3: Diagram = {
     <circle class="pkt" r="13"><animateMotion dur="2.2s" repeatCount="indefinite" path="M90 186V238H320"/></circle>
     <text x="20" y="316">fileSizeBytes is checked by the DTO,</text>
     <text x="20" y="340">then thrown away</text>
-    <rect x="20" y="356" width="480" height="16" fill="#26262b"/><rect class="size" data-hl="5" x="20" y="356" width="480" height="16" fill="#ff8a5c"/>
+    <rect x="20" y="356" width="480" height="16" fill="#2b2824"/><rect class="size" data-hl="5" x="20" y="356" width="480" height="16" fill="#eea285"/>
     <path d="M78 350V378" stroke="#ffffff" stroke-width="2"/>
     <text class="small" x="84" y="392">DTO limit</text>
     <text class="bad" x="20" y="424">same signature, bigger object: accepted</text>

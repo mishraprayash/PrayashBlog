@@ -10,11 +10,11 @@ export const daprK8s: Diagram = {
   height: 460,
   body: `
   <style>
-    .dg-dapr-k8s .pod { fill: none; stroke: #55555c; stroke-width: 1.5; stroke-dasharray: 3 5; }
+    .dg-dapr-k8s .pod { fill: none; stroke: #5d5852; stroke-width: 1.5; stroke-dasharray: 3 5; }
     .dg-dapr-k8s .side { fill: #122019; }
-    .dg-dapr-k8s .code { fill: #f1eee6; }
-    .dg-dapr-k8s .ns[data-hl-on] { stroke: #00b874; stroke-dasharray: none; }
-    .dg-dapr-k8s .hot[data-hl-on] { stroke: #00b874; stroke-dasharray: none; }
+    .dg-dapr-k8s .code { fill: #f4f0e7; }
+    .dg-dapr-k8s .ns[data-hl-on] { stroke: #5fae86; stroke-dasharray: none; }
+    .dg-dapr-k8s .hot[data-hl-on] { stroke: #5fae86; stroke-dasharray: none; }
   </style>
 
   <!-- main pair: order -->
@@ -31,7 +31,7 @@ export const daprK8s: Diagram = {
   <text data-show="2-" x="332" y="252">injected :3500</text>
   <path class="wire hot" data-hl="4" d="M206 235H316"/>
   <text class="small" data-show="1" x="222" y="226">127.0.0.1</text>
-  <text class="small" data-show="4" x="214" y="226" style="fill:#4ade80">api-token</text>
+  <text class="small" data-show="4" x="214" y="226" style="fill:#86d1a8">api-token</text>
 
   <!-- step 1: compose -->
   <g data-show="1">
@@ -49,9 +49,9 @@ export const daprK8s: Diagram = {
     <text class="title" x="332" y="378">payment-dapr</text><text x="332" y="402">:3500</text>
     <path class="wire hot" data-hl="1" d="M206 385H316"/>
     <text class="small" x="222" y="376">127.0.0.1</text>
-    <text class="tag" x="20" y="456" style="fill:#4ade80">both bind 3500, each in its own namespace</text>
+    <text class="tag" x="20" y="456" style="fill:#86d1a8">both bind 3500, each in its own namespace</text>
     <circle class="pkt" r="7"><animateMotion dur="1.8s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.5;1" calcMode="linear" path="M206 235H316"/></circle>
-    <circle class="pkt" r="7"><animateMotion dur="1.8s" begin=".6s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.5;1" calcMode="linear" path="M206 385H316"/></circle>
+    <circle class="pkt" r="7"><animateMotion dur="1.8s" begin="-.6s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.5;1" calcMode="linear" path="M206 385H316"/></circle>
   </g>
 
   <!-- steps 2-4: kubernetes control plane -->
@@ -79,11 +79,11 @@ export const daprK8s: Diagram = {
     <text class="title" x="332" y="378">state store</text><text x="332" y="402">ElastiCache</text>
     <path class="wire" d="M113 330V272M401 272V350"/>
     <text class="small" x="214" y="316">GET /v1.0/healthz/outbound</text>
-    <text class="tag" x="316" y="440" style="fill:#4ade80">204 once connected</text>
-    <text class="tag" x="20" y="420" style="fill:#ff8a5c">no traffic until then</text>
+    <text class="tag" x="316" y="440" style="fill:#86d1a8">204 once connected</text>
+    <text class="tag" x="20" y="420" style="fill:#eea285">no traffic until then</text>
     <circle class="pkt" r="7"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.3;1" calcMode="linear" path="M113 330V272"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.3;.32;1" dur="3s" repeatCount="indefinite"/></circle>
     <circle class="pkt" r="7"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;.33;.6;1" calcMode="linear" path="M206 235H316"/><animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;.32;.34;.6;.62;1" dur="3s" repeatCount="indefinite"/></circle>
-    <circle class="pkt" r="7" style="fill:#4ade80"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;0;1" keyTimes="0;.63;1" calcMode="linear" path="M401 350V272"/><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;.62;.64;1" dur="3s" repeatCount="indefinite"/></circle>
+    <circle class="pkt" r="7" style="fill:#86d1a8"><animateMotion dur="3s" repeatCount="indefinite" keyPoints="0;0;1" keyTimes="0;.63;1" calcMode="linear" path="M401 350V272"/><animate attributeName="opacity" values="0;0;1;1" keyTimes="0;.62;.64;1" dur="3s" repeatCount="indefinite"/></circle>
   </g>
 
   <!-- step 4: mTLS + API token -->
@@ -95,7 +95,7 @@ export const daprK8s: Diagram = {
     <path class="wire" d="M206 352H401"/>
     <path class="wire hot" data-hl="4" d="M401 272V366"/>
     <text class="small" x="250" y="344">certs</text>
-    <text class="small" x="410" y="322" style="fill:#4ade80">mTLS</text>
+    <text class="small" x="410" y="322" style="fill:#86d1a8">mTLS</text>
     <circle class="pkt" r="7"><animateMotion dur="1.8s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.5;1" calcMode="linear" path="M401 272V366"/></circle>
     <circle class="pkt" r="6"><animateMotion dur="1.4s" repeatCount="indefinite" path="M206 235H316"/></circle>
   </g>

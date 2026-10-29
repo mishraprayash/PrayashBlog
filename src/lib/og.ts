@@ -30,7 +30,7 @@ export interface CardInput {
   footer?: string;
 }
 
-export async function renderCard({ kicker, title, fill = "#111111", ink = "#f1eee6", footer = "prayashmishra.com" }: CardInput): Promise<Buffer> {
+export async function renderCard({ kicker, title, fill = "#1b1814", ink = "#f4f0e7", footer = "prayashmishra.com" }: CardInput): Promise<Buffer> {
   fonts ??= [
     { name: "Archivo", data: file("@fontsource/archivo/files/archivo-latin-900-normal.woff"), weight: 900, style: "normal" },
     { name: "Plex", data: file("@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff"), weight: 500, style: "normal" },
@@ -51,11 +51,11 @@ export async function renderCard({ kicker, title, fill = "#111111", ink = "#f1ee
       ]),
       h(
         "div",
-        { display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#111111", color: "#f1eee6", padding: "22px 64px", fontFamily: "Plex", fontSize: 24 },
+        { display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#1b1814", color: "#f4f0e7", padding: "22px 64px", fontFamily: "Plex", fontSize: 24 },
         [
           h("div", { display: "flex", fontFamily: "Archivo", fontWeight: 900, fontSize: 30 }, [
             h("span", {}, "PRAYASH"),
-            h("span", { color: "#ff4f1a" }, "/"),
+            h("span", { color: "#d77c60" }, "/"),
             h("span", {}, "MISHRA"),
           ]),
           h("div", {}, footer),

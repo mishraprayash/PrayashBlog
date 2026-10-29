@@ -11,13 +11,13 @@ export const daprInvoke: Diagram = {
   height: 440,
   body: `
   <style>
-    .dg-dapr-invoke .pod { fill: none; stroke: #55555c; stroke-width: 1.5; stroke-dasharray: 3 5; }
+    .dg-dapr-invoke .pod { fill: none; stroke: #5d5852; stroke-width: 1.5; stroke-dasharray: 3 5; }
     .dg-dapr-invoke .side { fill: #122019; }
-    .dg-dapr-invoke .fail[data-hl-on] { stroke: #ff4f1a; fill: #2a1610; }
-    .dg-dapr-invoke .link[data-hl-on] { stroke: #ff4f1a; stroke-dasharray: 2 8; }
-    .dg-dapr-invoke .code { fill: #f1eee6; white-space: pre; }
-    .dg-dapr-invoke .pip { fill: #26262b; transition: fill .3s; }
-    .dg-dapr-invoke .pip[data-hl-on] { fill: #ff4f1a; }
+    .dg-dapr-invoke .fail[data-hl-on] { stroke: #e58870; fill: #2a1610; }
+    .dg-dapr-invoke .link[data-hl-on] { stroke: #e58870; stroke-dasharray: 2 8; }
+    .dg-dapr-invoke .code { fill: #f4f0e7; white-space: pre; }
+    .dg-dapr-invoke .pip { fill: #2b2824; transition: fill .3s; }
+    .dg-dapr-invoke .pip[data-hl-on] { fill: #e58870; }
     .dg-dapr-invoke .pip:nth-of-type(2) { transition-delay: .15s; }
     .dg-dapr-invoke .pip:nth-of-type(3) { transition-delay: .3s; }
     .dg-dapr-invoke .pip:nth-of-type(4) { transition-delay: .45s; }
@@ -42,14 +42,14 @@ export const daprInvoke: Diagram = {
 
   <path class="wire link" data-hl="5" d="M401 122V328"/>
   <text class="small" data-show="-4" x="410" y="230">gRPC + mTLS</text>
-  <text class="tag" data-show="5" x="410" y="230" style="fill:#ff8a5c">open: 10s</text>
+  <text class="tag" data-show="5" x="410" y="230" style="fill:#eea285">open: 10s</text>
 
   <g data-show="1">
     <text class="code" x="36" y="172">invoker.invoke(</text>
     <text class="code" x="36" y="194">  'payment-app',</text>
     <text class="code" x="36" y="216">  'payments/process',</text>
     <text class="code" x="36" y="238">  HttpMethod.POST, payload)</text>
-    <text class="tag" x="36" y="266" style="fill:#4ade80">an app id, no IP or hostname</text>
+    <text class="tag" x="36" y="266" style="fill:#86d1a8">an app id, no IP or hostname</text>
     <circle class="pkt" r="8"><animateMotion dur="1.6s" repeatCount="indefinite" path="M206 85H316"/></circle>
   </g>
   <g data-show="2">
@@ -62,18 +62,18 @@ export const daprInvoke: Diagram = {
     <text class="code" x="36" y="194">POST /payments/process</text>
     <text x="36" y="216">reaches the controller,</text>
     <text x="36" y="238">and the reply goes back</text>
-    <text class="tag" x="36" y="266" style="fill:#4ade80">status: 'SUCCESS'</text>
+    <text class="tag" x="36" y="266" style="fill:#86d1a8">status: 'SUCCESS'</text>
     <circle class="pkt" r="8"><animateMotion dur="1.2s" repeatCount="indefinite" path="M316 365H206"/></circle>
-    <circle class="pkt" r="7" style="fill:#4ade80"><animateMotion dur="3s" repeatCount="indefinite" path="M206 365H401V85H206"/></circle>
+    <circle class="pkt" r="7" style="fill:#86d1a8"><animateMotion dur="3s" repeatCount="indefinite" path="M206 365H401V85H206"/></circle>
   </g>
   <g data-show="4">
     <text class="title" x="36" y="180">paymentRetry</text>
     <text x="36" y="206">policy: exponential</text>
     <text x="36" y="228">maxRetries: 3</text>
     <text x="36" y="250">maxInterval: 3s</text>
-    <text class="tag" x="36" y="276" style="fill:#4ade80">the backoff runs in the sidecar</text>
+    <text class="tag" x="36" y="276" style="fill:#86d1a8">the backoff runs in the sidecar</text>
     <circle class="pkt" r="8"><animateMotion dur="1.6s" repeatCount="indefinite" path="M401 122V365H206"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.9;1" dur="1.6s" repeatCount="indefinite"/></circle>
-    <text x="214" y="356" style="font:900 22px var(--display);fill:#ff4f1a">✕</text>
+    <text x="214" y="356" style="font:900 22px var(--display);fill:#e58870">✕</text>
   </g>
   <g data-show="5">
     <text class="title" x="36" y="180">paymentCB</text>
@@ -85,7 +85,7 @@ export const daprInvoke: Diagram = {
     <rect class="pip" data-hl="5" x="140" y="220" width="20" height="12"/>
     <text x="36" y="258">then fails fast, without</text>
     <text x="36" y="280">calling payment-app</text>
-    <circle class="pkt" r="8" style="fill:#ff4f1a"><animateMotion dur="1.6s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.5;1" calcMode="linear" path="M206 85H316"/></circle>
+    <circle class="pkt" r="8" style="fill:#e58870"><animateMotion dur="1.6s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;.5;1" calcMode="linear" path="M206 85H316"/></circle>
   </g>
   `,
 };

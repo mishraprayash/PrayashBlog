@@ -14,58 +14,61 @@ All three are self-hosted through fontsource. Archivo (latin, width+weight) and 
 
 **Titles rise into place one word at a time** (`Rise.astro`). The full title sits in a visually hidden span for assistive tech, and the animated words are `aria-hidden`.
 
-**Display headlines.** Post titles written for search ("The Transactional Outbox Pattern: Why Your 100-Line…") are too long to set in capitals at 100px. So each post has an optional `headline` of up to 48 characters, used on the hero, the cards and the social card. `title` stays the `<title>` and the search title.
+**Display headlines.** Post titles written for search ("The Transactional Outbox Pattern: Why Your 100-Line…") are too long to set in capitals at 100px. So each post has an optional `headline` of up to 48 characters, used on the hero, the cards and the social card. `title` stays the `<title>` and the search title. The hero size also has a cap set by the longest word, so a long word like "Idempotency," is never split across lines.
 
 ## 2. Colour
 
+The first magazine palette used four unrelated neons (#ff4f1a, #2f5bff, #00b874, #9f7aff) at full saturation next to pure black, and read as random. The palette now is one family: warm paper and a warm near-black, and four topic colours set at the same OKLCH lightness (0.66 to 0.68) and similar chroma (0.09 to 0.12), so they read like four inks from one press. Every topic fill takes ink text.
+
 ### Page
 
-| Token | Light | Dark | Contrast on page |
+| Token | Light | Dark | Contrast on `--paper` / `--paper-2` |
 |---|---|---|---|
-| `--paper` | `#f1eee6` | `#0f0f11` | |
-| `--paper-2` | `#e7e3d8` | `#1a1a1d` | |
-| `--ink` | `#111111` | `#f1eee6` | 16.3 / 16.5 |
-| `--ink-2` | `#3a3a38` | `#c8c5bd` | 9.8 / 11.1 |
-| `--muted` | `#5f5d58` | `#a6a39b` | 5.7 (5.1 on `--paper-2`) / 7.6 |
+| `--paper` | `#f4f0e7` | `#161311` | |
+| `--paper-2` | `#e8e2d7` | `#201e1b` | |
+| `--ink` | `#1b1814` | `#f4f0e7` | 15.6 / 13.7 (dark 16.3 / 14.6) |
+| `--ink-2` | `#403c39` | `#c8c3bc` | 9.6 / 8.5 (dark 10.6 / 9.5) |
+| `--muted` | `#67625c` | `#a9a49c` | 5.3 / 4.7 (dark 7.5 / 6.7) |
 
 Rules are `--line`, the ink colour: 3px between page sections and 1px inside them.
 
 ### Pillars
 
-Each topic has a fill colour (`--c`), a text colour for use on that fill (`--on`), and a text colour for use on the page (`--c-text`). A `pillar-<id>` class on any element sets all three, so components just use `var(--c)`.
+Each topic has a fill colour (`--c`), a text colour for use on that fill (`--on`, always ink), and a text colour for use on the page (`--c-text`). A `pillar-<id>` class on any element sets all three, so components just use `var(--c)`.
 
-| Pillar | `--c` fill | `--on` (contrast) | `--c-text` light (on paper / paper-2) | `--c-text` dark |
+| Pillar | `--c` fill | ink on fill | `--c-text` light (on paper / paper-2) | `--c-text` dark |
 |---|---|---|---|---|
-| Messaging | `#ff4f1a` | `#111111` (5.7) | `#b33a10` (5.1 / 4.6) | `#ff4f1a` (5.8) |
-| PostgreSQL | `#2f5bff` | `#ffffff` (5.2) | `#2a50e8` (5.3 / 4.8) | `#6f8dff` (6.3) |
-| Running services | `#00b874` | `#111111` (7.3) | `#006b47` (5.1 on paper-2) | `#00b874` (7.4) |
-| Network edge | `#9f7aff` | `#111111` (6.0) | `#6d3fd8` (5.4 / 4.9) | `#a98bff` (7.1) |
+| Messaging | `#d77c60` clay | 5.8 | `#944126` (6.1 / 5.4) | `#ec997f` (8.3) |
+| PostgreSQL | `#6198c6` slate blue | 5.7 | `#2c628d` (5.7 / 5.0) | `#85b7e2` (8.7) |
+| Running services | `#64aa85` sage | 6.4 | `#256d4c` (5.5 / 4.8) | `#83c19f` (8.9) |
+| Network edge | `#9b86c1` heather | 5.5 | `#665189` (6.0 / 5.2) | `#b9a6dd` (8.4) |
 
 Rules that follow from the table:
 
-- White text on the orange fill is only 3.3:1, so text on Messaging and Running services fills is always ink.
-- The bright fills are never used for text on the light page. That's what `--c-text` is for.
-- Callout labels follow the same pattern: blue fill with white text for notes, green, amber (`#ffb000`) and orange fills with ink text for tips, cautions and warnings.
+- Text on any topic fill is ink. White on these fills is under 3:1.
+- The fills are never used for text on the light page. That's what `--c-text` is for.
+- To add a topic, keep its fill at OKLCH lightness about 0.67 and chroma 0.09 to 0.12, and pick a hue away from the other four.
+- Callout labels follow the same pattern: slate blue for notes, sage for tips, ochre (`#dcae5a`, 8.6) for cautions and clay for warnings, all with ink text.
 
 ### Night panels
 
-The header, footer, code blocks, scroll diagrams and the "work behind it" strip are dark in both themes: `#111111` and `#0f0f11`, with text `#e8e6df` / `#f1eee6` (≥15:1) and muted `#a6a39b` (7.5).
+The header, footer, code blocks, scroll diagrams and the "work behind it" strip are dark in both themes: `#1b1814` and `#161311` (`#0e0c0b` in dark mode), with text `#e8e4dd` / `#f4f0e7` (14.6 / 15.6) and muted `#a9a49c` (7.5). In the diagrams, a failure is clay (`#e58870`) and a success is sage (`#86d1a8`), each a step lighter than its fill so it holds on the dark panel.
 
 ### Code
 
-Code is always on the dark "press" panel (`#141416`), with one Shiki theme (`src/lib/markdown/shiki-themes.ts`):
+Code is always on the dark "press" panel (`#1b1815`), with one Shiki theme (`src/lib/markdown/shiki-themes.ts`):
 
-| Token | Colour | Contrast |
+| Token | Colour | Contrast (on a highlighted line) |
 |---|---|---|
-| Text | `#e8e6df` | 14.7 |
-| Comment | `#8f8c85` | 5.5 (4.8 on a highlighted line) |
-| Keyword | `#ff8a5c` | 7.9 |
-| String | `#8ee0a8` | 11.7 |
-| Number | `#ffc66d` | 11.9 |
-| Function | `#8fb0ff` | 8.6 |
-| Type | `#c9a7eb` | 9.0 |
+| Text | `#e8e4dd` | 13.9 (11.8) |
+| Comment | `#958f86` | 5.5 (4.7) |
+| Keyword | `#eea285` | 8.5 (7.2) |
+| String | `#9bd4ae` | 10.5 (8.9) |
+| Number | `#e6c686` | 10.8 (9.1) |
+| Function | `#95c0e5` | 9.2 (7.8) |
+| Type | `#c1b1e1` | 9.0 (7.6) |
 
-Highlighted lines get a `#26201c` tint plus a 4px bar in the pillar colour, so the meaning doesn't rest on the tint alone.
+Highlighted lines get a `#2e2520` tint plus a 4px bar in the pillar colour, so the meaning doesn't rest on the tint alone.
 
 ## 3. Layout
 
@@ -96,6 +99,7 @@ Highlighted lines get a `#26201c` tint plus a 4px bar in the pillar colour, so t
 
 ## 5. Motion
 
+- **Delayed starts:** an animation that starts late uses a negative `begin`, so it is already mid-cycle on load instead of parked at the SVG origin.
 - **Kinds of motion:** covers and diagrams use SMIL; titles rise, blocks reveal on scroll, and the home ticker uses CSS animation.
 - **Motion switch:** the header has a pause/play control, which defaults to off under `prefers-reduced-motion` and is remembered per browser. With motion off:
   - CSS animations are paused;

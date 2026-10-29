@@ -8,7 +8,7 @@
   border-bottom: var(--rule-w) solid var(--line);
   overflow: hidden;
 }
-.phead--color { background: var(--c); color: var(--on); border-bottom-color: #111111; }
+.phead--color { background: var(--c); color: var(--on); border-bottom-color: #1b1814; }
 .phead--color :focus-visible { outline-color: var(--on); }
 .phead__kicker {
   display: flex;
@@ -110,7 +110,7 @@ a.chip:hover { background: var(--ink); color: var(--paper); border-color: var(--
   transition: background 0.25s;
 }
 .card:hover { background: var(--card-hover); }
-.card__art { aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--line); background: #111111; }
+.card__art { aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--line); background: #1b1814; }
 .s-wide .card__art { aspect-ratio: 16 / 8; }
 .card__art .cover, .card__art svg { width: 100%; height: 100%; display: block; }
 .card__art svg { transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -201,11 +201,11 @@ a.chip:hover { background: var(--ink); color: var(--paper); border-color: var(--
 .lead__title a:focus-visible { outline: none; }
 .lead:has(.lead__title a:focus-visible) { outline: 3px solid var(--ink); outline-offset: -6px; }
 .lead p { margin: 0; max-width: 40ch; font-size: 1.3125rem; line-height: 1.45; }
-.lead__art { border-left: var(--rule-w) solid #111111; background: #111111; overflow: hidden; }
+.lead__art { border-left: var(--rule-w) solid #1b1814; background: #1b1814; overflow: hidden; }
 .lead__art .cover, .lead__art svg { width: 100%; height: 100%; display: block; }
 @media (max-width: 900px) {
   .lead { grid-template-columns: 1fr; min-height: 0; }
-  .lead__art { border-left: 0; border-top: var(--rule-w) solid #111111; aspect-ratio: 16 / 10; }
+  .lead__art { border-left: 0; border-top: var(--rule-w) solid #1b1814; aspect-ratio: 16 / 10; }
 }
 
 /* ---------- Bands (one per pillar) ---------- */
@@ -243,18 +243,18 @@ a.row:hover { background: var(--card-hover); padding-left: calc(var(--gutter) + 
 }
 
 /* ---------- Dark strip (projects on the home page) ---------- */
-.strip { background: #111111; color: #f1eee6; border-bottom: var(--rule-w) solid var(--line); }
-.strip :focus-visible { outline-color: #f1eee6; }
-.strip .sect-h { border-bottom-color: #2c2c31; }
-.strip .sect-h > span, .strip .sect-h > a { color: #a6a39b; }
+.strip { background: #1b1814; color: #f4f0e7; border-bottom: var(--rule-w) solid var(--line); }
+.strip :focus-visible { outline-color: #f4f0e7; }
+.strip .sect-h { border-bottom-color: #36322e; }
+.strip .sect-h > span, .strip .sect-h > a { color: #a9a49c; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); margin: 0; padding: 0; list-style: none; }
-.tile { position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%; padding: 26px var(--gutter) 30px; border-right: 1px solid #2c2c31; transition: background 0.2s; }
-.tile:hover { background: #1a1a1d; }
+.tile { position: relative; display: flex; flex-direction: column; gap: 12px; height: 100%; padding: 26px var(--gutter) 30px; border-right: 1px solid #36322e; transition: background 0.2s; }
+.tile:hover { background: #201e1b; }
 .tile h3 { margin: 0; font: 800 1.75rem / 1.05 var(--display); font-stretch: 108%; letter-spacing: -0.02em; }
 .tile h3 a::after { content: ""; position: absolute; inset: 0; }
-.tile p { margin: 0; font-size: 1.0625rem; line-height: 1.45; color: #c8c5bd; }
+.tile p { margin: 0; font-size: 1.0625rem; line-height: 1.45; color: #c8c3bc; }
 .tile .label { color: var(--msg); }
-.strip mark.todo { background: #5a2a1c; color: #f1eee6; }
+.strip mark.todo { background: #5a2a1c; color: #f4f0e7; }
 
 /* ---------- Reading column for prose pages ---------- */
 .page-col {

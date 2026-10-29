@@ -35,9 +35,9 @@ const css = fs.readFileSync("src/styles/diagrams.css", "utf8");
 const page = (body) => `<!doctype html><html><head><style>
 @font-face { font-family: "Archivo Variable"; src: url(${font("@fontsource-variable/archivo", "archivo-latin-wdth-normal.woff2")}); font-weight: 100 900; font-stretch: 62% 125%; }
 @font-face { font-family: "IBM Plex Mono"; src: url(${font("@fontsource/ibm-plex-mono", "ibm-plex-mono-latin-400-normal.woff2")}); }
-:root { --display: "Archivo Variable", sans-serif; --mono: "IBM Plex Mono", monospace; --c: ${process.env.ACCENT || "#ff4f1a"}; --night: #0f0f11; }
-body { margin: 0; background: #0f0f11; display: flex; gap: 16px; padding: 16px; align-items: flex-start; }
-.cell { width: 600px; flex: none; } .cell p { color: #ff4f1a; font: 600 14px var(--mono); margin: 0 0 8px; }
+:root { --display: "Archivo Variable", sans-serif; --mono: "IBM Plex Mono", monospace; --c: ${process.env.ACCENT || "#d77c60"}; --night: #161311; }
+body { margin: 0; background: #161311; display: flex; gap: 16px; padding: 16px; align-items: flex-start; }
+.cell { width: 600px; flex: none; } .cell p { color: #d77c60; font: 600 14px var(--mono); margin: 0 0 8px; }
 svg { width: 600px; height: auto; display: block; outline: 1px dashed #333; }
 ${css}
 </style></head><body>${body}</body></html>`;

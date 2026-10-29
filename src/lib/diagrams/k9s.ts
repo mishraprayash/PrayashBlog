@@ -11,20 +11,20 @@ export const k9s: Diagram = {
   height: 450,
   body: `
   <style>
-    .dg-k9s .k9[data-hl-on] { stroke: #ff5555; fill: #1a0000; }
-    .dg-k9s .on-local[data-hl-on] { fill: rgb(0 184 116 / .2); stroke: #00b874; }
-    .dg-k9s .on-prod[data-hl-on] { fill: rgb(255 85 85 / .18); stroke: #ff5555; }
-    .dg-k9s .hot { fill: #ff8a5c; }
-    .dg-k9s .cool { fill: #4ade80; }
+    .dg-k9s .k9[data-hl-on] { stroke: #e47c75; fill: #1a0000; }
+    .dg-k9s .on-local[data-hl-on] { fill: rgb(0 184 116 / .2); stroke: #5fae86; }
+    .dg-k9s .on-prod[data-hl-on] { fill: rgb(255 85 85 / .18); stroke: #e47c75; }
+    .dg-k9s .hot { fill: #eea285; }
+    .dg-k9s .cool { fill: #86d1a8; }
     .dg-k9s .key { fill: #ffffff; }
-    .dg-k9s .chip { fill: #26262b; }
-    .dg-k9s .eph { fill: #2a1610; stroke: #ff4f1a; stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .dg-k9s .chip { fill: #2b2824; }
+    .dg-k9s .eph { fill: #2a1610; stroke: #e58870; stroke-width: 1.5; stroke-dasharray: 5 4; }
   </style>
 
   <!-- Your machine -->
   <rect class="box k9" data-hl="2-5" x="20" y="20" width="190" height="70"/>
   <text class="title" x="36" y="48">k9s</text><text x="36" y="74">local binary</text>
-  <text class="tag" data-show="2-" x="92" y="47" style="fill:#ff5555">skin: prod-alert</text>
+  <text class="tag" data-show="2-" x="92" y="47" style="fill:#e47c75">skin: prod-alert</text>
 
   <rect class="box" x="20" y="110" width="190" height="150"/>
   <text class="title" x="36" y="136">~/.kube/config</text>
@@ -56,7 +56,7 @@ export const k9s: Diagram = {
     <path class="wire" d="M210 55H255V120H300" style="stroke:#7a2a2a"/>
   </g>
   <g data-show="2">
-    <circle class="pkt" r="6" style="fill:#ff5555"><animateMotion dur="1.8s" repeatCount="indefinite" path="M210 55H255V120H300"/></circle>
+    <circle class="pkt" r="6" style="fill:#e47c75"><animateMotion dur="1.8s" repeatCount="indefinite" path="M210 55H255V120H300"/></circle>
     <text class="key" x="20" y="300">:ctx</text><text x="70" y="300">k3d-local → eks-prod</text>
     <text x="20" y="332">The production context loads its own</text>
     <text x="20" y="354">config.yaml, with skin: prod-alert,</text>
@@ -65,8 +65,8 @@ export const k9s: Diagram = {
   </g>
 
   <g data-show="3">
-    <circle class="pkt" r="6" style="fill:#ff4f1a"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M210 55H240"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.58;.64;1" dur="2s" repeatCount="indefinite"/></circle>
-    <text x="236" y="40" style="font:900 20px var(--display);fill:#ff4f1a">✕</text>
+    <circle class="pkt" r="6" style="fill:#e58870"><animateMotion dur="2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.6;1" calcMode="linear" path="M210 55H240"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.58;.64;1" dur="2s" repeatCount="indefinite"/></circle>
+    <text x="236" y="40" style="font:900 20px var(--display);fill:#e58870">✕</text>
     <text class="key" x="20" y="300">k9s --readonly</text>
     <text x="20" y="326">Ctrl+D (delete) and e (edit) are off.</text>
     <text x="20" y="358">That stops the UI only. A kubectl in</text>
@@ -89,8 +89,8 @@ export const k9s: Diagram = {
   </g>
   <g data-show="5">
     <rect class="chip" x="36" y="324" width="70" height="30"/><text x="46" y="344">app</text>
-    <rect class="eph" x="36" y="368" width="110" height="30"/><text x="46" y="388" style="fill:#ff8a5c">netshoot</text>
-    <text x="156" y="392" style="font:900 20px var(--display);fill:#ff4f1a">✕</text>
+    <rect class="eph" x="36" y="368" width="110" height="30"/><text x="46" y="388" style="fill:#eea285">netshoot</text>
+    <text x="156" y="392" style="font:900 20px var(--display);fill:#e58870">✕</text>
     <text class="small" x="36" y="424">Shift+D: kubectl debug</text>
     <text class="small" x="250" y="330">securityContext</text>
     <text x="250" y="352">drop: ["ALL"]</text>

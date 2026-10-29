@@ -12,13 +12,13 @@
  */
 import type { PillarId } from "../data/taxonomy";
 
-const INK = "#111111";
-const PAPER = "#f1eee6";
-const GREY = "#9a978f";
-const MSG = "#ff4f1a";
-const PG = "#2f5bff";
-const RUN = "#00b874";
-const EDGE = "#9f7aff";
+const INK = "#1b1814";
+const PAPER = "#f4f0e7";
+const GREY = "#9d978e";
+const MSG = "#d77c60";
+const PG = "#6198c6";
+const RUN = "#64aa85";
+const EDGE = "#9b86c1";
 const MONO = `font-family="IBM Plex Mono, monospace"`;
 const DISPLAY = `font-family="Archivo Variable, Arial Black, sans-serif" font-weight="900"`;
 
@@ -41,7 +41,7 @@ export const COVERS = {
   // its packet halfway; the outbox path always arrives.
   outbox: () =>
     svg(`
-    <rect x="-600" y="-400" width="1600" height="1060" fill="${INK}"/>${grid("#222")}
+    <rect x="-600" y="-400" width="1600" height="1060" fill="${INK}"/>${grid("#2a2723")}
     <g ${MONO} font-size="10" fill="${GREY}">
       <rect x="30" y="40" width="80" height="44" fill="none" stroke="${PAPER}" stroke-width="2"/><text x="44" y="66">app</text>
       <rect x="160" y="30" width="96" height="64" fill="none" stroke="${PAPER}" stroke-width="2"/><text x="174" y="52">postgres</text>
@@ -52,7 +52,7 @@ export const COVERS = {
     <path d="M110 62H160M208 94V170M256 192H338V160" stroke="${PAPER}" stroke-width="2" fill="none" stroke-dasharray="5 6"><animate attributeName="stroke-dashoffset" from="22" to="0" dur="1s" repeatCount="indefinite"/></path>
     <path d="M110 50C200 0 300 20 338 100" stroke="${MSG}" stroke-width="2" fill="none" stroke-dasharray="3 6" opacity=".7"/>
     <circle r="6" fill="${MSG}"><animateMotion dur="3.2s" repeatCount="indefinite" path="M110 62H208V192H338V160"/></circle>
-    <circle r="6" fill="${PAPER}"><animateMotion dur="3.2s" begin="1.6s" repeatCount="indefinite" path="M110 62H208V192H338V160"/></circle>
+    <circle r="6" fill="${PAPER}"><animateMotion dur="3.2s" begin="-1.6s" repeatCount="indefinite" path="M110 62H208V192H338V160"/></circle>
     <circle r="6" fill="${MSG}"><animateMotion dur="2.4s" repeatCount="indefinite" keyPoints="0;.62;.62" keyTimes="0;.6;1" calcMode="linear" path="M110 50C200 0 300 20 338 100"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.6;.65;1" dur="2.4s" repeatCount="indefinite"/></circle>
     <text x="262" y="34" ${MONO} font-size="16" fill="${MSG}" font-weight="600" opacity="0">✕<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;.58;.62;.9;1" dur="2.4s" repeatCount="indefinite"/></text>`),
 
@@ -63,7 +63,7 @@ export const COVERS = {
     ${[50, 130, 210]
       .map(
         (y, i) =>
-          `<path d="M20 ${y}C140 ${y} 160 130 250 130" stroke="${INK}" stroke-width="2" fill="none"/><circle r="9" fill="${INK}"><animateMotion dur="2.6s" begin="${i * 0.25}s" repeatCount="indefinite" path="M20 ${y}C140 ${y} 160 130 250 130"/></circle>`,
+          `<path d="M20 ${y}C140 ${y} 160 130 250 130" stroke="${INK}" stroke-width="2" fill="none"/><circle r="9" fill="${INK}"><animateMotion dur="2.6s" begin="-${i * 0.25}s" repeatCount="indefinite" path="M20 ${y}C140 ${y} 160 130 250 130"/></circle>`,
       )
       .join("")}
     <rect x="250" y="96" width="120" height="68" fill="${PAPER}" stroke="${INK}" stroke-width="3"/>
@@ -78,7 +78,7 @@ export const COVERS = {
     <rect x="-600" y="-400" width="1600" height="1060" fill="${PAPER}"/>
     <g ${MONO} font-size="10" fill="${INK}"><text x="16" y="44">QUEUE</text><text x="16" y="124">TOPIC</text><text x="16" y="204">STREAM</text></g>
     <path d="M80 40H360" stroke="${INK}" stroke-width="2"/>
-    ${[0, 0.7, 1.4].map((d) => `<rect x="80" width="16" height="16" y="32" fill="${INK}"><animate attributeName="x" from="80" to="344" dur="2.1s" begin="${d}s" repeatCount="indefinite"/></rect>`).join("")}
+    ${[0, 0.7, 1.4].map((d) => `<rect x="80" width="16" height="16" y="32" fill="${INK}"><animate attributeName="x" from="80" to="344" dur="2.1s" begin="-${d}s" repeatCount="indefinite"/></rect>`).join("")}
     <path d="M80 120H200M200 120L360 90M200 120H360M200 120L360 150" stroke="${INK}" stroke-width="2" fill="none"/>
     ${[90, 120, 150].map((y) => `<circle r="7" fill="${MSG}"><animateMotion dur="2s" repeatCount="indefinite" path="M80 120H200L360 ${y}"/></circle>`).join("")}
     ${range(14).map((i) => `<rect x="${80 + i * 20}" y="190" width="18" height="24" fill="${i % 3 ? INK : MSG}"/>`).join("")}
@@ -95,7 +95,7 @@ export const COVERS = {
     <text x="152" y="124" ${MONO} font-size="10" fill="${INK}">.get(channel)</text>
     ${["EMAIL", "SMS", "PUSH", "WEBHOOK"].map((t, i) => `<rect x="290" y="${28 + i * 56}" width="92" height="36" fill="none" stroke="${INK}" stroke-width="2"/><text x="300" y="${50 + i * 56}" ${MONO} font-size="10" fill="${INK}">${t}</text><path d="M240 130L290 ${46 + i * 56}" stroke="${INK}" stroke-width="1.5" fill="none" stroke-dasharray="3 4"/>`).join("")}
     <path d="M94 130H140" stroke="${INK}" stroke-width="2"/>
-    ${[0, 1, 2, 3].map((i) => `<circle r="7" fill="${INK}"><animateMotion dur="4.8s" begin="${i * 1.2}s" repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;${(i * 0.25).toFixed(2)};${(i * 0.25 + 0.22).toFixed(2)};1" calcMode="linear" path="M60 130H190L290 ${46 + i * 56}"/></circle>`).join("")}`),
+    ${[0, 1, 2, 3].map((i) => `<circle r="7" fill="${INK}"><animateMotion dur="4.8s" begin="-${i * 1.2}s" repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes="0;${(i * 0.25).toFixed(2)};${(i * 0.25 + 0.22).toFixed(2)};1" calcMode="linear" path="M60 130H190L290 ${46 + i * 56}"/></circle>`).join("")}`),
 
   // Leaf → intermediate → root; the middle link blinks because it isn't sent.
   tls: () =>
@@ -113,7 +113,7 @@ export const COVERS = {
   // or blocks.
   "waf-gatekeeper": () =>
     svg(`
-    <rect x="-600" y="-400" width="1600" height="1060" fill="${INK}"/>${grid("#1d1d1f")}
+    <rect x="-600" y="-400" width="1600" height="1060" fill="${INK}"/>${grid("#24211e")}
     <rect x="130" y="50" width="120" height="80" fill="none" stroke="${PAPER}" stroke-width="2"/>
     <text x="142" y="72" ${MONO} font-size="10" fill="${GREY}">nginx</text>
     <rect x="142" y="84" width="96" height="30" fill="${EDGE}"/><text x="150" y="103" ${MONO} font-size="10" fill="${INK}">access_by_lua</text>
@@ -122,7 +122,7 @@ export const COVERS = {
     <path d="M190 130V180" stroke="${EDGE}" stroke-width="2" stroke-dasharray="4 4"><animate attributeName="stroke-dashoffset" from="16" to="0" dur=".6s" repeatCount="indefinite"/></path>
     <path d="M20 90H130M250 90H320" stroke="${PAPER}" stroke-width="2" fill="none"/>
     <circle r="6" fill="${PAPER}"><animateMotion dur="3s" repeatCount="indefinite" path="M20 90H190V180V90H320"/></circle>
-    <circle r="6" fill="${MSG}"><animateMotion dur="3s" begin="1.5s" repeatCount="indefinite" keyPoints="0;.72;.72" keyTimes="0;.75;1" calcMode="linear" path="M20 90H190V180V90H320"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.74;.78;1" dur="3s" begin="1.5s" repeatCount="indefinite"/></circle>
+    <circle r="6" fill="${MSG}"><animateMotion dur="3s" begin="-1.5s" repeatCount="indefinite" keyPoints="0;.72;.72" keyTimes="0;.75;1" calcMode="linear" path="M20 90H190V180V90H320"/><animate attributeName="opacity" values="1;1;0;0" keyTimes="0;.74;.78;1" dur="3s" begin="-1.5s" repeatCount="indefinite"/></circle>
     <text x="270" y="150" ${MONO} font-size="10" fill="${GREY}">score → pass / 403</text>`),
 
   // Most bad requests stop at the gate; one goes round it.
@@ -133,8 +133,8 @@ export const COVERS = {
     ${[50, 90, 130, 170]
       .map((y, i) =>
         i % 2
-          ? `<circle r="7" cy="${y}" fill="${MSG}"><animate attributeName="cx" values="20;190;190" keyTimes="0;.6;1" dur="2.2s" begin="${i * 0.3}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.62;.7" dur="2.2s" begin="${i * 0.3}s" repeatCount="indefinite"/></circle>`
-          : `<circle r="7" cy="${y}" fill="${PAPER}"><animate attributeName="cx" from="20" to="390" dur="2.2s" begin="${i * 0.3}s" repeatCount="indefinite"/></circle>`,
+          ? `<circle r="7" cy="${y}" fill="${MSG}"><animate attributeName="cx" values="20;190;190" keyTimes="0;.6;1" dur="2.2s" begin="-${i * 0.3}s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.62;.7" dur="2.2s" begin="-${i * 0.3}s" repeatCount="indefinite"/></circle>`
+          : `<circle r="7" cy="${y}" fill="${PAPER}"><animate attributeName="cx" from="20" to="390" dur="2.2s" begin="-${i * 0.3}s" repeatCount="indefinite"/></circle>`,
       )
       .join("")}
     <path d="M20 200C120 200 150 236 200 236S290 200 390 200" stroke="${MSG}" stroke-width="1.5" stroke-dasharray="3 5" fill="none"/>
@@ -176,13 +176,13 @@ export const COVERS = {
   // the building blocks.
   "dapr-sidecar": () =>
     svg(`
-    <rect x="-600" y="-400" width="1600" height="1060" fill="${INK}"/>${grid("#1d1d1f")}
+    <rect x="-600" y="-400" width="1600" height="1060" fill="${INK}"/>${grid("#24211e")}
     <rect x="40" y="70" width="170" height="120" fill="none" stroke="${PAPER}" stroke-width="2" stroke-dasharray="6 5"/>
     <text x="50" y="88" ${MONO} font-size="10" fill="${GREY}">pod</text>
     <rect x="56" y="100" width="70" height="70" fill="${PAPER}"/><text x="66" y="140" ${MONO} font-size="10" fill="${INK}">app</text>
     <rect x="140" y="100" width="54" height="70" fill="${RUN}"/><text x="146" y="140" ${MONO} font-size="10" fill="${INK}">daprd</text>
-    ${["state", "pub/sub", "secrets", "bindings"].map((t, i) => `<rect x="280" y="${30 + i * 52}" width="96" height="34" fill="none" stroke="${RUN}" stroke-width="2"/><text x="290" y="${51 + i * 52}" ${MONO} font-size="10" fill="${RUN}">${t}</text><path d="M194 135L280 ${47 + i * 52}" stroke="#2c2c31" stroke-width="1.5"/>`).join("")}
-    ${range(4).map((i) => `<circle r="5" fill="${RUN}"><animateMotion dur="2.8s" begin="${i * 0.7}s" repeatCount="indefinite" path="M126 135H194L280 ${47 + i * 52}"/></circle>`).join("")}`),
+    ${["state", "pub/sub", "secrets", "bindings"].map((t, i) => `<rect x="280" y="${30 + i * 52}" width="96" height="34" fill="none" stroke="${RUN}" stroke-width="2"/><text x="290" y="${51 + i * 52}" ${MONO} font-size="10" fill="${RUN}">${t}</text><path d="M194 135L280 ${47 + i * 52}" stroke="#36322e" stroke-width="1.5"/>`).join("")}
+    ${range(4).map((i) => `<circle r="5" fill="${RUN}"><animateMotion dur="2.8s" begin="-${i * 0.7}s" repeatCount="indefinite" path="M126 135H194L280 ${47 + i * 52}"/></circle>`).join("")}`),
 
   // Service invocation: calls go sidecar to sidecar between pods.
   "dapr-invoke": () =>
@@ -210,7 +210,7 @@ export const COVERS = {
     <text x="32" y="186" ${MONO} font-size="10" fill="${INK}">If-Match: etag 7</text>
     <path d="M150 120L130 100" stroke="${INK}" stroke-width="2"/>
     <circle r="6" fill="${PAPER}"><animateMotion dur="2s" repeatCount="indefinite" path="M150 120L100 96"/></circle>
-    ${[50, 130, 210].map((y, i) => `<rect x="310" y="${y - 18}" width="70" height="36" fill="none" stroke="${INK}" stroke-width="2"/><text x="318" y="${y + 4}" ${MONO} font-size="10" fill="${INK}">sub ${i + 1}</text><path d="M250 130L310 ${y}" stroke="${INK}" stroke-width="1.5" stroke-dasharray="3 4"/><circle r="6" fill="${INK}"><animateMotion dur="2.2s" begin="${i * 0.15}s" repeatCount="indefinite" path="M250 130L310 ${y}"/></circle>`).join("")}`),
+    ${[50, 130, 210].map((y, i) => `<rect x="310" y="${y - 18}" width="70" height="36" fill="none" stroke="${INK}" stroke-width="2"/><text x="318" y="${y + 4}" ${MONO} font-size="10" fill="${INK}">sub ${i + 1}</text><path d="M250 130L310 ${y}" stroke="${INK}" stroke-width="1.5" stroke-dasharray="3 4"/><circle r="6" fill="${INK}"><animateMotion dur="2.2s" begin="-${i * 0.15}s" repeatCount="indefinite" path="M250 130L310 ${y}"/></circle>`).join("")}`),
 
   // A cluster: nodes full of pods, each with its injected sidecar.
   "dapr-k8s": () =>
@@ -222,7 +222,7 @@ export const COVERS = {
           `<rect x="${20 + n * 126}" y="60" width="114" height="150" fill="none" stroke="${INK}" stroke-width="2"/><text x="${28 + n * 126}" y="78" ${MONO} font-size="9" fill="${INK}">node ${n + 1}</text>${range(3)
             .map(
               (p) =>
-                `<rect x="${30 + n * 126}" y="${88 + p * 38}" width="62" height="28" fill="${INK}"/><rect x="${96 + n * 126}" y="${88 + p * 38}" width="28" height="28" fill="${RUN}">${(n + p) % 3 === 0 ? `<animate attributeName="opacity" values="0;1;1" keyTimes="0;.3;1" dur="3s" begin="${n * 0.4 + p * 0.2}s" repeatCount="indefinite"/>` : ""}</rect>`,
+                `<rect x="${30 + n * 126}" y="${88 + p * 38}" width="62" height="28" fill="${INK}"/><rect x="${96 + n * 126}" y="${88 + p * 38}" width="28" height="28" fill="${RUN}">${(n + p) % 3 === 0 ? `<animate attributeName="opacity" values="0;1;1" keyTimes="0;.3;1" dur="3s" begin="-${n * 0.4 + p * 0.2}s" repeatCount="indefinite"/>` : ""}</rect>`,
             )
             .join("")}`,
       )
